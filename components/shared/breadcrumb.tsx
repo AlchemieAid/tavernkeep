@@ -13,23 +13,40 @@ interface BreadcrumbItem {
 export function Breadcrumb() {
   const pathname = usePathname()
   const [campaignId, setCampaignId] = useState<string | null>(null)
+  const [townId, setTownId] = useState<string | null>(null)
   
-  // Fetch campaign ID when on a shop page
+  // Fetch IDs when on shop/town pages
   useEffect(() => {
     const segments = pathname.split('/').filter(Boolean)
     const shopIndex = segments.indexOf('shops')
+    const townIndex = segments.indexOf('towns')
     
+    // Fetch campaign and town ID for shops
     if (shopIndex !== -1 && segments[shopIndex + 1]) {
       const shopId = segments[shopIndex + 1]
-      // Fetch campaign ID for this shop
       fetch(`/api/dm/shops/${shopId}`)
         .then(res => res.json())
         .then(data => {
           if (data.data?.campaign_id) {
             setCampaignId(data.data.campaign_id)
           }
+          if (data.data?.town_id) {
+            setTownId(data.data.town_id)
+          }
         })
-        .catch(err => console.error('Failed to fetch campaign ID:', err))
+        .catch(err => console.error('Failed to fetch shop data:', err))
+    }
+    // Fetch campaign ID for towns
+    else if (townIndex !== -1 && segments[townIndex + 1]) {
+      const currentTownId = segments[townIndex + 1]
+      fetch(`/api/dm/towns/${currentTownId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.data?.campaign_id) {
+            setCampaignId(data.data.campaign_id)
+          }
+        })
+        .catch(err => console.error('Failed to fetch town data:', err))
     }
   }, [pathname])
   
@@ -43,6 +60,7 @@ export function Breadcrumb() {
   
   // Track IDs for building proper hierarchy
   let currentCampaignId: string | null = null
+  let currentTownId: string | null = null
   let shopId: string | null = null
   
   // Parse the URL to build hierarchical breadcrumbs
@@ -61,14 +79,35 @@ export function Breadcrumb() {
         href: `/dm/campaigns/${currentCampaignId}`,
       })
     }
-    // Track shop ID
-    else if (segments[i - 1] === 'shops' && isId) {
-      shopId = segment
+    // Track town ID
+    else if (segments[i - 1] === 'towns' && isId) {
+      currentTownId = segment
       // If we have a fetched campaign ID and no campaign in breadcrumbs yet, add it
       if (campaignId && !currentCampaignId) {
         breadcrumbs.push({
           label: 'Campaign',
           href: `/dm/campaigns/${campaignId}`,
+        })
+      }
+      breadcrumbs.push({
+        label: 'Town',
+        href: `/dm/towns/${currentTownId}`,
+      })
+    }
+    // Track shop ID
+    else if (segments[i - 1] === 'shops' && isId) {
+      shopId = segment
+      // If we have fetched IDs and no hierarchy in breadcrumbs yet, add them
+      if (campaignId && !currentCampaignId) {
+        breadcrumbs.push({
+          label: 'Campaign',
+          href: `/dm/campaigns/${campaignId}`,
+        })
+      }
+      if (townId && !currentTownId) {
+        breadcrumbs.push({
+          label: 'Town',
+          href: `/dm/towns/${townId}`,
         })
       }
       breadcrumbs.push({
@@ -81,6 +120,11 @@ export function Breadcrumb() {
       if (segments[i - 1] === 'campaigns') {
         breadcrumbs.push({
           label: 'New Campaign',
+          href: pathname,
+        })
+      } else if (segments[i - 1] === 'towns') {
+        breadcrumbs.push({
+          label: 'New Town',
           href: pathname,
         })
       } else if (segments[i - 1] === 'shops') {
