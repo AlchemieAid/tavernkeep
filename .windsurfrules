@@ -1,0 +1,314 @@
+# .windsurfrules — TavernKeep Development Guidelines
+
+These rules govern all AI-assisted code generation in this project. Follow them precisely on every file creation, edit, or refactor.
+
+---
+
+## 1. Project Identity
+
+- **App name**: TavernKeep
+- **Purpose**: D&D shop management and sharing platform for DMs and players
+- **Stack**: Next.js 14 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase · OpenAI API · Google Stitch (design) · Vercel
+
+---
+
+## 2. Google Stitch Design Workflow (ALWAYS DO THIS FIRST)
+
+Before writing any UI code for a screen or component:
+
+1. Use the Stitch MCP to list available projects and screens
+2. Fetch the Design DNA for the relevant screen (fonts, colors, spacing, layout)
+3. Retrieve the screen's HTML as a pixel-perfect reference
+4. If this is the first screen built, generate a `DESIGN.md` in the project root containing all extracted design tokens — colors, typography, spacing scale, border radii, shadows
+5. Implement the component in React + Tailwind, matching the Stitch design exactly
+
+**If no Stitch screen exists for a view**, use the design tokens already in `DESIGN.md` and the aesthetic direction in the prompt. Never invent new colors, fonts, or spacing — always anchor to the established system.
+
+`DESIGN.md` is auto-generated from Stitch — never hand-edit it. It is the single source of truth for the design system.
+
+---
+
+## 3. TypeScript Rules
+
+- **Strict mode always on**. No `any`. No `@ts-ignore` unless absolutely unavoidable and documented.
+- All props interfaces named `[ComponentName]Props`
+- All DB row types live in `/types/database.ts` as exported interfaces
+- All API request/response bodies validated with `zod` schemas in `/lib/validators/`
+- Use `type` for unions/intersections; use `interface` for object shapes
+
+```typescript
+// ✅ Good
+interface ShopCardProps {
+  shop: Shop;
+  onEdit?: (id: string) => void;
+}
+
+// ❌ Bad
+const ShopCard = ({ shop, onEdit }: any) => { ... }
+```
+
+---
+
+## 4. File and Folder Structure
+
+```
+/app
+  /(auth)/           → Auth pages (login, callback)
+  /(dm)/             → DM-protected pages
+  /(player)/         → Public player pages
+  /api/              → API route handlers
+/components
+  /ui/               → shadcn/ui primitives (never modify these directly)
+  /dm/               → DM-specific components
+  /player/           → Player-specific components
+  /shared/           → Components used in both contexts
+/lib
+  /supabase/         → Supabase client helpers (server.ts, client.ts, middleware.ts)
+  /prompts/          → All AI prompt strings as named exports
+  /validators/       → Zod schemas
+  /utils/            → Pure utility functions
+  /constants/        → App-wide constants (enums, config values)
+/types
+  /database.ts       → DB row interfaces
+  /index.ts          → Re-exports
+/hooks               → Custom React hooks
+/public              → Static assets
+/supabase
+  /migrations/       → All schema migrations
+DESIGN.md            → Stitch-extracted design tokens (auto-generated, do not hand-edit)
+```
+
+- One component per file
+- File names: `kebab-case.tsx` for components, `camelCase.ts` for utilities
+
+---
+
+## 5. Component Rules
+
+- **Server Components by default**. Add `"use client"` only when the component needs hooks, event handlers, browser APIs, or Zustand.
+- Never fetch data in Client Components — pass it as props from Server Components
+- All interactive forms are Client Components using `react-hook-form` + `zod`
+- No inline styles. Tailwind utility classes only. Use CSS variables from `DESIGN.md` tokens.
+- All images use Next.js `<Image />` with explicit `width`, `height`, and `alt`
+- No `<a>` tags for internal navigation — use Next.js `<Link />`
+
+```tsx
+// ✅ Good — Server Component fetches, passes down
+export default async function ShopPage({ params }: { params: { slug: string } }) {
+  const shop = await getShopBySlug(params.slug);
+  return <ShopView shop={shop} />;
+}
+
+// ❌ Bad — Client Component fetching its own data
+"use client";
+export default function ShopPage() {
+  const [shop, setShop] = useState(null);
+  useEffect(() => { fetchShop().then(setShop) }, []);
+}
+```
+
+---
+
+## 6. Data Fetching Rules
+
+- Server-side data fetching via `createServerClient` from `@supabase/ssr`
+- Client-side mutations via Supabase browser client in custom hooks
+- All Supabase queries handle errors explicitly — never assume success
+- Realtime subscriptions set up in Client Components in `useEffect` with cleanup
+
+```typescript
+// ✅ Always handle errors
+const { data: shop, error } = await supabase
+  .from('shops')
+  .select('*')
+  .eq('slug', slug)
+  .single();
+
+if (error) throw new Error(`Failed to load shop: ${error.message}`);
+```
+
+---
+
+## 7. API Route Rules
+
+- All routes in `/app/api/` using Next.js Route Handlers
+- Validate all inputs with Zod before processing
+- Consistent response shape:
+  ```typescript
+  { data: T, error: null }                        // success
+  { data: null, error: { message: string } }      // failure
+  ```
+- **Player-facing routes MUST strip `is_hidden = true` items before returning** — enforced at API level, not the UI
+- DM routes MUST verify `session.user.id` ownership before any write
+- AI routes rate-limited to 5 requests/min per IP
+- `OPENAI_API_KEY` is server-side only — never referenced in client components
+
+---
+
+## 8. Database & Supabase Rules
+
+- RLS enabled on every table — policies written before any data access code
+- Only the **anon key** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) is used — there is no service role key
+- All RLS policies enforce that DMs can only access their own campaigns and shops
+- Use `npx supabase` for all CLI commands — no global install
+- All schema changes go through migrations in `/supabase/migrations/` — never alter tables in the dashboard
+- Soft-delete items with `deleted_at timestamp` — never hard delete inventory
+- All timestamps in UTC
+
+---
+
+## 9. Authentication Rules
+
+- Google OAuth only via Supabase Auth
+- **Google OAuth is deferred until a Vercel deployment URL exists.** Scaffold and wire it up with clear comments, but do not block other features.
+- When Google OAuth is activated: Supabase callback URL = `https://[your-project].supabase.co/auth/v1/callback`
+- Auth state checked in `middleware.ts` for all `/dm/*` and `/api/dm/*` routes
+- Player routes are fully public — zero auth required
+- Never store session data in localStorage — use httpOnly cookies via `@supabase/ssr`
+
+---
+
+## 10. AI Integration Rules
+
+All AI prompt strings live in `/lib/prompts/` as named exports. Never write prompts inline.
+
+```typescript
+// /lib/prompts/itemGeneration.ts
+export const buildItemGenerationPrompt = (context: ItemGenerationContext): string => `
+You are a D&D 5e item generator. Return only valid JSON...
+`;
+```
+
+- Use **GPT-4o** for all text generation (items, shopkeeper profiles)
+- Use **DALL-E 3** for all image generation (keeper portrait, exterior, interior)
+- Always set `max_tokens` explicitly
+- Always request JSON-only responses for structured data; parse with try/catch
+- DALL-E 3 prompts must include: `"painterly fantasy illustration, warm candlelight, highly detailed, atmospheric"`
+- Store all generated images in Supabase Storage — never regenerate unless DM explicitly requests
+- Show loading skeletons during all AI generation calls
+- Disable generation buttons while a call is in flight
+
+---
+
+## 11. UI / Design System Rules
+
+**Always defer to `DESIGN.md` for exact values.** The following are fallback defaults only.
+
+### Fallback CSS Variables (define in `globals.css`)
+```css
+:root {
+  --parchment: #f5e6c8;
+  --parchment-dark: #e8d5a3;
+  --ink: #2c1810;
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --ember: #8b3a0f;
+  --shadow: #1a0f07;
+  --muted: #6b5344;
+}
+```
+
+### Typography
+- Display / headings: **Cinzel** (Google Fonts)
+- Body text: **Crimson Text** (Google Fonts)
+- Prices / stats: **Courier Prime** (Google Fonts)
+
+### Component Conventions
+- Cards: `rounded-sm` for a worn, angular feel
+- Borders: `border-gold/30` subtle metallic edge
+- Primary buttons: ember or parchment background with gold text
+- Rarity badge colors: common=gray, uncommon=green, rare=blue, very_rare=purple, legendary=orange
+- Empty states use D&D flavor text — never generic "No results" copy
+
+### Animations
+- Page transitions: opacity fade 200ms
+- Item cards: staggered `translateY` entrance, 50ms delay per card
+- Loading skeletons: shimmer on parchment base
+- QR code reveal: scale 0.8 → 1.0
+
+---
+
+## 12. Mobile-First Rules
+
+- All layouts designed for 375px minimum width first
+- Touch targets minimum 44×44px
+- No hover-only interactions on player-facing views
+- QR share page: full-bleed, no chrome, single tap to copy URL
+- Player shop view: single-column card scroll, sticky shopkeeper header
+- Test all player flows at 375px, 390px, and 428px widths
+
+---
+
+## 13. Error Handling Standards
+
+Every route segment must have:
+- `loading.tsx` — skeleton UI matching the real layout
+- `error.tsx` — themed error state with retry
+- `not-found.tsx` — D&D flavor 404 (e.g., "This shop has vanished from the realm...")
+
+All async operations wrapped in try/catch.
+
+---
+
+## 14. Performance Rules
+
+- All shop images via Supabase Storage + Next.js Image Optimization
+- Lazy-load item images with `loading="lazy"`
+- Fetch all needed data in parallel with `Promise.all` — no waterfalls
+- Player shop data: cache at edge 60 seconds, revalidate via `revalidatePath` on DM update
+
+---
+
+## 15. Security Checklist
+
+Before any commit:
+- [ ] No API keys in client-side code
+- [ ] All new tables have RLS policies
+- [ ] Player API routes strip hidden items server-side
+- [ ] DM API routes verify `user.id` ownership
+- [ ] All user inputs validated via Zod before DB write
+
+---
+
+## 16. Naming Conventions
+
+| Thing | Convention | Example |
+|---|---|---|
+| React components | PascalCase | `ShopKeeperCard` |
+| Hooks | `use` prefix + camelCase | `useShopRealtime` |
+| Utility functions | camelCase | `calculateModifiedPrice` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_PRICE_MODIFIER` |
+| DB tables | snake_case | `party_access` |
+| API routes | kebab-case path segments | `/api/ai/generate-items` |
+| CSS variables | kebab-case | `--parchment-dark` |
+| Zod schemas | PascalCase + `Schema` suffix | `CreateShopSchema` |
+| Types/Interfaces | PascalCase | `Shop`, `ShopItem` |
+
+---
+
+## 17. Git Commit Conventions
+
+```
+feat: add AI shopkeeper generation endpoint
+fix: strip hidden items from player shop API
+chore: add RLS policy for party_access table
+ui: implement player shop view from Stitch design
+db: migration for inventory volatility fields
+design: update DESIGN.md from Stitch token extraction
+```
+
+---
+
+## 18. What Windsurf Should NEVER Do
+
+- Never build a UI screen without first checking for a Stitch design via MCP
+- Never hand-edit `DESIGN.md` — it is always generated from Stitch
+- Never use the Pages Router or `getServerSideProps` / `getStaticProps`
+- Never use `useState` for server-fetchable data
+- Never reference `OPENAI_API_KEY` in client-side code
+- Never use a service role key — there is none in this project
+- Never hard delete items — always soft delete via `deleted_at`
+- Never write AI prompts inline — they go in `/lib/prompts/`
+- Never create shadcn components from scratch — install via the shadcn CLI
+- Never commit `.env.local`
+- Never use `eslint-disable` without naming the specific rule and explaining why
