@@ -53,6 +53,18 @@ export default async function NewShopPage({
       redirect('/login')
     }
 
+    // Fetch town data to get campaign_id
+    const { data: townData } = await supabase
+      .from('towns')
+      .select('campaign_id')
+      .eq('id', townId)
+      .eq('dm_id', user.id)
+      .single()
+
+    if (!townData) {
+      redirect('/dm/dashboard')
+    }
+
     const name = formData.get('name') as string
     const shopType = formData.get('shop_type') as string
     const economicTier = formData.get('economic_tier') as string
@@ -67,7 +79,7 @@ export default async function NewShopPage({
     const { error } = await supabase
       .from('shops')
       .insert({
-        campaign_id: town.campaign_id,
+        campaign_id: townData.campaign_id,
         town_id: townId,
         dm_id: user.id,
         name,
