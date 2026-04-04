@@ -93,7 +93,7 @@ export default async function NewShopPage({
       price_modifier: 1.0,
       haggle_enabled: true,
       haggle_dc: 15,
-      is_active: false,
+      is_active: true,
     }
 
     console.log('Attempting to create shop with data:', JSON.stringify(shopData, null, 2))
