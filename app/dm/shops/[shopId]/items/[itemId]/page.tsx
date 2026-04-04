@@ -23,15 +23,27 @@ export default async function EditItemPage({
     redirect('/login')
   }
 
-  // Get the item
-  const { data: item, error } = await supabase
+  // Get the item and verify ownership
+  const { data: item, error: itemError } = await supabase
     .from('items')
-    .select('*, shop:shops!inner(dm_id, campaign_id)')
+    .select('*')
     .eq('id', itemId)
     .eq('shop_id', shopId)
     .single()
 
-  if (error || !item || item.shop.dm_id !== user.id) {
+  if (itemError || !item) {
+    notFound()
+  }
+
+  // Verify shop ownership
+  const { data: shop } = await supabase
+    .from('shops')
+    .select('dm_id')
+    .eq('id', shopId)
+    .eq('dm_id', user.id)
+    .single()
+
+  if (!shop) {
     notFound()
   }
 
