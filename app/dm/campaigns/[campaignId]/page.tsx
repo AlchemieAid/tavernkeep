@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
+import { AIShopGenerator } from '@/components/dm/ai-shop-generator'
 
 export default async function CampaignPage({
   params,
@@ -52,19 +53,31 @@ export default async function CampaignPage({
           )}
         </div>
 
-        <div className="flex gap-4">
-          <Button asChild>
-            <Link href={`/dm/shops/new?campaignId=${campaignId}`}>
-              Create Shop
-            </Link>
-          </Button>
-          {activeShop && (
-            <Button asChild variant="outline">
-              <Link href={`/dm/shops/${activeShop.id}/qr`}>
-                View QR Code
-              </Link>
-            </Button>
-          )}
+        <div className="grid gap-6 md:grid-cols-2">
+          <AIShopGenerator campaignId={campaignId} />
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Manual Shop Creation</CardTitle>
+              <CardDescription>
+                Create a shop manually with full control over all settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button asChild className="w-full">
+                <Link href={`/dm/shops/new?campaignId=${campaignId}`}>
+                  Create Shop Manually
+                </Link>
+              </Button>
+              {activeShop && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/dm/shops/${activeShop.id}/qr`}>
+                    View Active Shop QR Code
+                  </Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div>
