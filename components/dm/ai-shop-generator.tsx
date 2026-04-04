@@ -13,7 +13,7 @@ interface AIShopGeneratorProps {
 
 export function AIShopGenerator({ campaignId }: AIShopGeneratorProps) {
   const router = useRouter()
-  const [prompt, setPrompt] = useState('')
+  const [prompt, setPrompt] = useState('A mysterious apothecary in a dark alley, run by a suspicious halfling')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -60,12 +60,11 @@ export function AIShopGenerator({ campaignId }: AIShopGeneratorProps) {
               id="ai-prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A mysterious apothecary in a dark alley, run by a suspicious halfling..."
               required
               disabled={loading}
             />
             <p className="text-xs text-muted">
-              Example: "A blacksmith in a dwarven mountain city" or "A magical curiosity shop run by a eccentric gnome"
+              Example: "A blacksmith in a dwarven mountain city" or "A magical curiosity shop run by an eccentric gnome"
             </p>
           </div>
 

@@ -30,6 +30,15 @@ export async function POST(request: Request) {
       )
     }
 
+    // Verify OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured')
+      return NextResponse.json(
+        { error: { message: 'AI service not configured' } },
+        { status: 500 }
+      )
+    }
+
     // Verify campaign ownership
     const { data: campaign } = await supabase
       .from('campaigns')
@@ -46,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     // Generate shop with GPT-4o
+    console.log('Calling OpenAI API with prompt:', prompt)
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -54,10 +64,20 @@ export async function POST(request: Request) {
       ],
       temperature: 0.8,
       response_format: { type: 'json_object' },
+    }).catch((error) => {
+      console.error('OpenAI API error:', error)
+      throw new Error(`OpenAI API failed: ${error.message}`)
     })
 
+    console.log('OpenAI response received')
     const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+    console.log('Generated shop data:', JSON.stringify(generatedData, null, 2))
+    
     const { shop: shopData, items: itemsData } = generatedData
+
+    if (!shopData || !itemsData) {
+      throw new Error('Invalid response from AI: missing shop or items data')
+    }
 
     // Create shop
     const slug = nanoid(SLUG_LENGTH)
