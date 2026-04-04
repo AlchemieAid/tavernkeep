@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 
 try {
-  // Get commit count
-  const commitCount = execSync('git rev-list --all --count')
+  // Get commit count on current branch (HEAD)
+  const commitCount = execSync('git rev-list HEAD --count')
     .toString()
     .trim();
 
@@ -20,9 +20,9 @@ try {
     hour12: true,
   });
 
-  // Create version info
+  // Create version info with v0.0.x format
   const versionInfo = {
-    version: `v1.0.${commitCount}`,
+    version: `v0.0.${commitCount}`,
     lastUpdated,
     buildTime: now.toISOString(),
   };
@@ -36,7 +36,7 @@ try {
   console.error('Failed to generate version:', error.message);
   // Fallback version
   const fallbackVersion = {
-    version: 'v1.0.0',
+    version: 'v0.0.0',
     lastUpdated: new Date().toLocaleString('en-US', {
       timeZone: 'America/New_York',
       month: 'short',
