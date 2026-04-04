@@ -64,19 +64,14 @@ export default async function ShopEditorPage({
   }
 
   return (
-    <main className="min-h-screen bg-surface p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div>
-          <Link href={`/dm/campaigns/${shop.campaign_id}`} className="body-md text-gold hover:underline">
-            ← Back to Campaign
-          </Link>
-          <div className="flex items-center justify-between mt-4">
-            <div>
-              <h1 className="headline-lg text-gold">{shop.name}</h1>
-              <p className="body-md text-on-surface-variant mt-2">
-                {shop.shop_type} · {shop.economic_tier}
-              </p>
-            </div>
+    <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="headline-lg text-gold">{shop.name}</h1>
+            <p className="body-md text-on-surface-variant mt-2">
+              {shop.shop_type} · {shop.economic_tier}
+            </p>
+          </div>
             <div className="flex items-center gap-4">
               <form action={toggleActive}>
                 <Button 
@@ -155,7 +150,6 @@ export default async function ShopEditorPage({
             </Card>
           )}
         </div>
-      </div>
-    </main>
+    </div>
   )
 }
