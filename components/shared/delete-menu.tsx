@@ -11,7 +11,7 @@ import {
 import { useState } from 'react'
 
 interface DeleteMenuProps {
-  itemType: 'campaign' | 'shop' | 'item'
+  itemType: 'campaign' | 'town' | 'shop' | 'item'
   itemId: string
   onDelete: (id: string) => Promise<void>
 }

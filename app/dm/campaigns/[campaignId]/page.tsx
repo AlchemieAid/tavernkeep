@@ -32,15 +32,13 @@ export default async function CampaignPage({
     notFound()
   }
 
-  const { data: shops } = await supabase
-    .from('shops')
+  const { data: towns } = await supabase
+    .from('towns')
     .select('*')
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: false })
 
-  const activeShop = shops?.find(s => s.is_active)
-
-  async function deleteShop(shopId: string) {
+  async function deleteTown(townId: string) {
     'use server'
     
     const supabase = await createClient()
@@ -51,9 +49,9 @@ export default async function CampaignPage({
     }
 
     await supabase
-      .from('shops')
+      .from('towns')
       .delete()
-      .eq('id', shopId)
+      .eq('id', townId)
       .eq('dm_id', user.id)
 
     revalidatePath(`/dm/campaigns/${campaignId}`)
@@ -70,70 +68,39 @@ export default async function CampaignPage({
           )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <AIShopGenerator campaignId={campaignId} />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Shop Creation</CardTitle>
-              <CardDescription>
-                Create a shop manually with full control over all settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button asChild className="w-full">
-                <Link href={`/dm/shops/new?campaignId=${campaignId}`}>
-                  Create Shop Manually
-                </Link>
-              </Button>
-              {activeShop && (
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/dm/shops/${activeShop.id}/qr`}>
-                    View Active Shop QR Code
-                  </Link>
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+        <div className="flex gap-4">
+          <Button asChild>
+            <Link href={`/dm/campaigns/${campaignId}/towns/new`}>Create Town</Link>
+          </Button>
         </div>
 
         <div>
-          <h2 className="headline-sm text-on-surface mb-4">Shops</h2>
+          <h2 className="headline-sm text-on-surface mb-4">Towns</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {shops?.map((shop) => (
-              <Card key={shop.id} className={shop.is_active ? 'ring-2 ring-gold' : ''}>
+            {towns?.map((town) => (
+              <Card key={town.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle>{shop.name}</CardTitle>
-                      {shop.is_active && (
-                        <span className="text-xs px-2 py-1 rounded-md bg-gold text-on-gold">
-                          Active
-                        </span>
+                      <CardTitle>{town.name}</CardTitle>
+                      {town.description && (
+                        <CardDescription className="mt-2">{town.description}</CardDescription>
                       )}
                     </div>
                     <DeleteMenu
-                      itemType="shop"
-                      itemId={shop.id}
+                      itemType="town"
+                      itemId={town.id}
                       onDelete={async (id) => {
                         'use server'
-                        await deleteShop(id)
+                        await deleteTown(id)
                       }}
                     />
                   </div>
-                  <CardDescription>
-                    {shop.shop_type} · {shop.economic_tier}
-                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent>
                   <Button asChild variant="outline" className="w-full">
-                    <Link href={`/dm/shops/${shop.id}`}>
-                      Manage Shop
-                    </Link>
-                  </Button>
-                  <Button asChild variant="ghost" className="w-full">
-                    <Link href={`/shop/${shop.slug}`} target="_blank">
-                      Preview
+                    <Link href={`/dm/towns/${town.id}`}>
+                      View Town
                     </Link>
                   </Button>
                 </CardContent>
@@ -141,11 +108,11 @@ export default async function CampaignPage({
             ))}
           </div>
 
-          {!shops?.length && (
+          {!towns?.length && (
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="body-lg text-on-surface-variant">
-                  No shops yet. Create your first shop to share with your party.
+                  No towns yet. Create your first town to organize your shops.
                 </p>
               </CardContent>
             </Card>

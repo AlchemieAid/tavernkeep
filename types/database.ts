@@ -19,9 +19,20 @@ export interface Campaign {
   created_at: string
 }
 
+export interface Town {
+  id: string
+  campaign_id: string
+  dm_id: string
+  name: string
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Shop {
   id: string
   campaign_id: string
+  town_id: string | null
   dm_id: string
   name: string
   slug: string
@@ -85,6 +96,11 @@ export interface Database {
         Row: Campaign
         Insert: Omit<Campaign, 'id' | 'created_at'>
         Update: Partial<Omit<Campaign, 'id' | 'dm_id' | 'created_at'>>
+      }
+      towns: {
+        Row: Town
+        Insert: Omit<Town, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Town, 'id' | 'dm_id' | 'campaign_id' | 'created_at' | 'updated_at'>>
       }
       shops: {
         Row: Shop
