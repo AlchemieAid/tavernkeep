@@ -1,10 +1,11 @@
 export function getVersionInfo(): { version: string; lastUpdated: string } {
-  // Version is injected at build time via NEXT_PUBLIC_VERSION env var
-  // This is set in the prebuild script
-  const version = process.env.NEXT_PUBLIC_VERSION || 'v0.0.0'
-  const buildTime = process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString()
+  // Use commit hash from Vercel environment variable
+  const commitSha = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'dev'
+  const version = `v0.0.${commitSha}`
   
-  const lastUpdated = new Date(buildTime).toLocaleString('en-US', {
+  // Get build time and format in Eastern Time
+  const buildTime = new Date()
+  const lastUpdated = buildTime.toLocaleString('en-US', {
     timeZone: 'America/New_York',
     month: 'short',
     day: 'numeric',
