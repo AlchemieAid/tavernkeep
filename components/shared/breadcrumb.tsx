@@ -129,10 +129,10 @@ export function Breadcrumb() {
       {breadcrumbs.map((crumb, index) => (
         <div key={index} className="flex items-center space-x-2">
           <ChevronRight className="w-4 h-4" />
-          {crumb.href && !crumb.isLast ? (
+          {crumb.href ? (
             <Link 
               href={crumb.href}
-              className="hover:text-gold transition-colors"
+              className={`hover:text-gold transition-colors ${crumb.isLast ? 'text-gold font-medium' : ''}`}
             >
               {crumb.label}
             </Link>
