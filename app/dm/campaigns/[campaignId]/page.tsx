@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { AIShopGenerator } from '@/components/dm/ai-shop-generator'
+import { AITownGenerator } from '@/components/dm/ai-town-generator'
 import { DeleteMenu } from '@/components/shared/delete-menu'
 
 export default async function CampaignPage({
@@ -68,10 +68,22 @@ export default async function CampaignPage({
           )}
         </div>
 
-        <div className="flex gap-4">
-          <Button asChild>
-            <Link href={`/dm/campaigns/${campaignId}/towns/new`}>Create Town</Link>
-          </Button>
+        <div className="grid gap-6 md:grid-cols-2">
+          <AITownGenerator campaignId={campaignId} />
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Manual Town Creation</CardTitle>
+              <CardDescription>
+                Create a town manually with full control over all settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link href={`/dm/campaigns/${campaignId}/towns/new`}>Create Town Manually</Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
         <div>
