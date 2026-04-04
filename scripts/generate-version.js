@@ -8,9 +8,10 @@ try {
     .toString()
     .trim();
 
-  // Get current timestamp
+  // Get current timestamp in Eastern Time
   const now = new Date();
   const lastUpdated = now.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -37,6 +38,7 @@ try {
   const fallbackVersion = {
     version: 'v1.0.0',
     lastUpdated: new Date().toLocaleString('en-US', {
+      timeZone: 'America/New_York',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
