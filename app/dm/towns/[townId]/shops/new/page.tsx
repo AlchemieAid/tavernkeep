@@ -71,7 +71,6 @@ export default async function NewShopPage({
     const locationDescriptor = formData.get('location_descriptor') as string
     const keeperName = formData.get('keeper_name') as string
     const keeperRace = formData.get('keeper_race') as string
-    const keeperPersonality = formData.get('keeper_personality') as string
     const keeperBackstory = formData.get('keeper_backstory') as string
 
     const slug = nanoid(SLUG_LENGTH)
@@ -88,8 +87,9 @@ export default async function NewShopPage({
       inventory_volatility: 'moderate',
       keeper_name: keeperName || null,
       keeper_race: keeperRace || null,
-      keeper_personality: keeperPersonality || null,
       keeper_backstory: keeperBackstory || null,
+      keeper_personality_traits: null,
+      keeper_motivation: null,
       price_modifier: 1.0,
       haggle_enabled: true,
       haggle_dc: 15,
@@ -201,15 +201,6 @@ export default async function NewShopPage({
                 id="keeper_race"
                 name="keeper_race"
                 placeholder="e.g., Half-Elf, Dwarf"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="keeper_personality">Keeper Personality</Label>
-              <Input
-                id="keeper_personality"
-                name="keeper_personality"
-                placeholder="e.g., Friendly and welcoming"
               />
             </div>
 
