@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
+import { DeleteMenu } from '@/components/shared/delete-menu'
 
 export default async function ShopEditorPage({
   params,
@@ -63,6 +64,24 @@ export default async function ShopEditorPage({
     revalidatePath(`/dm/shops/${shopId}`)
   }
 
+  async function deleteItem(itemId: string) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('items')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', itemId)
+
+    revalidatePath(`/dm/shops/${shopId}`)
+  }
+
   return (
     <div className="space-y-8">
         <div className="flex items-center justify-between">
@@ -105,12 +124,22 @@ export default async function ShopEditorPage({
               <Card key={item.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <CardTitle className="text-base">{item.name}</CardTitle>
-                    {item.is_hidden && (
-                      <span className="text-xs px-2 py-1 rounded-md bg-surface-container text-on-surface-variant">
-                        Hidden
-                      </span>
-                    )}
+                    <div className="flex-1">
+                      <CardTitle className="text-base">{item.name}</CardTitle>
+                      {item.is_hidden && (
+                        <span className="text-xs px-2 py-1 rounded-md bg-surface-container text-on-surface-variant">
+                          Hidden
+                        </span>
+                      )}
+                    </div>
+                    <DeleteMenu
+                      itemType="item"
+                      itemId={item.id}
+                      onDelete={async (id) => {
+                        'use server'
+                        await deleteItem(id)
+                      }}
+                    />
                   </div>
                   <CardDescription>
                     <span className={RARITY_COLORS[item.rarity]}>
