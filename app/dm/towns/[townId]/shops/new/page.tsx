@@ -76,31 +76,36 @@ export default async function NewShopPage({
 
     const slug = nanoid(SLUG_LENGTH)
 
+    const shopData = {
+      campaign_id: townData.campaign_id,
+      town_id: townId,
+      dm_id: user.id,
+      name,
+      slug,
+      shop_type: shopType,
+      location_descriptor: locationDescriptor || null,
+      economic_tier: economicTier,
+      inventory_volatility: 'moderate',
+      keeper_name: keeperName || null,
+      keeper_race: keeperRace || null,
+      keeper_personality: keeperPersonality || null,
+      keeper_backstory: keeperBackstory || null,
+      price_modifier: 1.0,
+      haggle_enabled: true,
+      haggle_dc: 15,
+      is_active: false,
+    }
+
+    console.log('Attempting to create shop with data:', JSON.stringify(shopData, null, 2))
+
     const { error } = await supabase
       .from('shops')
-      .insert({
-        campaign_id: townData.campaign_id,
-        town_id: townId,
-        dm_id: user.id,
-        name,
-        slug,
-        shop_type: shopType,
-        location_descriptor: locationDescriptor || null,
-        economic_tier: economicTier,
-        inventory_volatility: 'moderate',
-        keeper_name: keeperName || null,
-        keeper_race: keeperRace || null,
-        keeper_personality: keeperPersonality || null,
-        keeper_backstory: keeperBackstory || null,
-        price_modifier: 1.0,
-        haggle_enabled: true,
-        haggle_dc: 15,
-        is_active: false,
-      })
+      .insert(shopData)
 
     if (error) {
-      console.error('Error creating shop:', error)
-      redirect(`/dm/towns/${townId}?error=shop_creation_failed`)
+      console.error('Error creating shop:', JSON.stringify(error, null, 2))
+      console.error('Error details - code:', error.code, 'message:', error.message, 'details:', error.details)
+      redirect(`/dm/towns/${townId}?error=shop_creation_failed&details=${encodeURIComponent(error.message)}`)
     }
 
     revalidatePath(`/dm/towns/${townId}`)
