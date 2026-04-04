@@ -25,6 +25,21 @@ export default async function NewCampaignPage() {
       redirect('/login')
     }
 
+    // Ensure profile exists
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single()
+
+    if (!existingProfile) {
+      await supabase.from('profiles').insert({
+        id: user.id,
+        display_name: user.email,
+        avatar_url: user.user_metadata?.avatar_url,
+      })
+    }
+
     const name = formData.get('name') as string
     const description = formData.get('description') as string
 
