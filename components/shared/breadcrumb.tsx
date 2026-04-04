@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight, Home } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface BreadcrumbItem {
   label: string
@@ -11,6 +12,26 @@ interface BreadcrumbItem {
 
 export function Breadcrumb() {
   const pathname = usePathname()
+  const [campaignId, setCampaignId] = useState<string | null>(null)
+  
+  // Fetch campaign ID when on a shop page
+  useEffect(() => {
+    const segments = pathname.split('/').filter(Boolean)
+    const shopIndex = segments.indexOf('shops')
+    
+    if (shopIndex !== -1 && segments[shopIndex + 1]) {
+      const shopId = segments[shopIndex + 1]
+      // Fetch campaign ID for this shop
+      fetch(`/api/dm/shops/${shopId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.data?.campaign_id) {
+            setCampaignId(data.data.campaign_id)
+          }
+        })
+        .catch(err => console.error('Failed to fetch campaign ID:', err))
+    }
+  }, [pathname])
   
   // Don't show breadcrumbs on login or root pages
   if (pathname === '/' || pathname === '/login' || pathname === '/callback') {
@@ -21,7 +42,7 @@ export function Breadcrumb() {
   const breadcrumbs: BreadcrumbItem[] = []
   
   // Track IDs for building proper hierarchy
-  let campaignId: string | null = null
+  let currentCampaignId: string | null = null
   let shopId: string | null = null
   
   // Parse the URL to build hierarchical breadcrumbs
@@ -34,15 +55,22 @@ export function Breadcrumb() {
     
     // Track campaign ID
     if (segments[i - 1] === 'campaigns' && isId) {
-      campaignId = segment
+      currentCampaignId = segment
       breadcrumbs.push({
         label: 'Campaign',
-        href: `/dm/campaigns/${campaignId}`,
+        href: `/dm/campaigns/${currentCampaignId}`,
       })
     }
     // Track shop ID
     else if (segments[i - 1] === 'shops' && isId) {
       shopId = segment
+      // If we have a fetched campaign ID and no campaign in breadcrumbs yet, add it
+      if (campaignId && !currentCampaignId) {
+        breadcrumbs.push({
+          label: 'Campaign',
+          href: `/dm/campaigns/${campaignId}`,
+        })
+      }
       breadcrumbs.push({
         label: 'Shop',
         href: `/dm/shops/${shopId}`,
