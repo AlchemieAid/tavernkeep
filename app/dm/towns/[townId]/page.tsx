@@ -22,7 +22,7 @@ export default async function TownPage({
 
   const { data: town, error } = await supabase
     .from('towns')
-    .select('*, campaign:campaigns(*)')
+    .select('*')
     .eq('id', townId)
     .eq('dm_id', user.id)
     .single()

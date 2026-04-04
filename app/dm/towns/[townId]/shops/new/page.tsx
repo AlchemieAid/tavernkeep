@@ -32,14 +32,14 @@ export default async function NewShopPage({
   }
 
   // Verify town ownership and get campaign info
-  const { data: town } = await supabase
+  const { data: town, error: townError } = await supabase
     .from('towns')
-    .select('*, campaign:campaigns(*)')
+    .select('*')
     .eq('id', townId)
     .eq('dm_id', user.id)
     .single()
 
-  if (!town) {
+  if (townError || !town) {
     redirect('/dm/dashboard')
   }
 
