@@ -6,8 +6,7 @@ import { ChevronRight, Home } from 'lucide-react'
 
 interface BreadcrumbItem {
   label: string
-  href: string | null
-  isLast: boolean
+  href: string
 }
 
 export function Breadcrumb() {
@@ -21,92 +20,58 @@ export function Breadcrumb() {
   const segments = pathname.split('/').filter(Boolean)
   const breadcrumbs: BreadcrumbItem[] = []
   
-  // Build smart breadcrumbs based on route structure
+  // Track IDs for building proper hierarchy
+  let campaignId: string | null = null
+  let shopId: string | null = null
+  
+  // Parse the URL to build hierarchical breadcrumbs
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i]
-    const isLast = i === segments.length - 1
-    
-    // Check if this is an ID (UUID or slug)
     const isId = segment.length > 20 || /^[a-zA-Z0-9-_]{10,}$/.test(segment)
     
-    // Skip 'dm' segment - it's not a meaningful breadcrumb
-    if (segment === 'dm') continue
+    // Skip 'dm' and 'dashboard'
+    if (segment === 'dm' || segment === 'dashboard') continue
     
-    // Handle campaigns
-    if (segment === 'campaigns') {
-      // Don't link to /dm/campaigns (doesn't exist)
-      breadcrumbs.push({
-        label: 'Campaigns',
-        href: null,
-        isLast: isLast,
-      })
-    }
-    // Handle campaign ID
-    else if (i > 0 && segments[i - 1] === 'campaigns' && isId) {
-      // Link back to the campaign page
+    // Track campaign ID
+    if (segments[i - 1] === 'campaigns' && isId) {
+      campaignId = segment
       breadcrumbs.push({
         label: 'Campaign',
-        href: `/dm/campaigns/${segment}`,
-        isLast: isLast,
+        href: `/dm/campaigns/${campaignId}`,
       })
     }
-    // Handle shops
-    else if (segment === 'shops') {
-      // Don't link to /dm/shops (doesn't exist)
-      breadcrumbs.push({
-        label: 'Shops',
-        href: null,
-        isLast: isLast,
-      })
-    }
-    // Handle shop ID
-    else if (i > 0 && segments[i - 1] === 'shops' && isId) {
-      // Link back to the shop page
+    // Track shop ID
+    else if (segments[i - 1] === 'shops' && isId) {
+      shopId = segment
       breadcrumbs.push({
         label: 'Shop',
-        href: `/dm/shops/${segment}`,
-        isLast: isLast,
+        href: `/dm/shops/${shopId}`,
       })
     }
-    // Handle items
-    else if (segment === 'items') {
-      breadcrumbs.push({
-        label: 'Items',
-        href: null,
-        isLast: isLast,
-      })
-    }
-    // Handle 'new' pages
+    // Handle 'new' pages - show what's being created
     else if (segment === 'new') {
-      breadcrumbs.push({
-        label: 'New',
-        href: null,
-        isLast: isLast,
-      })
+      if (segments[i - 1] === 'campaigns') {
+        breadcrumbs.push({
+          label: 'New Campaign',
+          href: pathname,
+        })
+      } else if (segments[i - 1] === 'shops') {
+        breadcrumbs.push({
+          label: 'New Shop',
+          href: pathname,
+        })
+      } else if (segments[i - 1] === 'items') {
+        breadcrumbs.push({
+          label: 'New Item',
+          href: pathname,
+        })
+      }
     }
-    // Handle 'qr' pages
+    // Handle QR code page
     else if (segment === 'qr') {
       breadcrumbs.push({
         label: 'QR Code',
-        href: null,
-        isLast: isLast,
-      })
-    }
-    // Handle dashboard
-    else if (segment === 'dashboard') {
-      // Skip - home icon already links here
-      continue
-    }
-    // Handle other segments
-    else if (!isId) {
-      const label = segment
-        .replace(/-/g, ' ')
-        .replace(/\b\w/g, (l) => l.toUpperCase())
-      
-      breadcrumbs.push({
-        label,
-        href: null,
-        isLast: isLast,
+        href: pathname,
       })
     }
   }
@@ -126,23 +91,20 @@ export function Breadcrumb() {
         <Home className="w-4 h-4" />
       </Link>
       
-      {breadcrumbs.map((crumb, index) => (
-        <div key={index} className="flex items-center space-x-2">
-          <ChevronRight className="w-4 h-4" />
-          {crumb.href ? (
+      {breadcrumbs.map((crumb, index) => {
+        const isLast = index === breadcrumbs.length - 1
+        return (
+          <div key={index} className="flex items-center space-x-2">
+            <ChevronRight className="w-4 h-4" />
             <Link 
               href={crumb.href}
-              className={`hover:text-gold transition-colors ${crumb.isLast ? 'text-gold font-medium' : ''}`}
+              className={`hover:text-gold transition-colors ${isLast ? 'text-gold font-medium' : ''}`}
             >
               {crumb.label}
             </Link>
-          ) : (
-            <span className={crumb.isLast ? 'text-gold font-medium' : 'text-on-surface-variant'}>
-              {crumb.label}
-            </span>
-          )}
-        </div>
-      ))}
+          </div>
+        )
+      })}
     </nav>
   )
 }
