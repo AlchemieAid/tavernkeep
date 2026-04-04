@@ -72,21 +72,20 @@ export default async function ShopEditorPage({
               {shop.shop_type} · {shop.economic_tier}
             </p>
           </div>
-            <div className="flex items-center gap-4">
-              <form action={toggleActive}>
-                <Button 
-                  type="submit" 
-                  variant={shop.is_active ? 'default' : 'outline'}
-                >
-                  {shop.is_active ? 'Active' : 'Inactive'}
-                </Button>
-              </form>
-              {shop.is_active && (
-                <Button asChild variant="outline">
-                  <Link href={`/dm/shops/${shopId}/qr`}>QR Code</Link>
-                </Button>
-              )}
-            </div>
+          <div className="flex items-center gap-4">
+            <form action={toggleActive}>
+              <Button 
+                type="submit" 
+                variant={shop.is_active ? 'default' : 'outline'}
+              >
+                {shop.is_active ? 'Active' : 'Inactive'}
+              </Button>
+            </form>
+            {shop.is_active && (
+              <Button asChild variant="outline">
+                <Link href={`/dm/shops/${shopId}/qr`}>QR Code</Link>
+              </Button>
+            )}
           </div>
         </div>
 
