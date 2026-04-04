@@ -39,13 +39,9 @@ export default async function CampaignPage({
   const activeShop = shops?.find(s => s.is_active)
 
   return (
-    <main className="min-h-screen bg-surface p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="space-y-8">
         <div>
-          <Link href="/dm/dashboard" className="body-md text-gold hover:underline">
-            ← Back to Dashboard
-          </Link>
-          <h1 className="headline-lg text-gold mt-4">{campaign.name}</h1>
+          <h1 className="headline-lg text-gold">{campaign.name}</h1>
           {campaign.description && (
             <p className="body-md text-on-surface-variant mt-2">
               {campaign.description}
@@ -124,7 +120,6 @@ export default async function CampaignPage({
             </Card>
           )}
         </div>
-      </div>
-    </main>
+    </div>
   )
 }

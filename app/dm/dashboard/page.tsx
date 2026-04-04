@@ -19,18 +19,12 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <main className="min-h-screen bg-surface p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="headline-lg text-gold">DM Dashboard</h1>
-            <p className="body-md text-on-surface-variant mt-2">
-              Manage your campaigns and shops
-            </p>
-          </div>
-          <form action="/auth/signout" method="post">
-            <Button variant="outline" type="submit">Sign Out</Button>
-          </form>
+    <div className="space-y-8">
+        <div>
+          <h1 className="headline-lg text-gold">DM Dashboard</h1>
+          <p className="body-md text-on-surface-variant mt-2">
+            Manage your campaigns and shops
+          </p>
         </div>
 
         <div className="flex gap-4">
@@ -66,7 +60,6 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         )}
-      </div>
-    </main>
+    </div>
   )
 }
