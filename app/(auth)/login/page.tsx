@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 
 export default async function LoginPage() {
   const supabase = await createClient()
@@ -37,12 +38,12 @@ export default async function LoginPage() {
             
             The sign-in button below is wired and ready - it will work once the above is configured.
           */}
-          <form action="/auth/google" method="post">
-            <Button 
-              type="submit" 
-              className="w-full"
-              variant="default"
-            >
+          <Button 
+            asChild
+            className="w-full"
+            variant="default"
+          >
+            <Link href="/auth/google">
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -62,8 +63,8 @@ export default async function LoginPage() {
                 />
               </svg>
               Continue with Google
-            </Button>
-          </form>
+            </Link>
+          </Button>
 
           <div className="text-center">
             <p className="body-sm text-muted">
