@@ -1,27 +1,21 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-
 export function getVersionInfo(): { version: string; lastUpdated: string } {
-  try {
-    const versionPath = join(process.cwd(), 'lib', 'version.json')
-    const versionData = JSON.parse(readFileSync(versionPath, 'utf-8'))
-    return {
-      version: versionData.version,
-      lastUpdated: versionData.lastUpdated,
-    }
-  } catch (error) {
-    // Fallback if file doesn't exist
-    return {
-      version: 'v0.0.0',
-      lastUpdated: new Date().toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-    }
+  // Version is injected at build time via NEXT_PUBLIC_VERSION env var
+  // This is set in the prebuild script
+  const version = process.env.NEXT_PUBLIC_VERSION || 'v0.0.0'
+  const buildTime = process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString()
+  
+  const lastUpdated = new Date(buildTime).toLocaleString('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+  
+  return {
+    version,
+    lastUpdated,
   }
 }

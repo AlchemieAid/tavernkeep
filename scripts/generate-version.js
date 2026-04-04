@@ -8,46 +8,19 @@ try {
     .toString()
     .trim();
 
-  // Get current timestamp in Eastern Time
-  const now = new Date();
-  const lastUpdated = now.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
+  const version = `v0.0.${commitCount}`;
+  const buildTime = new Date().toISOString();
 
-  // Create version info with v0.0.x format
-  const versionInfo = {
-    version: `v0.0.${commitCount}`,
-    lastUpdated,
-    buildTime: now.toISOString(),
-  };
+  // Write to .env file for Next.js to pick up at build time
+  const envContent = `NEXT_PUBLIC_VERSION=${version}\nNEXT_PUBLIC_BUILD_TIME=${buildTime}\n`;
+  const envPath = path.join(__dirname, '..', '.env.production');
+  fs.writeFileSync(envPath, envContent);
 
-  // Write to file
-  const outputPath = path.join(__dirname, '..', 'lib', 'version.json');
-  fs.writeFileSync(outputPath, JSON.stringify(versionInfo, null, 2));
-
-  console.log(`Generated version: ${versionInfo.version}`);
+  console.log(`Generated version: ${version} at ${buildTime}`);
 } catch (error) {
   console.error('Failed to generate version:', error.message);
   // Fallback version
-  const fallbackVersion = {
-    version: 'v0.0.0',
-    lastUpdated: new Date().toLocaleString('en-US', {
-      timeZone: 'America/New_York',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }),
-    buildTime: new Date().toISOString(),
-  };
-  const outputPath = path.join(__dirname, '..', 'lib', 'version.json');
-  fs.writeFileSync(outputPath, JSON.stringify(fallbackVersion, null, 2));
+  const envContent = `NEXT_PUBLIC_VERSION=v0.0.0\nNEXT_PUBLIC_BUILD_TIME=${new Date().toISOString()}\n`;
+  const envPath = path.join(__dirname, '..', '.env.production');
+  fs.writeFileSync(envPath, envContent);
 }
