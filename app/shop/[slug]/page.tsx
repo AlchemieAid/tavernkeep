@@ -63,7 +63,7 @@ export default async function PlayerShopPage({
           <Card className="max-w-2xl mx-auto">
             <CardContent className="pt-6">
               <p className="body-md text-on-surface-variant italic">
-                "{shop.keeper_backstory}"
+                &ldquo;{shop.keeper_backstory}&rdquo;
               </p>
             </CardContent>
           </Card>

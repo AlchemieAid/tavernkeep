@@ -184,7 +184,7 @@ export default async function NewItemPage({
                   <Label htmlFor="is_hidden">Hidden Item</Label>
                 </div>
                 <p className="body-sm text-muted">
-                  Hidden items won't appear to players unless revealed
+                  Hidden items won&apos;t appear to players unless revealed
                 </p>
               </div>
 
