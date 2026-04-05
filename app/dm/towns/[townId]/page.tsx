@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
-import { DeleteMenu } from '@/components/shared/delete-menu'
+import { ActionMenu } from '@/components/shared/delete-menu'
+import { Pencil } from 'lucide-react'
 
 export default async function TownPage({
   params,
@@ -60,7 +61,8 @@ export default async function TownPage({
 
   return (
     <div className="space-y-8">
-        <div>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
           <h1 className="headline-lg text-gold">{town.name}</h1>
           {town.description && (
             <p className="body-md text-on-surface-variant mt-2">
@@ -68,16 +70,91 @@ export default async function TownPage({
             </p>
           )}
         </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/dm/towns/${townId}/edit`}>
+            <Pencil className="w-4 h-4 mr-2" />
+            Edit Town
+          </Link>
+        </Button>
+      </div>
 
-        <div className="flex gap-4">
-          <Button asChild>
-            <Link href={`/dm/towns/${townId}/shops/new`}>Create Shop</Link>
-          </Button>
-          {activeShop && (
-            <Button asChild variant="outline">
-              <Link href={`/dm/shops/${activeShop.id}/qr`}>
-                View Active Shop QR Code
-              </Link>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {town.population !== null && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-on-surface-variant">Population</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-on-surface">{town.population.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {town.size && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-on-surface-variant">Size</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-on-surface capitalize">{town.size}</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {town.location && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-on-surface-variant">Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-on-surface capitalize">{town.location.replace('_', ' ')}</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {town.ruler && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-on-surface-variant">Ruler / Leadership</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-on-surface">{town.ruler}</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {town.political_system && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-on-surface-variant">Political System</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-on-surface capitalize">{town.political_system.replace('_', ' ')}</p>
+            </CardContent>
+          </Card>
+        )}
+        
+        {town.history && (
+          <Card className="md:col-span-2 lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="text-sm font-medium text-on-surface-variant">History & Lore</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-on-surface whitespace-pre-wrap">{town.history}</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div className="flex gap-4">
+        <Button asChild>
+          <Link href={`/dm/towns/${townId}/shops/new`}>Create Shop</Link>
+        </Button>
+        {activeShop && (
+          <Button asChild variant="outline">
+            <Link href={`/dm/shops/${activeShop.id}/qr`}>
+              View Active Shop QR Code
+            </Link>
             </Button>
           )}
         </div>
@@ -89,17 +166,11 @@ export default async function TownPage({
               <Card key={shop.id} className={shop.is_active ? 'ring-2 ring-gold' : ''}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle>{shop.name}</CardTitle>
-                      {shop.is_active && (
-                        <span className="text-xs px-2 py-1 rounded-md bg-gold text-on-gold">
-                          Active
-                        </span>
-                      )}
-                    </div>
-                    <DeleteMenu
+                    <CardTitle>{shop.name}</CardTitle>
+                    <ActionMenu
                       itemType="shop"
                       itemId={shop.id}
+                      editPath={`/dm/shops/${shop.id}/edit`}
                       onDelete={async (id) => {
                         'use server'
                         await deleteShop(id)
