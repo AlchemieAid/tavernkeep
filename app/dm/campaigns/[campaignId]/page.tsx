@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { AITownGenerator } from '@/components/dm/ai-town-generator'
 import { DeleteMenu } from '@/components/shared/delete-menu'
+import { Pencil } from 'lucide-react'
 
 export default async function CampaignPage({
   params,
@@ -59,12 +60,77 @@ export default async function CampaignPage({
 
   return (
     <div className="space-y-8">
-        <div>
-          <h1 className="headline-lg text-gold">{campaign.name}</h1>
-          {campaign.description && (
-            <p className="body-md text-on-surface-variant mt-2">
-              {campaign.description}
-            </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="headline-lg text-gold">{campaign.name}</h1>
+            {campaign.description && (
+              <p className="body-md text-on-surface-variant mt-2">
+                {campaign.description}
+              </p>
+            )}
+          </div>
+          <Button asChild>
+            <Link href={`/dm/campaigns/${campaignId}/edit`}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit Campaign
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {campaign.ruleset && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-on-surface-variant">Ruleset</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-on-surface">{campaign.ruleset}</p>
+              </CardContent>
+            </Card>
+          )}
+          
+          {campaign.setting && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-on-surface-variant">Setting / World</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-on-surface">{campaign.setting}</p>
+              </CardContent>
+            </Card>
+          )}
+          
+          {campaign.currency && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-on-surface-variant">Currency</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-on-surface">{campaign.currency}</p>
+              </CardContent>
+            </Card>
+          )}
+          
+          {campaign.history && (
+            <Card className="md:col-span-2 lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-on-surface-variant">History & Lore</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-on-surface whitespace-pre-wrap">{campaign.history}</p>
+              </CardContent>
+            </Card>
+          )}
+          
+          {campaign.pantheon && (
+            <Card className="md:col-span-2 lg:col-span-3">
+              <CardHeader>
+                <CardTitle className="text-sm font-medium text-on-surface-variant">Pantheon & Deities</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-on-surface whitespace-pre-wrap">{campaign.pantheon}</p>
+              </CardContent>
+            </Card>
           )}
         </div>
 
