@@ -4,6 +4,8 @@ import OpenAI from 'openai'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { checkCache, storeInCache } from '@/lib/generation-cache'
+import { GenerateCampaignSchema } from '@/lib/validators'
+import type { Database } from '@/types/database'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -16,34 +18,33 @@ export async function POST(request: Request) {
 
     if (!user) {
       return NextResponse.json(
-        { error: { message: 'Unauthorized' } },
+        { data: null, error: { message: 'Unauthorized' } },
         { status: 401 }
       )
     }
 
-    const { prompt } = await request.json()
-
-    if (!prompt) {
+    // Validate request body with Zod
+    const body = await request.json()
+    const validation = GenerateCampaignSchema.safeParse(body)
+    
+    if (!validation.success) {
       return NextResponse.json(
-        { error: { message: 'Prompt is required' } },
+        { data: null, error: { message: validation.error.errors[0].message } },
         { status: 400 }
       )
     }
+
+    const { prompt } = validation.data
 
     // Check rate limit
     const rateLimit = await checkRateLimit(user.id, 'campaign')
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { 
-          error: { 
-            message: `Rate limit exceeded. You can generate ${rateLimit.remaining} more campaigns. Resets at ${rateLimit.resetAt.toLocaleTimeString()}.` 
-          } 
-        },
+        { data: null, error: { message: rateLimit.message } },
         { 
           status: 429,
           headers: {
-            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-            'X-RateLimit-Reset': rateLimit.resetAt.toISOString()
+            'X-RateLimit-Reset': rateLimit.resetAt?.toString() || ''
           }
         }
       )
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is not configured')
       return NextResponse.json(
-        { error: { message: 'AI service not configured' } },
+        { data: null, error: { message: 'AI service not configured' } },
         { status: 500 }
       )
     }
@@ -76,24 +77,27 @@ export async function POST(request: Request) {
       if (campaignError) {
         console.error('Error creating campaign from cache:', campaignError)
         return NextResponse.json(
-          { error: { message: 'Failed to create campaign' } },
+          { data: null, error: { message: 'Failed to create campaign' } },
           { status: 500 }
         )
       }
 
       return NextResponse.json({ 
-        campaign: createdCampaign, 
-        suggestedTowns: cached.data.suggestedTowns || [],
-        usage: {
-          tokens: cached.tokensUsed || 0,
-          inputTokens: 0,
-          outputTokens: 0,
-          estimatedCost: '0.000000',
-          model: 'cached',
-          cached: true,
-          cacheId: cached.cacheId,
-          averageRating: cached.averageRating
-        }
+        data: {
+          campaign: createdCampaign, 
+          suggestedTowns: cached.data.suggestedTowns || [],
+          usage: {
+            tokens: cached.tokensUsed || 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            estimatedCost: '0.000000',
+            model: 'cached',
+            cached: true,
+            cacheId: cached.cacheId,
+            averageRating: cached.averageRating
+          }
+        },
+        error: null
       })
     }
 
@@ -101,7 +105,7 @@ export async function POST(request: Request) {
     const moderation = await openai.moderations.create({ input: prompt })
     if (moderation.results[0].flagged) {
       return NextResponse.json(
-        { error: { message: 'Content violates usage policies. Please revise your prompt.' } },
+        { data: null, error: { message: 'Content violates usage policies. Please revise your prompt.' } },
         { status: 400 }
       )
     }
@@ -141,7 +145,7 @@ export async function POST(request: Request) {
     if (campaignError) {
       console.error('Error creating campaign:', campaignError)
       return NextResponse.json(
-        { error: { message: 'Failed to create campaign in DB' } },
+        { data: null, error: { message: 'Failed to create campaign in DB' } },
         { status: 500 }
       )
     }
@@ -174,22 +178,25 @@ export async function POST(request: Request) {
     )
 
     return NextResponse.json({ 
-      campaign: createdCampaign, 
-      suggestedTowns: suggestedTowns || [],
-      usage: {
-        tokens: totalTokens,
-        inputTokens,
-        outputTokens,
-        estimatedCost: estimatedCost.toFixed(6),
-        model: 'gpt-4o-mini',
-        cached: false,
-        cacheId
-      }
+      data: {
+        campaign: createdCampaign, 
+        suggestedTowns: suggestedTowns || [],
+        usage: {
+          tokens: totalTokens,
+          inputTokens,
+          outputTokens,
+          estimatedCost: estimatedCost.toFixed(6),
+          model: 'gpt-4o-mini',
+          cached: false,
+          cacheId
+        }
+      },
+      error: null
     })
   } catch (error) {
     console.error('AI campaign generation failed:', error)
     return NextResponse.json(
-      { error: { message: (error as Error).message || 'Unknown error' } },
+      { data: null, error: { message: (error as Error).message || 'Unknown error' } },
       { status: 500 }
     )
   }

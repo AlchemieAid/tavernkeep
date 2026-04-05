@@ -15,7 +15,7 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
 export async function checkRateLimit(
   userId: string,
   generationType: 'campaign' | 'town' | 'shop' | 'item'
-): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date; message: string }> {
   const supabase = await createClient()
   const config = RATE_LIMITS[generationType]
   
@@ -37,7 +37,8 @@ export async function checkRateLimit(
     return {
       allowed: true,
       remaining: config.maxRequests,
-      resetAt: new Date(Date.now() + config.windowMinutes * 60 * 1000)
+      resetAt: new Date(Date.now() + config.windowMinutes * 60 * 1000),
+      message: `You have ${config.maxRequests} ${generationType} generations remaining.`
     }
   }
 
@@ -45,9 +46,14 @@ export async function checkRateLimit(
   const remaining = Math.max(0, config.maxRequests - requestCount)
   const resetAt = new Date(Date.now() + config.windowMinutes * 60 * 1000)
 
+  const allowed = requestCount < config.maxRequests
+  
   return {
-    allowed: requestCount < config.maxRequests,
+    allowed,
     remaining,
-    resetAt
+    resetAt,
+    message: allowed 
+      ? `You have ${remaining} ${generationType} generations remaining.`
+      : `Rate limit exceeded. You can generate ${remaining} more ${generationType}s. Resets at ${resetAt.toLocaleTimeString()}.`
   }
 }
