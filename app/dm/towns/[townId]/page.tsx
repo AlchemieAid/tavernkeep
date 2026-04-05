@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { ActionMenu } from '@/components/shared/delete-menu'
 import { Pencil } from 'lucide-react'
+import { AINotablePersonGenerator } from '@/components/dm/ai-notable-person-generator'
 
 export default async function TownPage({
   params,
@@ -167,6 +168,11 @@ export default async function TownPage({
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Notable People</h2>
+          
+          <div className="mb-6">
+            <AINotablePersonGenerator townId={townId} />
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {notablePeople?.map((person) => (
               <Card key={person.id}>
@@ -179,7 +185,7 @@ export default async function TownPage({
                       </CardDescription>
                     </div>
                     <ActionMenu
-                      itemType="notable person"
+                      itemType="notable-person"
                       itemId={person.id}
                       editPath={`/dm/notable-people/${person.id}/edit`}
                       onDelete={async (id) => {
@@ -217,7 +223,7 @@ export default async function TownPage({
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="body-lg text-on-surface-variant">
-                  No notable people yet. They will be generated automatically when you create a town.
+                  No notable people yet. Use the generator above to create interesting characters for your town.
                 </p>
               </CardContent>
             </Card>

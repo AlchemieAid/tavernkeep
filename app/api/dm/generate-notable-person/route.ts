@@ -103,17 +103,19 @@ export async function POST(request: Request) {
       throw new Error('Invalid response from AI: missing notable people data')
     }
 
-    // Insert all notable people into database
-    const peopleToInsert = notablePeople.map((person: any) => ({
-      town_id: townId,
-      dm_id: user.id,
-      name: person.name,
-      race: person.race,
-      role: person.role,
-      backstory: person.backstory,
-      motivation: person.motivation,
-      personality_traits: person.personality_traits,
-    }))
+    // Insert all notable people into database with truncation
+    const peopleToInsert = notablePeople.map((person: any) => 
+      truncateFields({
+        town_id: townId,
+        dm_id: user.id,
+        name: person.name,
+        race: person.race,
+        role: person.role,
+        backstory: person.backstory,
+        motivation: person.motivation,
+        personality_traits: person.personality_traits || [],
+      }, NOTABLE_PERSON_FIELD_MAP)
+    )
 
     const { data: createdPeople, error: peopleError } = await supabase
       .from('notable_people')

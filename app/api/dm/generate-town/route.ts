@@ -99,10 +99,10 @@ export async function POST(request: Request) {
     const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
     console.log('Generated town data:', JSON.stringify(generatedData, null, 2))
     
-    const { town, suggestedShops } = generatedData
+    const { town, notablePeople, suggestedShops } = generatedData
 
     console.log('Creating town in database...')
-    // Truncate town data to ensure field limits
+    // Truncate town data to ensure field limits (don't include ruler field yet)
     const townData = truncateFields({
       campaign_id: campaignId,
       dm_id: user.id,
@@ -111,7 +111,6 @@ export async function POST(request: Request) {
       population: town.population,
       size: town.size,
       location: town.location,
-      ruler: town.ruler,
       political_system: town.political_system,
       history: town.history,
     }, TOWN_FIELD_MAP)
@@ -128,6 +127,48 @@ export async function POST(request: Request) {
         { error: { message: 'Failed to create town in DB' } },
         { status: 500 }
       )
+    }
+
+    // Create notable people for the town
+    let rulerName: string | null = null
+    if (notablePeople && Array.isArray(notablePeople) && notablePeople.length > 0) {
+      console.log(`Creating ${notablePeople.length} notable people...`)
+      
+      const notablePeopleData = notablePeople.map((person: any) => 
+        truncateFields({
+          town_id: (createdTown as any).id,
+          dm_id: user.id,
+          name: person.name,
+          race: person.race,
+          role: person.role,
+          backstory: person.backstory,
+          motivation: person.motivation,
+          personality_traits: person.personality_traits || [],
+        }, NOTABLE_PERSON_FIELD_MAP)
+      )
+
+      const { data: createdPeople, error: peopleError } = await supabase
+        .from('notable_people')
+        .insert(notablePeopleData as any)
+        .select()
+
+      if (peopleError) {
+        console.error('Error creating notable people:', peopleError)
+      } else {
+        console.log(`Created ${createdPeople.length} notable people`)
+        
+        // Find the ruler and update town with their name
+        const ruler = createdPeople.find((p: any) => p.role === 'ruler')
+        if (ruler) {
+          rulerName = ruler.name
+          await supabase
+            .from('towns')
+            .update({ ruler: rulerName } as any)
+            .eq('id', (createdTown as any).id)
+          
+          console.log(`Set town ruler to: ${rulerName}`)
+        }
+      }
     }
 
     // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
@@ -149,7 +190,7 @@ export async function POST(request: Request) {
     } as any)
 
     return NextResponse.json({ 
-      town: { ...createdTown, ruler: rulerName || createdTown.ruler },
+      town: { ...(createdTown as any), ruler: rulerName || (createdTown as any).ruler },
       notablePeople: notablePeople || [],
       suggestedShops: suggestedShops || [],
       usage: {
