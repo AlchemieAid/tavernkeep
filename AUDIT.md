@@ -233,6 +233,50 @@
 
 ## 🆕 New Requirements (2026-04-05)
 
+### Edit Functionality for All Entities
+**Status**: Not Started  
+**Priority**: High
+
+**Requirement**: Add full edit capability for all entities with all parameters visible and editable.
+
+**Entities to Support**:
+1. **Campaigns** - Edit all fields including new parameters (ruleset, setting, history, currency, pantheon)
+2. **Towns** - Edit all fields including new parameters (population, size, location, ruler, political_system, history)
+3. **Notable People** - Edit all fields (name, race, role, backstory, motivation, personality_traits)
+4. **Shops** - Edit all fields including new parameters (notable_person_id, reputation, size, security, operating_hours, special_services)
+5. **Items** - Edit all fields including new parameters (attunement_required, cursed, identified, crafting_time_days, source)
+
+**UI Requirements**:
+- ✅ Add "Edit" option to all kebab menus (three-dot menus)
+- ✅ Add dedicated "Edit" button to main detail view of each entity
+- ✅ Display ALL parameters in detail view (not just name/description)
+- ✅ Edit forms must include ALL parameters with appropriate input types:
+  - Text inputs for strings
+  - Number inputs for integers
+  - Dropdowns for enums
+  - Textareas for long text
+  - Checkboxes for booleans
+  - Array inputs for text arrays
+- ✅ Form validation using existing Zod schemas
+- ✅ Success/error feedback after save
+- ✅ Cancel button to discard changes
+
+**Implementation Tasks**:
+- ❌ Create `/app/(dm)/campaigns/[campaignId]/edit/page.tsx`
+- ❌ Create `/app/(dm)/towns/[townId]/edit/page.tsx`
+- ❌ Create `/app/(dm)/notable-people/[personId]/edit/page.tsx`
+- ❌ Create `/app/(dm)/shops/[shopId]/edit/page.tsx`
+- ❌ Create `/app/(dm)/items/[itemId]/edit/page.tsx`
+- ❌ Add edit buttons to all detail views
+- ❌ Add edit options to all kebab menus
+- ❌ Update detail views to show all parameters
+- ❌ Create API PATCH endpoints for all entities
+- ❌ Add optimistic updates for better UX
+
+---
+
+## 🆕 New Requirements (2026-04-05) - Database Schema
+
 ### Campaign-Level Parameters
 **Status**: ✅ Database Applied | ⚠️ UI Pending  
 **Priority**: High
