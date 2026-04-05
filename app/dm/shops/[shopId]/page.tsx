@@ -134,14 +134,14 @@ export default async function ShopEditorPage({
                       {item.is_hidden && (
                         <form action={toggleItemVisibility.bind(null, item.id, item.is_hidden)}>
                           <Button type="submit" size="sm" variant="outline" title="Reveal to Players">
-                            <Eye className="w-4 h-4" />
+                            <EyeOff className="w-4 h-4" />
                           </Button>
                         </form>
                       )}
                       {!item.is_hidden && item.hidden_condition && (
                         <form action={toggleItemVisibility.bind(null, item.id, item.is_hidden)}>
                           <Button type="submit" size="sm" variant="outline" title="Hide from Players">
-                            <EyeOff className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </Button>
                         </form>
                       )}
