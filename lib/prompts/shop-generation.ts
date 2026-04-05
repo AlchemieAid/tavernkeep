@@ -7,7 +7,7 @@ Return a JSON object with this exact structure:
     "shop_type": "general_store" | "blacksmith" | "apothecary" | "magic_shop" | "tavern" | "temple" | "specialty",
     "location_descriptor": "Brief location description",
     "economic_tier": "destitute" | "squalid" | "poor" | "modest" | "comfortable" | "wealthy" | "aristocratic",
-    "inventory_volatility": "static" | "slow" | "moderate" | "high",
+    "inventory_volatility": "static" | "slow" | "moderate" | "fast",
     "keeper_name": "Shopkeeper name",
     "keeper_race": "Race (optional)",
     "keeper_personality": "Brief personality description",

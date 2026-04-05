@@ -154,69 +154,136 @@ export default async function TownPage({
         )}
       </div>
 
-      <div className="flex gap-4">
-        <Button asChild>
-          <Link href={`/dm/towns/${townId}/shops/new`}>Create Shop</Link>
-        </Button>
-        {activeShop && (
-          <Button asChild variant="outline">
-            <Link href={`/dm/shops/${activeShop.id}/qr`}>
-              View Active Shop QR Code
-            </Link>
-            </Button>
-          )}
+      <div>
+        <h2 className="headline-sm text-on-surface mb-4">Notable People</h2>
+        
+        <div className="mb-6">
+          <AINotablePersonGenerator townId={townId} />
         </div>
 
-        <div>
-          <h2 className="headline-sm text-on-surface mb-4">Notable People</h2>
-          
-          <div className="mb-6">
-            <AINotablePersonGenerator townId={townId} />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {notablePeople?.map((person) => (
-              <Card key={person.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{person.name}</CardTitle>
-                      <CardDescription className="capitalize">
-                        {person.race} · {person.role?.replace('_', ' ')}
-                      </CardDescription>
-                    </div>
-                    <ActionMenu
-                      itemType="notable-person"
-                      itemId={person.id}
-                      editPath={`/dm/notable-people/${person.id}/edit`}
-                      onDelete={async (id) => {
-                        'use server'
-                        const supabase = await createClient()
-                        await supabase
-                          .from('notable_people')
-                          .delete()
-                          .eq('id', id)
-                          .eq('dm_id', user.id)
-                        revalidatePath(`/dm/towns/${townId}`)
-                      }}
-                    />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {notablePeople?.map((person) => (
+            <Card key={person.id}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle>{person.name}</CardTitle>
+                    <CardDescription className="capitalize">
+                      {person.race} · {person.role?.replace('_', ' ')}
+                    </CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {person.backstory && (
-                    <p className="text-sm text-on-surface-variant">{person.backstory}</p>
-                  )}
-                  {person.personality_traits && person.personality_traits.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {person.personality_traits.map((trait, idx) => (
-                        <span key={idx} className="text-xs px-2 py-1 bg-surface-variant rounded">
-                          {trait}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  <ActionMenu
+                    itemType="notable-person"
+                    itemId={person.id}
+                    editPath={`/dm/notable-people/${person.id}/edit`}
+                    onDelete={async (id) => {
+                      'use server'
+                      const supabase = await createClient()
+                      await supabase
+                        .from('notable_people')
+                        .delete()
+                        .eq('id', id)
+                        .eq('dm_id', user.id)
+                      revalidatePath(`/dm/towns/${townId}`)
+                    }}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {person.backstory && (
+                  <p className="text-sm text-on-surface-variant">{person.backstory}</p>
+                )}
+                {person.personality_traits && person.personality_traits.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {person.personality_traits.map((trait, idx) => (
+                      <span key={idx} className="text-xs px-2 py-1 bg-surface-variant rounded">
+                        {trait}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {!notablePeople?.length && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="body-lg text-on-surface-variant">
+                No notable people yet. Use the generator above to create interesting characters for your town.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <div>
+        <h2 className="headline-sm text-on-surface mb-4">Shops</h2>
+        
+        <div className="grid gap-4 md:grid-cols-2 mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create Shop Manually</CardTitle>
+              <CardDescription>
+                Build a custom shop with your own details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link href={`/dm/towns/${townId}/shops/new`}>Create Shop</Link>
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
+        </div>
+
+        {activeShop && (
+          <div className="mb-4">
+            <Button asChild variant="outline">
+              <Link href={`/dm/shops/${activeShop.id}/qr`}>
+                View Active Shop QR Code
+              </Link>
+            </Button>
+          </div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {shops?.map((shop) => (
+            <Card key={shop.id} className={shop.is_active ? 'ring-2 ring-gold' : ''}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle>{shop.name}</CardTitle>
+                  <ActionMenu
+                    itemType="shop"
+                    itemId={shop.id}
+                    editPath={`/dm/shops/${shop.id}/edit`}
+                    onDelete={async (id) => {
+                      'use server'
+                      await deleteShop(id)
+                    }}
+                  />
+                </div>
+                <CardDescription>
+                  {shop.shop_type} · {shop.economic_tier}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/dm/shops/${shop.id}`}>
+                    Manage Shop
+                  </Link>
+                </Button>
+                {shop.is_active && (
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/shop/${shop.slug}`} target="_blank">
+                      View Public Shop
+                    </Link>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
             ))}
           </div>
 
