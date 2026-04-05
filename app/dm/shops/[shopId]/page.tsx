@@ -59,7 +59,7 @@ export default async function ShopEditorPage({
     revalidatePath(`/dm/shops/${shopId}`)
   }
 
-  async function toggleItemVisibility(itemId: string, currentlyHidden: boolean) {
+  async function toggleItemVisibility(formData: FormData) {
     'use server'
     
     const supabase = await createClient()
@@ -68,6 +68,9 @@ export default async function ShopEditorPage({
     if (!user) {
       redirect('/login')
     }
+
+    const itemId = formData.get('itemId') as string
+    const currentlyHidden = formData.get('currentlyHidden') === 'true'
 
     console.log('Toggling item visibility:', { itemId, currentlyHidden, newValue: !currentlyHidden })
 
@@ -138,14 +141,18 @@ export default async function ShopEditorPage({
                     </div>
                     <div className="flex items-center gap-2">
                       {item.is_hidden && (
-                        <form action={toggleItemVisibility.bind(null, item.id, item.is_hidden)}>
+                        <form action={toggleItemVisibility}>
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <input type="hidden" name="currentlyHidden" value={item.is_hidden.toString()} />
                           <Button type="submit" size="sm" variant="outline" title="Reveal to Players">
                             <EyeOff className="w-4 h-4" />
                           </Button>
                         </form>
                       )}
                       {!item.is_hidden && item.hidden_condition && (
-                        <form action={toggleItemVisibility.bind(null, item.id, item.is_hidden)}>
+                        <form action={toggleItemVisibility}>
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <input type="hidden" name="currentlyHidden" value={item.is_hidden.toString()} />
                           <Button type="submit" size="sm" variant="outline" title="Hide from Players">
                             <Eye className="w-4 h-4" />
                           </Button>
