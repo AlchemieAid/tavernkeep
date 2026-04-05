@@ -78,7 +78,6 @@ export default async function ShopEditorPage({
       .from('items')
       .update({ is_hidden: !currentlyHidden } as any)
       .eq('id', itemId)
-      .eq('dm_id', user.id)
 
     if (error) {
       console.error('Error toggling item visibility:', error)
