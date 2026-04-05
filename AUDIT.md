@@ -234,7 +234,7 @@
 ## 🆕 New Requirements (2026-04-05)
 
 ### Campaign-Level Parameters
-**Status**: Not Started  
+**Status**: ✅ Database Complete | ⚠️ UI Pending  
 **Priority**: High
 
 Add configurable parameters that inform AI generation:
@@ -245,45 +245,45 @@ Add configurable parameters that inform AI generation:
 - ✅ Pantheon/deities
 - ✅ Other global variables
 
-**Database Changes Needed**:
-- Add columns to `campaigns` table for ruleset, setting, history, currency, pantheon
-- Update Campaign type in `types/database.ts`
-- Create migration for new columns
+**Database Changes** ✅ COMPLETED:
+- ✅ Migration created: `20260405_add_campaign_parameters.sql`
+- ✅ Campaign type updated in `types/database.ts`
+- ✅ Zod validators updated in `lib/validators/campaign.ts`
 
 **UI Changes Needed**:
-- Update campaign creation form
-- Update campaign edit page
-- Add fields to AI generation prompt builder
+- ❌ Update campaign creation form
+- ❌ Update campaign edit page
+- ❌ Add fields to AI generation prompt builder
 
 ---
 
 ### Town-Level Parameters
-**Status**: Not Started  
+**Status**: ✅ Database Complete | ⚠️ UI Pending  
 **Priority**: High
 
 Add town-specific parameters:
 - ✅ Population size
-- ✅ Geographic size
-- ✅ Geographic location (desert, forest, wilderness, necropolis, arctic, plains, riverside, etc.)
+- ✅ Geographic size (hamlet, village, town, city, metropolis)
+- ✅ Geographic location (desert, forest, wilderness, necropolis, arctic, plains, riverside, coastal, mountain, swamp, underground, floating, jungle)
 - ✅ Ruler/leadership
-- ✅ Political system
+- ✅ Political system (monarchy, democracy, oligarchy, theocracy, anarchy, military, tribal, merchant_guild, magocracy)
 - ✅ History
 - ✅ Notable figures reference
 
-**Database Changes Needed**:
-- Add columns to `towns` table for population, size, location, ruler, political_system, history
-- Update Town type in `types/database.ts`
-- Create migration for new columns
+**Database Changes** ✅ COMPLETED:
+- ✅ Migration created: `20260405_add_town_parameters.sql`
+- ✅ Town type updated in `types/database.ts` with enums
+- ✅ Zod validators updated in `lib/validators/town.ts`
 
 **UI Changes Needed**:
-- Update town creation form
-- Update town edit page
-- Add fields to AI generation prompt builder
+- ❌ Update town creation form
+- ❌ Update town edit page
+- ❌ Add fields to AI generation prompt builder
 
 ---
 
 ### Notable People System (NEW ENTITY)
-**Status**: Not Started  
+**Status**: ✅ Database Complete | ⚠️ UI Pending  
 **Priority**: High
 
 **Major Architectural Change**: Replace "Shop Keepers" with "Notable People" entity.
@@ -295,36 +295,29 @@ Add town-specific parameters:
 - Each town can have multiple Notable People
 - Notable People should have their own dropdown navigation (like campaigns/towns/shops)
 
-**Database Changes Needed**:
-- Create new `notable_people` table:
-  - `id` (uuid)
-  - `town_id` (uuid, FK → towns)
-  - `dm_id` (uuid, FK → profiles)
-  - `name` (text)
-  - `race` (text)
-  - `role` (enum: 'shopkeeper', 'quest_giver', 'ruler', 'priest', 'magician', 'merchant', 'guard', 'noble', 'commoner', etc.)
-  - `backstory` (text)
-  - `motivation` (text)
-  - `personality_traits` (text[])
-  - `image_url` (text, nullable)
-  - `created_at` (timestamp)
-  - `updated_at` (timestamp)
-
-- Modify `shops` table:
-  - Remove: `keeper_name`, `keeper_race`, `keeper_backstory`, `keeper_motivation`, `keeper_personality_traits`, `keeper_image_url`
-  - Add: `notable_person_id` (uuid, FK → notable_people, nullable)
+**Database Changes** ✅ COMPLETED:
+- ✅ Migration created: `20260405_create_notable_people.sql`
+- ✅ Full `notable_people` table with RLS policies
+- ✅ Roles enum: shopkeeper, quest_giver, ruler, priest, magician, merchant, guard, noble, commoner, blacksmith, innkeeper, healer, scholar, criminal, artisan
+- ✅ Indexes for performance
+- ✅ Updated_at trigger
+- ✅ Migration created: `20260405_refactor_shops_for_notable_people.sql`
+- ✅ Added `notable_person_id` to shops table
+- ✅ Legacy keeper fields marked DEPRECATED (kept for backward compatibility)
+- ✅ NotablePerson type added to `types/database.ts`
+- ✅ Zod validators created in `lib/validators/notable-person.ts`
 
 **UI Changes Needed**:
-- Create Notable People CRUD pages
-- Add Notable People to navigation dropdown
-- Update shop creation/edit to assign from Notable People list
-- Create Notable People AI generator
-- Update shop AI generator to optionally create Notable Person
+- ❌ Create Notable People CRUD pages
+- ❌ Add Notable People to navigation dropdown
+- ❌ Update shop creation/edit to assign from Notable People list
+- ❌ Create Notable People AI generator
+- ❌ Update shop AI generator to optionally create Notable Person
 
 ---
 
 ### Shop Parameter Analysis
-**Status**: Not Started  
+**Status**: ✅ Database Complete | ⚠️ UI Pending  
 **Priority**: Medium
 
 **Current Parameters** (already good):
@@ -332,17 +325,20 @@ Add town-specific parameters:
 - price_modifier, haggle_enabled, haggle_dc
 - inventory_volatility, last_restocked_at
 
-**Potential Additions**:
+**New Additions** ✅ COMPLETED:
 - ✅ `shop_reputation` (enum: 'unknown', 'poor', 'fair', 'good', 'excellent')
 - ✅ `shop_size` (enum: 'tiny', 'small', 'medium', 'large', 'massive')
 - ✅ `shop_security` (enum: 'none', 'basic', 'moderate', 'high', 'fortress')
 - ✅ `operating_hours` (text) - e.g., "Dawn to dusk", "24/7", "Evenings only"
 - ✅ `special_services` (text[]) - e.g., ["Repairs", "Custom orders", "Appraisals"]
+- ✅ Migration created: `20260405_refactor_shops_for_notable_people.sql`
+- ✅ Shop type updated in `types/database.ts`
+- ✅ Zod validators updated in `lib/validators/shop.ts`
 
 ---
 
 ### Item Parameter Analysis
-**Status**: Not Started  
+**Status**: ✅ Database Complete | ⚠️ UI Pending  
 **Priority**: Low
 
 **Current Parameters** (already comprehensive):
@@ -352,12 +348,15 @@ Add town-specific parameters:
 - weight_lbs, properties (jsonb)
 - expires_at, deleted_at
 
-**Potential Additions**:
+**New Additions** ✅ COMPLETED:
 - ✅ `attunement_required` (boolean)
 - ✅ `cursed` (boolean)
 - ✅ `identified` (boolean) - for mystery items
 - ✅ `crafting_time_days` (int, nullable) - for custom orders
-- ✅ `source` (enum: 'purchased', 'crafted', 'looted', 'generated') - tracking provenance
+- ✅ `source` (enum: 'purchased', 'crafted', 'looted', 'generated', 'quest_reward', 'gift')
+- ✅ Migration created: `20260405_add_item_parameters.sql`
+- ✅ Item type updated in `types/database.ts`
+- ✅ Zod validators updated in `lib/validators/item.ts`
 
 ---
 
