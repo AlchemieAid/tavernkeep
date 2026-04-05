@@ -1,0 +1,53 @@
+import { createClient } from '@/lib/supabase/server'
+
+interface RateLimitConfig {
+  maxRequests: number
+  windowMinutes: number
+}
+
+const RATE_LIMITS: Record<string, RateLimitConfig> = {
+  campaign: { maxRequests: 5, windowMinutes: 60 }, // 5 campaigns per hour
+  town: { maxRequests: 10, windowMinutes: 60 },    // 10 towns per hour
+  shop: { maxRequests: 20, windowMinutes: 60 },    // 20 shops per hour
+  item: { maxRequests: 50, windowMinutes: 60 },    // 50 items per hour
+}
+
+export async function checkRateLimit(
+  userId: string,
+  generationType: 'campaign' | 'town' | 'shop' | 'item'
+): Promise<{ allowed: boolean; remaining: number; resetAt: Date }> {
+  const supabase = await createClient()
+  const config = RATE_LIMITS[generationType]
+  
+  // Calculate time window
+  const windowStart = new Date()
+  windowStart.setMinutes(windowStart.getMinutes() - config.windowMinutes)
+
+  // Count requests in the current window
+  const { data, error } = await supabase
+    .from('ai_usage')
+    .select('id', { count: 'exact', head: true })
+    .eq('dm_id', userId)
+    .eq('generation_type', generationType)
+    .gte('created_at', windowStart.toISOString())
+
+  if (error) {
+    console.error('Rate limit check error:', error)
+    // Fail open - allow the request if we can't check
+    return {
+      allowed: true,
+      remaining: config.maxRequests,
+      resetAt: new Date(Date.now() + config.windowMinutes * 60 * 1000)
+    }
+  }
+
+  const requestCount = data?.length || 0
+  const remaining = Math.max(0, config.maxRequests - requestCount)
+  const resetAt = new Date(Date.now() + config.windowMinutes * 60 * 1000)
+
+  return {
+    allowed: requestCount < config.maxRequests,
+    remaining,
+    resetAt
+  }
+}

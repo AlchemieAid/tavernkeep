@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -25,6 +26,25 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: { message: 'Prompt is required' } },
         { status: 400 }
+      )
+    }
+
+    // Check rate limit
+    const rateLimit = await checkRateLimit(user.id, 'campaign')
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { 
+          error: { 
+            message: `Rate limit exceeded. You can generate ${rateLimit.remaining} more campaigns. Resets at ${rateLimit.resetAt.toLocaleTimeString()}.` 
+          } 
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+            'X-RateLimit-Reset': rateLimit.resetAt.toISOString()
+          }
+        }
       )
     }
 
