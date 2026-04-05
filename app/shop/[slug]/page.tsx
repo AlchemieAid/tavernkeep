@@ -26,10 +26,10 @@ export default async function PlayerShopPage({
     .from('items')
     .select('*')
     .eq('shop_id', shop.id)
-    .eq('is_hidden', false)
     .is('deleted_at', null)
     .gt('stock_quantity', 0)
-    .order('rarity', { ascending: false })
+    .or('is_hidden.eq.false,and(is_hidden.eq.true,reveal_state.eq.true)')
+    .order('added_at', { ascending: true })
     .order('name', { ascending: true })
 
   const finalPrice = (basePrice: number) => {

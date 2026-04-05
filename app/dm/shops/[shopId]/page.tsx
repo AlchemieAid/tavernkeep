@@ -39,7 +39,8 @@ export default async function ShopEditorPage({
     .select('*')
     .eq('shop_id', shopId)
     .is('deleted_at', null)
-    .order('added_at', { ascending: false })
+    .order('added_at', { ascending: true })
+    .order('name', { ascending: true })
 
   async function deleteItem(itemId: string) {
     'use server'
