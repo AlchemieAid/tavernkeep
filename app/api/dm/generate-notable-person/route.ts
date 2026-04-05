@@ -59,16 +59,17 @@ export async function POST(request: Request) {
     }
 
     // Verify town ownership and get context
-    const { data: town } = await supabase
+    const { data: town, error: townError } = await supabase
       .from('towns')
-      .select('id, name, description, campaign_id, campaigns(name, description, ruleset, setting, history, currency, pantheon)')
+      .select('id, name, description, campaign_id, campaigns(name, description, ruleset, setting, history, currency_name, currency_description, pantheon)')
       .eq('id', townId)
       .eq('dm_id', user.id)
       .single()
 
-    if (!town) {
+    if (townError || !town) {
+      console.error('Town lookup error:', townError)
       return NextResponse.json(
-        { data: null, error: { message: 'Town not found' } },
+        { data: null, error: { message: 'Town not found or access denied' } },
         { status: 404 }
       )
     }
@@ -81,6 +82,8 @@ export async function POST(request: Request) {
       campaign.description,
       campaign.setting && `Setting: ${campaign.setting}`,
       campaign.ruleset && `Ruleset: ${campaign.ruleset}`,
+      campaign.currency_name && `Currency: ${campaign.currency_name}${campaign.currency_description ? ` (${campaign.currency_description})` : ''}`,
+      campaign.pantheon && `Pantheon: ${campaign.pantheon}`,
     ].filter(Boolean).join('\n') : undefined
 
     console.log('Generating notable person(s) with prompt:', prompt, 'count:', count, 'role:', role)
