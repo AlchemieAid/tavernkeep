@@ -27,11 +27,11 @@ export async function NavHeader() {
             <h1 className="headline-sm text-gold">TavernKeep</h1>
           </Link>
           
-          <didiv className="flex items-center gap-3">
-              <v classNamge />
-              <AIUsaeeCount=r />
-           "<fdivlex items-center gap-4">
-            <VersionBadge />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <VersionBadge />
+              <AIUsageCounter />
+            </div>
             <ProfileMenu 
               userEmail={user.email || null}
               displayName={profile?.display_name || null}
