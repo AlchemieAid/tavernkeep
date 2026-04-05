@@ -157,16 +157,19 @@ export async function POST(request: Request) {
       } else {
         console.log(`Created ${createdPeople.length} notable people`)
         
-        // Find the ruler and update town with their name
+        // Find the ruler and update town with their name and ID
         const ruler = createdPeople.find((p: any) => p.role === 'ruler')
         if (ruler) {
           rulerName = ruler.name
           await supabase
             .from('towns')
-            .update({ ruler: rulerName } as any)
+            .update({ 
+              ruler: rulerName,
+              ruler_id: ruler.id 
+            } as any)
             .eq('id', (createdTown as any).id)
           
-          console.log(`Set town ruler to: ${rulerName}`)
+          console.log(`Set town ruler to: ${rulerName} (ID: ${ruler.id})`)
         }
       }
     }

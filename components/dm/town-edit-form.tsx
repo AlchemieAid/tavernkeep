@@ -210,7 +210,7 @@ export function TownEditForm({ town, notablePeople }: TownEditFormProps) {
             <div className="space-y-2">
               <Label htmlFor="ruler_id">Ruler / Leadership</Label>
               <Select
-                value={formData.ruler_id}
+                value={formData.ruler_id || undefined}
                 onValueChange={(value) => setFormData({ ...formData, ruler_id: value })}
                 disabled={isSaving}
               >

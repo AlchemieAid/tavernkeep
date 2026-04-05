@@ -87,8 +87,10 @@ export async function PATCH(
       .single()
 
     if (error) {
+      console.error('Town update error:', error)
+      console.error('Update data:', updateData)
       return NextResponse.json(
-        { error: { message: 'Failed to update town' } },
+        { error: { message: `Failed to update town: ${error.message}` } },
         { status: 500 }
       )
     }
