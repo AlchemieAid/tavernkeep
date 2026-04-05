@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 
 const notablePersonRoleEnum = z.enum([
   'shopkeeper', 'quest_giver', 'ruler', 'priest', 'magician',
@@ -8,21 +9,21 @@ const notablePersonRoleEnum = z.enum([
 
 export const CreateNotablePersonSchema = z.object({
   town_id: z.string().uuid('Invalid town ID'),
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
-  race: z.string().max(50).optional().nullable(),
+  name: z.string().min(1, 'Name is required').max(FIELD_LIMITS.NOTABLE_PERSON_NAME, 'Name too long'),
+  race: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_RACE).optional().nullable(),
   role: notablePersonRoleEnum,
-  backstory: z.string().max(2000).optional().nullable(),
-  motivation: z.string().max(500).optional().nullable(),
+  backstory: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY).optional().nullable(),
+  motivation: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION).optional().nullable(),
   personality_traits: z.array(z.string().max(100)).max(10).optional().nullable(),
   image_url: z.string().url().optional().nullable(),
 })
 
 export const UpdateNotablePersonSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long').optional(),
-  race: z.string().max(50).optional().nullable(),
+  name: z.string().min(1, 'Name is required').max(FIELD_LIMITS.NOTABLE_PERSON_NAME, 'Name too long').optional(),
+  race: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_RACE).optional().nullable(),
   role: notablePersonRoleEnum.optional(),
-  backstory: z.string().max(2000).optional().nullable(),
-  motivation: z.string().max(500).optional().nullable(),
+  backstory: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY).optional().nullable(),
+  motivation: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION).optional().nullable(),
   personality_traits: z.array(z.string().max(100)).max(10).optional().nullable(),
   image_url: z.string().url().optional().nullable(),
 })

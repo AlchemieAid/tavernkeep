@@ -178,6 +178,21 @@ export default async function TownPage({
                         {person.race} · {person.role?.replace('_', ' ')}
                       </CardDescription>
                     </div>
+                    <ActionMenu
+                      itemType="notable person"
+                      itemId={person.id}
+                      editPath={`/dm/notable-people/${person.id}/edit`}
+                      onDelete={async (id) => {
+                        'use server'
+                        const supabase = await createClient()
+                        await supabase
+                          .from('notable_people')
+                          .delete()
+                          .eq('id', id)
+                          .eq('dm_id', user.id)
+                        revalidatePath(`/dm/towns/${townId}`)
+                      }}
+                    />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
