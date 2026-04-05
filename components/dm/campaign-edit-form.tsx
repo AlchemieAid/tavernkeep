@@ -17,7 +17,8 @@ interface Campaign {
   ruleset: string | null
   setting: string | null
   history: string | null
-  currency: string | null
+  currency_name: string | null
+  currency_description: string | null
   pantheon: string | null
 }
 
@@ -35,7 +36,8 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
     ruleset: campaign.ruleset || '5e',
     setting: campaign.setting || '',
     history: campaign.history || '',
-    currency: campaign.currency || 'Gold Pieces (gp)',
+    currency_name: campaign.currency_name || 'gp',
+    currency_description: campaign.currency_description || '',
     pantheon: campaign.pantheon || '',
   })
 
@@ -145,14 +147,33 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="currency">Currency System</Label>
+              <Label htmlFor="currency_name">Currency Name</Label>
               <Input
-                id="currency"
-                value={formData.currency}
-                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                placeholder="e.g., Gold Pieces (gp), Silver Crowns"
+                id="currency_name"
+                value={formData.currency_name}
+                onChange={(e) => setFormData({ ...formData, currency_name: e.target.value })}
+                placeholder="e.g., gp, sc, drakes"
                 disabled={isSaving}
+                maxLength={20}
               />
+              <p className="text-xs text-on-surface-variant">
+                Short currency abbreviation used for item pricing (max 20 characters)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currency_description">Currency Description</Label>
+              <Input
+                id="currency_description"
+                value={formData.currency_description}
+                onChange={(e) => setFormData({ ...formData, currency_description: e.target.value })}
+                placeholder="e.g., Gold Pieces (gp), Silver Crowns (sc), Copper Bits (cb)"
+                disabled={isSaving}
+                maxLength={200}
+              />
+              <p className="text-xs text-on-surface-variant">
+                Full description of currency system (optional)
+              </p>
             </div>
           </CardContent>
         </Card>

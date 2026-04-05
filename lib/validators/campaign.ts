@@ -6,7 +6,8 @@ export const CreateCampaignSchema = z.object({
   ruleset: z.string().max(50).default('5e'),
   setting: z.string().max(200).optional().nullable(),
   history: z.string().max(2000).optional().nullable(),
-  currency: z.string().max(100).default('Gold Pieces (gp)'),
+  currency_name: z.string().max(20).default('gp'),
+  currency_description: z.string().max(200).optional().nullable(),
   pantheon: z.string().max(1000).optional().nullable(),
 })
 
@@ -16,7 +17,8 @@ export const UpdateCampaignSchema = z.object({
   ruleset: z.string().max(50).optional(),
   setting: z.string().max(200).optional().nullable(),
   history: z.string().max(2000).optional().nullable(),
-  currency: z.string().max(100).optional(),
+  currency_name: z.string().max(20).optional(),
+  currency_description: z.string().max(200).optional().nullable(),
   pantheon: z.string().max(1000).optional().nullable(),
 })
 

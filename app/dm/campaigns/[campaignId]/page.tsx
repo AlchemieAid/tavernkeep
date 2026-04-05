@@ -100,13 +100,16 @@ export default async function CampaignPage({
             </Card>
           )}
           
-          {campaign.currency && (
+          {campaign.currency_name && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium text-on-surface-variant">Currency</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-on-surface">{campaign.currency}</p>
+                <p className="text-on-surface font-semibold">{campaign.currency_name}</p>
+                {campaign.currency_description && (
+                  <p className="text-sm text-on-surface-variant mt-1">{campaign.currency_description}</p>
+                )}
               </CardContent>
             </Card>
           )}

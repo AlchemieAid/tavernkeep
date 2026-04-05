@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     // Verify campaign ownership and get context
     const { data: campaign } = await supabase
       .from('campaigns')
-      .select('id, name, description, ruleset, setting, history, currency, pantheon')
+      .select('id, name, description, ruleset, setting, history, currency_name, currency_description, pantheon')
       .eq('id', campaignId)
       .eq('dm_id', user.id)
       .single()
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       campaign.setting && `Setting: ${campaign.setting}`,
       campaign.ruleset && `Ruleset: ${campaign.ruleset}`,
       campaign.history && `History: ${campaign.history}`,
-      campaign.currency && `Currency: ${campaign.currency}`,
+      campaign.currency_name && `Currency: ${campaign.currency_name}${campaign.currency_description ? ` (${campaign.currency_description})` : ''}`,
       campaign.pantheon && `Pantheon: ${campaign.pantheon}`
     ].filter(Boolean).join('\n')
 

@@ -73,7 +73,8 @@ export async function POST(request: Request) {
           ruleset: cached.data.campaign.ruleset || '5e',
           setting: cached.data.campaign.setting,
           history: cached.data.campaign.history,
-          currency: cached.data.campaign.currency || 'Gold Pieces (gp)',
+          currency_name: cached.data.campaign.currency_name || 'gp',
+          currency_description: cached.data.campaign.currency_description,
           pantheon: cached.data.campaign.pantheon,
         } as any)
         .select()
@@ -146,7 +147,8 @@ export async function POST(request: Request) {
         ruleset: campaign.ruleset || ruleset || '5e',
         setting: campaign.setting || setting,
         history: campaign.history,
-        currency: campaign.currency || 'Gold Pieces (gp)',
+        currency_name: campaign.currency_name || 'gp',
+        currency_description: campaign.currency_description,
         pantheon: campaign.pantheon,
       } as any)
       .select()
