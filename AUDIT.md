@@ -229,19 +229,185 @@
 
 ---
 
+---
+
+## 🆕 New Requirements (2026-04-05)
+
+### Campaign-Level Parameters
+**Status**: Not Started  
+**Priority**: High
+
+Add configurable parameters that inform AI generation:
+- ✅ Ruleset dropdown (5e, 4e, 3e, 2e, Pathfinder, Traveler, etc.)
+- ✅ Setting/world name
+- ✅ History/lore
+- ✅ Currency system
+- ✅ Pantheon/deities
+- ✅ Other global variables
+
+**Database Changes Needed**:
+- Add columns to `campaigns` table for ruleset, setting, history, currency, pantheon
+- Update Campaign type in `types/database.ts`
+- Create migration for new columns
+
+**UI Changes Needed**:
+- Update campaign creation form
+- Update campaign edit page
+- Add fields to AI generation prompt builder
+
+---
+
+### Town-Level Parameters
+**Status**: Not Started  
+**Priority**: High
+
+Add town-specific parameters:
+- ✅ Population size
+- ✅ Geographic size
+- ✅ Geographic location (desert, forest, wilderness, necropolis, arctic, plains, riverside, etc.)
+- ✅ Ruler/leadership
+- ✅ Political system
+- ✅ History
+- ✅ Notable figures reference
+
+**Database Changes Needed**:
+- Add columns to `towns` table for population, size, location, ruler, political_system, history
+- Update Town type in `types/database.ts`
+- Create migration for new columns
+
+**UI Changes Needed**:
+- Update town creation form
+- Update town edit page
+- Add fields to AI generation prompt builder
+
+---
+
+### Notable People System (NEW ENTITY)
+**Status**: Not Started  
+**Priority**: High
+
+**Major Architectural Change**: Replace "Shop Keepers" with "Notable People" entity.
+
+**Concept**:
+- Notable People are town residents with various roles
+- Some Notable People run shops (shop keepers)
+- Others are quest givers, rulers, priests, magicians, etc.
+- Each town can have multiple Notable People
+- Notable People should have their own dropdown navigation (like campaigns/towns/shops)
+
+**Database Changes Needed**:
+- Create new `notable_people` table:
+  - `id` (uuid)
+  - `town_id` (uuid, FK → towns)
+  - `dm_id` (uuid, FK → profiles)
+  - `name` (text)
+  - `race` (text)
+  - `role` (enum: 'shopkeeper', 'quest_giver', 'ruler', 'priest', 'magician', 'merchant', 'guard', 'noble', 'commoner', etc.)
+  - `backstory` (text)
+  - `motivation` (text)
+  - `personality_traits` (text[])
+  - `image_url` (text, nullable)
+  - `created_at` (timestamp)
+  - `updated_at` (timestamp)
+
+- Modify `shops` table:
+  - Remove: `keeper_name`, `keeper_race`, `keeper_backstory`, `keeper_motivation`, `keeper_personality_traits`, `keeper_image_url`
+  - Add: `notable_person_id` (uuid, FK → notable_people, nullable)
+
+**UI Changes Needed**:
+- Create Notable People CRUD pages
+- Add Notable People to navigation dropdown
+- Update shop creation/edit to assign from Notable People list
+- Create Notable People AI generator
+- Update shop AI generator to optionally create Notable Person
+
+---
+
+### Shop Parameter Analysis
+**Status**: Not Started  
+**Priority**: Medium
+
+**Current Parameters** (already good):
+- shop_type, location_descriptor, economic_tier
+- price_modifier, haggle_enabled, haggle_dc
+- inventory_volatility, last_restocked_at
+
+**Potential Additions**:
+- ✅ `shop_reputation` (enum: 'unknown', 'poor', 'fair', 'good', 'excellent')
+- ✅ `shop_size` (enum: 'tiny', 'small', 'medium', 'large', 'massive')
+- ✅ `shop_security` (enum: 'none', 'basic', 'moderate', 'high', 'fortress')
+- ✅ `operating_hours` (text) - e.g., "Dawn to dusk", "24/7", "Evenings only"
+- ✅ `special_services` (text[]) - e.g., ["Repairs", "Custom orders", "Appraisals"]
+
+---
+
+### Item Parameter Analysis
+**Status**: Not Started  
+**Priority**: Low
+
+**Current Parameters** (already comprehensive):
+- name, description, category, rarity
+- base_price_gp, stock_quantity
+- is_hidden, hidden_condition
+- weight_lbs, properties (jsonb)
+- expires_at, deleted_at
+
+**Potential Additions**:
+- ✅ `attunement_required` (boolean)
+- ✅ `cursed` (boolean)
+- ✅ `identified` (boolean) - for mystery items
+- ✅ `crafting_time_days` (int, nullable) - for custom orders
+- ✅ `source` (enum: 'purchased', 'crafted', 'looted', 'generated') - tracking provenance
+
+---
+
+### AI Generation Wizard (Campaign-Level)
+**Status**: Not Started  
+**Priority**: High
+
+**New Feature**: Multi-step AI generation wizard at campaign level.
+
+**Workflow**:
+1. DM invokes AI at campaign level
+2. Wizard asks: "How many towns should this campaign have?"
+3. AI generates campaign with specified parameters
+4. For each town:
+   - AI generates town with appropriate parameters
+   - AI generates 3-8 Notable People per town (based on population)
+   - AI generates 1-5 shops per town (based on size)
+   - AI assigns Notable People as shop keepers
+   - AI generates 5-20 items per shop (based on shop type/tier)
+
+**Implementation Needs**:
+- New API endpoint: `/api/dm/generate-campaign-wizard`
+- Multi-step UI wizard component
+- Batch generation with progress tracking
+- Transaction handling (all-or-nothing generation)
+- Cost estimation before generation
+- Ability to review and edit before finalizing
+
+---
+
 ## Summary
 
 **Strong Foundation**: The core architecture, AI optimization, and DM features are solid.
 
 **Critical Gaps**: 
-- Zod validation missing
-- Player-facing features incomplete
-- Error boundaries needed
-- TypeScript type issues
+- ✅ Zod validation (COMPLETED)
+- ✅ TypeScript type safety (COMPLETED)
+- ❌ Player-facing features incomplete
+- ❌ Error boundaries needed
+- ❌ Notable People system (NEW - major refactor)
+- ❌ Campaign/Town parameters
+- ❌ AI Generation Wizard
 
 **Recommended Priority**: 
-1. Fix TypeScript/Zod (blocks everything)
-2. Complete AI generators (shop/item)
-3. Build player shop view (core value prop)
-4. Add error boundaries (UX quality)
-5. Image generation (visual polish)
+1. ✅ Fix TypeScript/Zod (COMPLETED)
+2. Database schema updates for new parameters
+3. Notable People entity and migration
+4. Update AI generators with new parameters
+5. Build AI Generation Wizard
+6. Complete remaining AI generators (shop/item)
+7. Build player shop view (core value prop)
+8. Add error boundaries (UX quality)
+9. Image generation (visual polish)
