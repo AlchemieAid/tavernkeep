@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { prompt } = validation.data
+    const { prompt, ruleset, setting } = validation.data
 
     // Check rate limit
     const rateLimit = await checkRateLimit(user.id, 'campaign')
@@ -70,6 +70,11 @@ export async function POST(request: Request) {
           dm_id: user.id,
           name: cached.data.campaign.name,
           description: cached.data.campaign.description,
+          ruleset: cached.data.campaign.ruleset || '5e',
+          setting: cached.data.campaign.setting,
+          history: cached.data.campaign.history,
+          currency: cached.data.campaign.currency || 'Gold Pieces (gp)',
+          pantheon: cached.data.campaign.pantheon,
         } as any)
         .select()
         .single()
@@ -110,12 +115,12 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('Generating campaign with prompt:', prompt)
+    console.log('Generating campaign with prompt:', prompt, 'ruleset:', ruleset, 'setting:', setting)
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Much cheaper than gpt-4o
       messages: [
         { role: 'system', content: CAMPAIGN_GENERATION_SYSTEM_PROMPT },
-        { role: 'user', content: buildCampaignGenerationPrompt(prompt) },
+        { role: 'user', content: buildCampaignGenerationPrompt(prompt, ruleset, setting) },
       ],
       temperature: 0.8,
       response_format: { type: 'json_object' },
@@ -138,6 +143,11 @@ export async function POST(request: Request) {
         dm_id: user.id,
         name: campaign.name,
         description: campaign.description,
+        ruleset: campaign.ruleset || ruleset || '5e',
+        setting: campaign.setting || setting,
+        history: campaign.history,
+        currency: campaign.currency || 'Gold Pieces (gp)',
+        pantheon: campaign.pantheon,
       } as any)
       .select()
       .single()

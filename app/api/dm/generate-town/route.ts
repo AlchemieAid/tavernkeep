@@ -56,10 +56,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify campaign ownership
+    // Verify campaign ownership and get context
     const { data: campaign } = await supabase
       .from('campaigns')
-      .select('id, name, description')
+      .select('id, name, description, ruleset, setting, history, currency, pantheon')
       .eq('id', campaignId)
       .eq('dm_id', user.id)
       .single()
@@ -71,7 +71,16 @@ export async function POST(request: Request) {
       )
     }
 
-    const campaignContext = campaign.description || campaign.name
+    // Build rich campaign context for AI
+    const campaignContext = [
+      campaign.name,
+      campaign.description,
+      campaign.setting && `Setting: ${campaign.setting}`,
+      campaign.ruleset && `Ruleset: ${campaign.ruleset}`,
+      campaign.history && `History: ${campaign.history}`,
+      campaign.currency && `Currency: ${campaign.currency}`,
+      campaign.pantheon && `Pantheon: ${campaign.pantheon}`
+    ].filter(Boolean).join('\n')
 
     console.log('Generating town with prompt:', prompt)
     const completion = await openai.chat.completions.create({
@@ -102,6 +111,12 @@ export async function POST(request: Request) {
         dm_id: user.id,
         name: town.name,
         description: town.description,
+        population: town.population,
+        size: town.size,
+        location: town.location,
+        ruler: town.ruler,
+        political_system: town.political_system,
+        history: town.history,
       })
       .select()
       .single()
@@ -130,7 +145,7 @@ export async function POST(request: Request) {
       output_tokens: outputTokens,
       estimated_cost: estimatedCost,
       model: 'gpt-4o-mini'
-    })
+    } as any)
 
     return NextResponse.json({ 
       town: createdTown, 

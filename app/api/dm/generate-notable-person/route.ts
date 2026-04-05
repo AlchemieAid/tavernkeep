@@ -1,0 +1,168 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import OpenAI from 'openai'
+import { NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT, buildNotablePersonGenerationPrompt } from '@/lib/prompts/notable-person-generation'
+import { checkRateLimit } from '@/lib/rate-limit'
+import { GenerateNotablePersonSchema } from '@/lib/validators'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { data: null, error: { message: 'Unauthorized' } },
+        { status: 401 }
+      )
+    }
+
+    // Validate request body with Zod
+    const body = await request.json()
+    const validation = GenerateNotablePersonSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return NextResponse.json(
+        { data: null, error: { message: validation.error.errors[0].message } },
+        { status: 400 }
+      )
+    }
+
+    const { townId, prompt, role, count } = validation.data
+
+    // Check rate limit (using 'town' rate limit for now, can create separate limit later)
+    const rateLimit = await checkRateLimit(user.id, 'town')
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { data: null, error: { message: rateLimit.message } },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Reset': rateLimit.resetAt?.toString() || ''
+          }
+        }
+      )
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured')
+      return NextResponse.json(
+        { data: null, error: { message: 'AI service not configured' } },
+        { status: 500 }
+      )
+    }
+
+    // Verify town ownership and get context
+    const { data: town } = await supabase
+      .from('towns')
+      .select('id, name, description, campaign_id, campaigns(name, description, ruleset, setting, history, currency, pantheon)')
+      .eq('id', townId)
+      .eq('dm_id', user.id)
+      .single()
+
+    if (!town) {
+      return NextResponse.json(
+        { data: null, error: { message: 'Town not found' } },
+        { status: 404 }
+      )
+    }
+
+    // Build context
+    const townContext = `${town.name}: ${town.description || ''}`
+    const campaign = town.campaigns as any
+    const campaignContext = campaign ? [
+      campaign.name,
+      campaign.description,
+      campaign.setting && `Setting: ${campaign.setting}`,
+      campaign.ruleset && `Ruleset: ${campaign.ruleset}`,
+    ].filter(Boolean).join('\n') : undefined
+
+    console.log('Generating notable person(s) with prompt:', prompt, 'count:', count, 'role:', role)
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT },
+        { role: 'user', content: buildNotablePersonGenerationPrompt(prompt, townContext, campaignContext, role, count) },
+      ],
+      temperature: 0.9, // Higher temperature for more creative NPCs
+      response_format: { type: 'json_object' },
+    })
+
+    console.log('OpenAI response received')
+    const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+    console.log('Generated notable people data:', JSON.stringify(generatedData, null, 2))
+    
+    const { notablePeople } = generatedData
+
+    if (!notablePeople || !Array.isArray(notablePeople) || notablePeople.length === 0) {
+      throw new Error('Invalid response from AI: missing notable people data')
+    }
+
+    // Insert all notable people into database
+    const peopleToInsert = notablePeople.map((person: any) => ({
+      town_id: townId,
+      dm_id: user.id,
+      name: person.name,
+      race: person.race,
+      role: person.role,
+      backstory: person.backstory,
+      motivation: person.motivation,
+      personality_traits: person.personality_traits,
+    }))
+
+    const { data: createdPeople, error: peopleError } = await supabase
+      .from('notable_people')
+      .insert(peopleToInsert as any)
+      .select()
+
+    if (peopleError) {
+      console.error('Error creating notable people:', peopleError)
+      return NextResponse.json(
+        { data: null, error: { message: 'Failed to create notable people in DB' } },
+        { status: 500 }
+      )
+    }
+
+    // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
+    const inputTokens = completion.usage?.prompt_tokens || 0
+    const outputTokens = completion.usage?.completion_tokens || 0
+    const totalTokens = completion.usage?.total_tokens || 0
+    const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+
+    // Track usage in database
+    await supabase.from('ai_usage').insert({
+      dm_id: user.id,
+      generation_type: 'town', // Using 'town' for now
+      prompt,
+      tokens_used: totalTokens,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      estimated_cost: estimatedCost,
+      model: 'gpt-4o-mini'
+    } as any)
+
+    return NextResponse.json({ 
+      data: {
+        notablePeople: createdPeople,
+        usage: {
+          tokens: totalTokens,
+          inputTokens,
+          outputTokens,
+          estimatedCost: estimatedCost.toFixed(6),
+          model: 'gpt-4o-mini'
+        }
+      },
+      error: null
+    })
+  } catch (error) {
+    console.error('AI notable person generation failed:', error)
+    return NextResponse.json(
+      { data: null, error: { message: (error as Error).message || 'Unknown error' } },
+      { status: 500 }
+    )
+  }
+}
