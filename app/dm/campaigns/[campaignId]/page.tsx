@@ -138,8 +138,6 @@ export default async function CampaignPage({
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <AITownGenerator campaignId={campaignId} />
-          
           <Card>
             <CardHeader>
               <CardTitle>Manual Town Creation</CardTitle>
@@ -153,6 +151,8 @@ export default async function CampaignPage({
               </Button>
             </CardContent>
           </Card>
+          
+          <AITownGenerator campaignId={campaignId} />
         </div>
 
         <div>

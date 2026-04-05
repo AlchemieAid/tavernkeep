@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
 import { DeleteMenu } from '@/components/shared/delete-menu'
 import { AIItemGenerator } from '@/components/dm/ai-item-generator'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default async function ShopEditorPage({
   params,
@@ -92,21 +93,9 @@ export default async function ShopEditorPage({
               {shop.shop_type} · {shop.economic_tier}
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            <form action={toggleActive}>
-              <Button 
-                type="submit" 
-                variant={shop.is_active ? 'default' : 'outline'}
-              >
-                {shop.is_active ? 'Active' : 'Inactive'}
-              </Button>
-            </form>
-            {shop.is_active && (
-              <Button asChild variant="outline">
-                <Link href={`/dm/shops/${shopId}/qr`}>QR Code</Link>
-              </Button>
-            )}
-          </div>
+          <Button asChild>
+            <Link href={`/dm/shops/${shopId}/edit`}>Edit Shop</Link>
+          </Button>
         </div>
 
         <div className="flex gap-4">
@@ -131,28 +120,48 @@ export default async function ShopEditorPage({
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-base">{item.name}</CardTitle>
-                      {item.is_hidden && (
-                        <span className="text-xs px-2 py-1 rounded-md bg-surface-container text-on-surface-variant">
-                          Hidden
+                      <CardDescription>
+                        <span className={RARITY_COLORS[item.rarity]}>
+                          {item.rarity}
                         </span>
-                      )}
+                        {' · '}
+                        {item.category}
+                        {item.is_hidden && (
+                          <span className="ml-2 text-xs text-amber-500">(Hidden from Players)</span>
+                        )}
+                      </CardDescription>
                     </div>
-                    <DeleteMenu
-                      itemType="item"
-                      itemId={item.id}
-                      onDelete={async (id) => {
-                        'use server'
-                        await deleteItem(id)
-                      }}
-                    />
+                    <div className="flex items-center gap-2">
+                      {item.is_hidden && (
+                        <form action={async () => {
+                          'use server'
+                          await toggleItemVisibility(item.id, item.is_hidden)
+                        }}>
+                          <Button type="submit" size="sm" variant="outline" title="Reveal to Players">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </form>
+                      )}
+                      {!item.is_hidden && item.hidden_condition && (
+                        <form action={async () => {
+                          'use server'
+                          await toggleItemVisibility(item.id, item.is_hidden)
+                        }}>
+                          <Button type="submit" size="sm" variant="outline" title="Hide from Players">
+                            <EyeOff className="w-4 h-4" />
+                          </Button>
+                        </form>
+                      )}
+                      <DeleteMenu
+                        itemType="item"
+                        itemId={item.id}
+                        onDelete={async (id) => {
+                          'use server'
+                          await deleteItem(id)
+                        }}
+                      />
+                    </div>
                   </div>
-                  <CardDescription>
-                    <span className={RARITY_COLORS[item.rarity]}>
-                      {item.rarity}
-                    </span>
-                    {' · '}
-                    {item.category}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex items-center justify-between">

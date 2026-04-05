@@ -431,6 +431,60 @@ Add town-specific parameters:
 
 ---
 
+---
+
+## 🆕 Shop Management Improvements (2026-04-05)
+
+### Multiple Active Shops
+**Status**: ✅ COMPLETED  
+**Priority**: High
+
+**Change**: Removed single-active-shop restriction. All shops are now always active and visible to players.
+
+**Implementation**:
+- ✅ Removed `toggleActive` server action from shop detail page
+- ✅ Removed "Activate/Deactivate" button from shop UI
+- ✅ Removed "Active Shop QR Code" button from town pages
+- ✅ Removed gold ring styling for active shops
+- ✅ All shops now show "View Public Shop" button
+- ✅ Set `is_active: true` by default for all new shops (manual and AI-generated)
+
+**Rationale**: Managing shop activation was too burdensome for DMs. Now all shops are immediately accessible to players.
+
+---
+
+### Item Visibility Toggle
+**Status**: ✅ COMPLETED  
+**Priority**: High
+
+**Change**: Added instant "Reveal to Players" toggle for hidden items on DM shop view.
+
+**Implementation**:
+- ✅ Added `toggleItemVisibility` server action
+- ✅ Added Eye icon button for hidden items (reveals to players)
+- ✅ Added EyeOff icon button for revealed items with `hidden_condition` (hides again)
+- ✅ Updated hidden item label to "(Hidden from Players)" for clarity
+- ✅ Buttons appear next to item action menu
+
+**Rationale**: DMs can now instantly reveal hidden items when players meet the reveal condition, without needing to edit the item.
+
+---
+
+### UI Consistency - AI/Manual Creation Order
+**Status**: ✅ COMPLETED  
+**Priority**: Medium
+
+**Change**: Swapped AI and manual creation card positions to be consistent across all entity types.
+
+**Implementation**:
+- ✅ **Campaigns**: AI generator left, Manual creation right
+- ✅ **Towns**: AI generator left, Manual creation right  
+- ✅ **Shops**: AI generator left, Manual creation right
+
+**Rationale**: Consistent UI pattern makes the interface more predictable and easier to learn.
+
+---
+
 ## Summary
 
 **Strong Foundation**: The core architecture, AI optimization, and DM features are solid.
@@ -438,6 +492,7 @@ Add town-specific parameters:
 **Critical Gaps**: 
 - ✅ Zod validation (COMPLETED)
 - ✅ TypeScript type safety (COMPLETED)
+- ✅ Shop management improvements (COMPLETED)
 - ❌ Player-facing features incomplete
 - ❌ Error boundaries needed
 - ❌ Notable People system (NEW - major refactor)
@@ -446,11 +501,12 @@ Add town-specific parameters:
 
 **Recommended Priority**: 
 1. ✅ Fix TypeScript/Zod (COMPLETED)
-2. Database schema updates for new parameters
-3. Notable People entity and migration
-4. Update AI generators with new parameters
-5. Build AI Generation Wizard
-6. Complete remaining AI generators (shop/item)
-7. Build player shop view (core value prop)
-8. Add error boundaries (UX quality)
-9. Image generation (visual polish)
+2. ✅ Shop UX improvements (COMPLETED)
+3. Database schema updates for new parameters
+4. Notable People entity and migration
+5. Update AI generators with new parameters
+6. Build AI Generation Wizard
+7. Complete remaining AI generators (shop/item)
+8. Build player shop view (core value prop)
+9. Add error boundaries (UX quality)
+10. Image generation (visual polish)

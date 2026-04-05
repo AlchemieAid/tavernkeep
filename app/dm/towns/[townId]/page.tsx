@@ -46,8 +46,6 @@ export default async function TownPage({
     .eq('town_id', townId)
     .order('created_at', { ascending: false })
 
-  const activeShop = shops?.find(s => s.is_active)
-
   async function deleteShop(shopId: string) {
     'use server'
     
@@ -222,6 +220,8 @@ export default async function TownPage({
         <h2 className="headline-sm text-on-surface mb-4">Shops</h2>
         
         <div className="grid gap-4 md:grid-cols-2 mb-6">
+          <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
+          
           <Card>
             <CardHeader>
               <CardTitle>Create Shop Manually</CardTitle>
@@ -235,23 +235,11 @@ export default async function TownPage({
               </Button>
             </CardContent>
           </Card>
-          
-          <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
         </div>
-
-        {activeShop && (
-          <div className="mb-4">
-            <Button asChild variant="outline">
-              <Link href={`/dm/shops/${activeShop.id}/qr`}>
-                View Active Shop QR Code
-              </Link>
-            </Button>
-          </div>
-        )}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {shops?.map((shop) => (
-            <Card key={shop.id} className={shop.is_active ? 'ring-2 ring-gold' : ''}>
+            <Card key={shop.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <CardTitle>{shop.name}</CardTitle>
@@ -275,13 +263,11 @@ export default async function TownPage({
                     Manage Shop
                   </Link>
                 </Button>
-                {shop.is_active && (
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href={`/shop/${shop.slug}`} target="_blank">
-                      View Public Shop
-                    </Link>
-                  </Button>
-                )}
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={`/shop/${shop.slug}`} target="_blank">
+                    View Public Shop
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
             ))}
