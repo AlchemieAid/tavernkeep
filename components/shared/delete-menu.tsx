@@ -1,6 +1,6 @@
 'use client'
 
-import { MoreVertical, Trash2 } from 'lucide-react'
+import { MoreVertical, Trash2, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,15 +9,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-interface DeleteMenuProps {
-  itemType: 'campaign' | 'town' | 'shop' | 'item'
+interface ActionMenuProps {
+  itemType: 'campaign' | 'town' | 'shop' | 'item' | 'notable-person'
   itemId: string
   onDelete: (id: string) => Promise<void>
+  editPath?: string
 }
 
-export function DeleteMenu({ itemType, itemId, onDelete }: DeleteMenuProps) {
+export function ActionMenu({ itemType, itemId, onDelete, editPath }: ActionMenuProps) {
   const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter()
 
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete this ${itemType}? This action cannot be undone.`)) {
@@ -35,6 +38,12 @@ export function DeleteMenu({ itemType, itemId, onDelete }: DeleteMenuProps) {
     }
   }
 
+  const handleEdit = () => {
+    if (editPath) {
+      router.push(editPath)
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -43,6 +52,12 @@ export function DeleteMenu({ itemType, itemId, onDelete }: DeleteMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {editPath && (
+          <DropdownMenuItem onClick={handleEdit}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={handleDelete}
           disabled={isDeleting}
@@ -55,3 +70,6 @@ export function DeleteMenu({ itemType, itemId, onDelete }: DeleteMenuProps) {
     </DropdownMenu>
   )
 }
+
+// Backward compatibility export
+export const DeleteMenu = ActionMenu
