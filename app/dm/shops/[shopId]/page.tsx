@@ -41,31 +41,6 @@ export default async function ShopEditorPage({
     .is('deleted_at', null)
     .order('added_at', { ascending: false })
 
-  async function toggleActive() {
-    'use server'
-    
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) return
-
-    const { shopId } = await params
-
-    const { data: currentShop } = await supabase
-      .from('shops')
-      .select('is_active')
-      .eq('id', shopId)
-      .single()
-
-    await supabase
-      .from('shops')
-      .update({ is_active: !currentShop?.is_active })
-      .eq('id', shopId)
-      .eq('dm_id', user.id)
-
-    revalidatePath(`/dm/shops/${shopId}`)
-  }
-
   async function deleteItem(itemId: string) {
     'use server'
     
@@ -80,6 +55,25 @@ export default async function ShopEditorPage({
       .from('items')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', itemId)
+
+    revalidatePath(`/dm/shops/${shopId}`)
+  }
+
+  async function toggleItemVisibility(itemId: string, currentlyHidden: boolean) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('items')
+      .update({ is_hidden: !currentlyHidden } as any)
+      .eq('id', itemId)
+      .eq('dm_id', user.id)
 
     revalidatePath(`/dm/shops/${shopId}`)
   }
