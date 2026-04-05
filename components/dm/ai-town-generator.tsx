@@ -11,10 +11,17 @@ interface AITownGeneratorProps {
   campaignId: string
 }
 
+interface UsageInfo {
+  tokens: number
+  estimatedCost: string
+  model: string
+}
+
 export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUsage, setLastUsage] = useState<UsageInfo | null>(null)
   const router = useRouter()
 
   const handleGenerate = async () => {
@@ -36,8 +43,15 @@ export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
         throw new Error(data.error?.message || 'Failed to generate town')
       }
 
-      // Redirect to the new town
-      router.push(`/dm/towns/${data.town.id}`)
+      // Store usage info
+      if (data.usage) {
+        setLastUsage(data.usage)
+      }
+
+      // Redirect to the new town after a brief delay to show usage
+      setTimeout(() => {
+        router.push(`/dm/towns/${data.town.id}`)
+      }, 2000)
     } catch (err) {
       setError((err as Error).message)
       setIsGenerating(false)
@@ -67,6 +81,14 @@ export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
         {error && (
           <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
             {error}
+          </div>
+        )}
+
+        {lastUsage && (
+          <div className="text-sm text-green-700 bg-green-50 p-3 rounded-md space-y-1">
+            <p className="font-semibold">Generation Complete!</p>
+            <p>Tokens: {lastUsage.tokens.toLocaleString()} | Cost: ${lastUsage.estimatedCost}</p>
+            <p className="text-xs">Model: {lastUsage.model}</p>
           </div>
         )}
 

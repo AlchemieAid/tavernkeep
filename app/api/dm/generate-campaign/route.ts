@@ -36,9 +36,18 @@ export async function POST(request: Request) {
       )
     }
 
+    // Check for inappropriate content
+    const moderation = await openai.moderations.create({ input: prompt })
+    if (moderation.results[0].flagged) {
+      return NextResponse.json(
+        { error: { message: 'Content violates usage policies. Please revise your prompt.' } },
+        { status: 400 }
+      )
+    }
+
     console.log('Generating campaign with prompt:', prompt)
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini', // Much cheaper than gpt-4o
       messages: [
         { role: 'system', content: CAMPAIGN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildCampaignGenerationPrompt(prompt) },
@@ -76,9 +85,22 @@ export async function POST(request: Request) {
       )
     }
 
+    // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
+    const inputTokens = completion.usage?.prompt_tokens || 0
+    const outputTokens = completion.usage?.completion_tokens || 0
+    const totalTokens = completion.usage?.total_tokens || 0
+    const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+
     return NextResponse.json({ 
       campaign: createdCampaign, 
-      suggestedTowns: suggestedTowns || [] 
+      suggestedTowns: suggestedTowns || [],
+      usage: {
+        tokens: totalTokens,
+        inputTokens,
+        outputTokens,
+        estimatedCost: estimatedCost.toFixed(6),
+        model: 'gpt-4o-mini'
+      }
     })
   } catch (error) {
     console.error('AI campaign generation failed:', error)

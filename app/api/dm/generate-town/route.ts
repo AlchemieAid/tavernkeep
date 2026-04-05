@@ -94,9 +94,22 @@ export async function POST(request: Request) {
       )
     }
 
+    // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
+    const inputTokens = completion.usage?.prompt_tokens || 0
+    const outputTokens = completion.usage?.completion_tokens || 0
+    const totalTokens = completion.usage?.total_tokens || 0
+    const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+
     return NextResponse.json({ 
       town: createdTown, 
-      suggestedShops: suggestedShops || [] 
+      suggestedShops: suggestedShops || [],
+      usage: {
+        tokens: totalTokens,
+        inputTokens,
+        outputTokens,
+        estimatedCost: estimatedCost.toFixed(6),
+        model: 'gpt-4o-mini'
+      }
     })
   } catch (error) {
     console.error('AI town generation failed:', error)

@@ -7,10 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Sparkles } from 'lucide-react'
 
+interface UsageInfo {
+  tokens: number
+  estimatedCost: string
+  model: string
+}
+
 export function AICampaignGenerator() {
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastUsage, setLastUsage] = useState<UsageInfo | null>(null)
   const router = useRouter()
 
   const handleGenerate = async () => {
@@ -32,8 +39,15 @@ export function AICampaignGenerator() {
         throw new Error(data.error?.message || 'Failed to generate campaign')
       }
 
-      // Redirect to the new campaign
-      router.push(`/dm/campaigns/${data.campaign.id}`)
+      // Store usage info
+      if (data.usage) {
+        setLastUsage(data.usage)
+      }
+
+      // Redirect to the new campaign after a brief delay to show usage
+      setTimeout(() => {
+        router.push(`/dm/campaigns/${data.campaign.id}`)
+      }, 2000)
     } catch (err) {
       setError((err as Error).message)
       setIsGenerating(false)
@@ -63,6 +77,14 @@ export function AICampaignGenerator() {
         {error && (
           <div className="text-sm text-red-500 bg-red-50 p-3 rounded-md">
             {error}
+          </div>
+        )}
+
+        {lastUsage && (
+          <div className="text-sm text-green-700 bg-green-50 p-3 rounded-md space-y-1">
+            <p className="font-semibold">Generation Complete!</p>
+            <p>Tokens: {lastUsage.tokens.toLocaleString()} | Cost: ${lastUsage.estimatedCost}</p>
+            <p className="text-xs">Model: {lastUsage.model}</p>
           </div>
         )}
 
