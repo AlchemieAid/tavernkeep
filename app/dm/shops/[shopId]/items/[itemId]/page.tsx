@@ -76,6 +76,7 @@ export default async function EditItemPage({
         base_price_gp,
         stock_quantity,
         is_hidden,
+        reveal_state: is_hidden ? false : true, // When marking as hidden, default to not revealed
         hidden_condition,
       } as any)
       .eq('id', itemId)

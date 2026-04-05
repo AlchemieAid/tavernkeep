@@ -111,6 +111,7 @@ export interface Item {
   base_price_gp: number
   stock_quantity: number
   is_hidden: boolean
+  reveal_state: boolean
   hidden_condition: string | null
   image_url: string | null
   weight_lbs: number | null

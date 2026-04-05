@@ -70,17 +70,17 @@ export default async function ShopEditorPage({
     }
 
     const itemId = formData.get('itemId') as string
-    const currentlyHidden = formData.get('currentlyHidden') === 'true'
+    const currentRevealState = formData.get('currentRevealState') === 'true'
 
-    console.log('Toggling item visibility:', { itemId, currentlyHidden, newValue: !currentlyHidden })
+    console.log('Toggling item reveal state:', { itemId, currentRevealState, newValue: !currentRevealState })
 
     const { error } = await supabase
       .from('items')
-      .update({ is_hidden: !currentlyHidden } as any)
+      .update({ reveal_state: !currentRevealState } as any)
       .eq('id', itemId)
 
     if (error) {
-      console.error('Error toggling item visibility:', error)
+      console.error('Error toggling item reveal state:', error)
     }
 
     revalidatePath(`/dm/shops/${shopId}`)
@@ -139,14 +139,19 @@ export default async function ShopEditorPage({
                           </span>
                         )}
                       </CardDescription>
+                      {item.is_hidden && item.hidden_condition && (
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          <strong>Reveal condition:</strong> {item.hidden_condition}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       {item.is_hidden && (
                         <form action={toggleItemVisibility}>
                           <input type="hidden" name="itemId" value={item.id} />
-                          <input type="hidden" name="currentlyHidden" value={item.is_hidden.toString()} />
-                          <Button type="submit" size="sm" variant="outline" title={item.is_hidden ? "Reveal to Players" : "Hide from Players"}>
-                            {item.is_hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          <input type="hidden" name="currentRevealState" value={item.reveal_state.toString()} />
+                          <Button type="submit" size="sm" variant="outline" title={item.reveal_state ? "Hide from Players" : "Reveal to Players"}>
+                            {item.reveal_state ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                           </Button>
                         </form>
                       )}
