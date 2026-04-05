@@ -97,6 +97,30 @@ export interface AIUsage {
   created_at: string
 }
 
+export interface GenerationCache {
+  id: string
+  generation_type: 'campaign' | 'town' | 'shop' | 'item'
+  prompt_normalized: string
+  prompt_original: string
+  output_data: any // JSONB
+  tokens_used: number
+  model: string
+  times_reused: number
+  average_rating: number | null
+  rating_count: number
+  created_at: string
+  last_used_at: string
+}
+
+export interface GenerationRating {
+  id: string
+  cache_id: string
+  dm_id: string
+  rating: number
+  feedback: string | null
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -134,6 +158,16 @@ export interface Database {
         Row: AIUsage
         Insert: Omit<AIUsage, 'id' | 'created_at'>
         Update: Partial<Omit<AIUsage, 'id' | 'dm_id' | 'created_at'>>
+      }
+      generation_cache: {
+        Row: GenerationCache
+        Insert: Omit<GenerationCache, 'id' | 'created_at' | 'last_used_at' | 'times_reused' | 'average_rating' | 'rating_count'>
+        Update: Partial<Omit<GenerationCache, 'id' | 'created_at'>>
+      }
+      generation_ratings: {
+        Row: GenerationRating
+        Insert: Omit<GenerationRating, 'id' | 'created_at'>
+        Update: Partial<Omit<GenerationRating, 'id' | 'cache_id' | 'dm_id' | 'created_at'>>
       }
     }
   }

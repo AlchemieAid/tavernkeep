@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { checkCache, storeInCache } from '@/lib/generation-cache'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -54,6 +55,46 @@ export async function POST(request: Request) {
         { error: { message: 'AI service not configured' } },
         { status: 500 }
       )
+    }
+
+    // Check cache first
+    const cached = await checkCache(prompt, 'campaign')
+    if (cached.found && cached.data) {
+      console.log('Cache hit! Reusing cached campaign generation')
+      
+      // Create campaign from cached data
+      const { data: createdCampaign, error: campaignError } = await supabase
+        .from('campaigns')
+        .insert({
+          dm_id: user.id,
+          name: cached.data.campaign.name,
+          description: cached.data.campaign.description,
+        })
+        .select()
+        .single()
+
+      if (campaignError) {
+        console.error('Error creating campaign from cache:', campaignError)
+        return NextResponse.json(
+          { error: { message: 'Failed to create campaign' } },
+          { status: 500 }
+        )
+      }
+
+      return NextResponse.json({ 
+        campaign: createdCampaign, 
+        suggestedTowns: cached.data.suggestedTowns || [],
+        usage: {
+          tokens: cached.tokensUsed || 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          estimatedCost: '0.000000',
+          model: 'cached',
+          cached: true,
+          cacheId: cached.cacheId,
+          averageRating: cached.averageRating
+        }
+      })
     }
 
     // Check for inappropriate content
@@ -123,6 +164,15 @@ export async function POST(request: Request) {
       model: 'gpt-4o-mini'
     })
 
+    // Store in cache for future reuse
+    const cacheId = await storeInCache(
+      prompt,
+      'campaign',
+      { campaign, suggestedTowns },
+      totalTokens,
+      'gpt-4o-mini'
+    )
+
     return NextResponse.json({ 
       campaign: createdCampaign, 
       suggestedTowns: suggestedTowns || [],
@@ -131,7 +181,9 @@ export async function POST(request: Request) {
         inputTokens,
         outputTokens,
         estimatedCost: estimatedCost.toFixed(6),
-        model: 'gpt-4o-mini'
+        model: 'gpt-4o-mini',
+        cached: false,
+        cacheId
       }
     })
   } catch (error) {
