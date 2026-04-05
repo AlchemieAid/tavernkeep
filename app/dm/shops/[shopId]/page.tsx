@@ -132,20 +132,14 @@ export default async function ShopEditorPage({
                     </div>
                     <div className="flex items-center gap-2">
                       {item.is_hidden && (
-                        <form action={async () => {
-                          'use server'
-                          await toggleItemVisibility(item.id, item.is_hidden)
-                        }}>
+                        <form action={toggleItemVisibility.bind(null, item.id, item.is_hidden)}>
                           <Button type="submit" size="sm" variant="outline" title="Reveal to Players">
                             <Eye className="w-4 h-4" />
                           </Button>
                         </form>
                       )}
                       {!item.is_hidden && item.hidden_condition && (
-                        <form action={async () => {
-                          'use server'
-                          await toggleItemVisibility(item.id, item.is_hidden)
-                        }}>
+                        <form action={toggleItemVisibility.bind(null, item.id, item.is_hidden)}>
                           <Button type="submit" size="sm" variant="outline" title="Hide from Players">
                             <EyeOff className="w-4 h-4" />
                           </Button>
