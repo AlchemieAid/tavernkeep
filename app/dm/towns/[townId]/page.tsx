@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ActionMenu } from '@/components/shared/delete-menu'
 import { Pencil } from 'lucide-react'
 import { AINotablePersonGenerator } from '@/components/dm/ai-notable-person-generator'
+import { AIShopGenerator } from '@/components/dm/ai-shop-generator'
 
 export default async function TownPage({
   params,
@@ -232,6 +233,11 @@ export default async function TownPage({
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Shops</h2>
+          
+          <div className="mb-6">
+            <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {shops?.map((shop) => (
               <Card key={shop.id} className={shop.is_active ? 'ring-2 ring-gold' : ''}>

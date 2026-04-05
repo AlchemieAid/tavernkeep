@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { campaignId, prompt } = await request.json()
+    const { campaignId, townId, prompt, createNotablePerson = true, notablePersonId } = await request.json()
 
     if (!campaignId || !prompt) {
       return NextResponse.json(
@@ -54,6 +54,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Verify town ownership if townId is provided
+    if (townId) {
+      const { data: town } = await supabase
+        .from('towns')
+        .select('id')
+        .eq('id', townId)
+        .eq('dm_id', user.id)
+        .single()
+
+      if (!town) {
+        return NextResponse.json(
+          { error: { message: 'Town not found' } },
+          { status: 404 }
+        )
+      }
+    }
+
     // Generate shop with GPT-4o
     console.log('Calling OpenAI API with prompt:', prompt)
     const completion = await openai.chat.completions.create({
@@ -79,12 +96,36 @@ export async function POST(request: Request) {
       throw new Error('Invalid response from AI: missing shop or items data')
     }
 
+    // Create notable person if requested and not provided
+    let shopkeeperId = notablePersonId
+    if (createNotablePerson && !notablePersonId && townId) {
+      const { data: notablePerson, error: personError } = await supabase
+        .from('notable_people')
+        .insert({
+          town_id: townId,
+          dm_id: user.id,
+          name: shopData.keeper_name,
+          race: shopData.keeper_race,
+          role: 'shopkeeper',
+          backstory: shopData.keeper_backstory,
+          motivation: shopData.keeper_personality,
+          personality_traits: shopData.keeper_personality ? [shopData.keeper_personality] : [],
+        })
+        .select()
+        .single()
+
+      if (!personError && notablePerson) {
+        shopkeeperId = notablePerson.id
+      }
+    }
+
     // Create shop
     const slug = nanoid(SLUG_LENGTH)
     const { data: shop, error: shopError } = await supabase
       .from('shops')
       .insert({
         campaign_id: campaignId,
+        town_id: townId || null,
         dm_id: user.id,
         name: shopData.name,
         slug,
@@ -92,9 +133,9 @@ export async function POST(request: Request) {
         location_descriptor: shopData.location_descriptor,
         economic_tier: shopData.economic_tier,
         inventory_volatility: shopData.inventory_volatility,
+        notable_person_id: shopkeeperId || null,
         keeper_name: shopData.keeper_name,
         keeper_race: shopData.keeper_race,
-        keeper_personality: shopData.keeper_personality,
         keeper_backstory: shopData.keeper_backstory,
         price_modifier: shopData.price_modifier,
         haggle_enabled: shopData.haggle_enabled,

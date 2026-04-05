@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label'
 
 interface AIShopGeneratorProps {
   campaignId: string
+  townId?: string
 }
 
-export function AIShopGenerator({ campaignId }: AIShopGeneratorProps) {
+export function AIShopGenerator({ campaignId, townId }: AIShopGeneratorProps) {
   const router = useRouter()
   const [prompt, setPrompt] = useState('A mysterious apothecary in a dark alley, run by a suspicious halfling')
   const [loading, setLoading] = useState(false)
@@ -26,7 +27,11 @@ export function AIShopGenerator({ campaignId }: AIShopGeneratorProps) {
       const response = await fetch('/api/dm/generate-shop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaignId, prompt }),
+        body: JSON.stringify({ 
+          campaignId, 
+          townId: townId || undefined,
+          prompt 
+        }),
       })
 
       const result = await response.json()

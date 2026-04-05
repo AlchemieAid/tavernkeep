@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
 import { DeleteMenu } from '@/components/shared/delete-menu'
+import { AIItemGenerator } from '@/components/dm/ai-item-generator'
 
 export default async function ShopEditorPage({
   params,
@@ -119,6 +120,10 @@ export default async function ShopEditorPage({
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Inventory</h2>
+          
+          <div className="mb-6">
+            <AIItemGenerator shopId={shopId} />
+          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items?.map((item) => (
               <Card key={item.id}>
