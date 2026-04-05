@@ -110,7 +110,7 @@ export async function POST(request: Request) {
           backstory: shopData.keeper_backstory,
           motivation: shopData.keeper_personality,
           personality_traits: shopData.keeper_personality ? [shopData.keeper_personality] : [],
-        })
+        } as any)
         .select()
         .single()
 
@@ -141,14 +141,15 @@ export async function POST(request: Request) {
         haggle_enabled: shopData.haggle_enabled,
         haggle_dc: shopData.haggle_dc,
         is_active: true,
-      })
+      } as any)
       .select()
       .single()
 
     if (shopError) {
       console.error('Error creating shop:', shopError)
+      console.error('Shop data:', shopData)
       return NextResponse.json(
-        { error: { message: 'Failed to create shop' } },
+        { error: { message: `Failed to create shop: ${shopError.message}` } },
         { status: 500 }
       )
     }
