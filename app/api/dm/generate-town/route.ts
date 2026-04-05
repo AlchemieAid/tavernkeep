@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
+import { z } from 'zod'
 import { TOWN_GENERATION_SYSTEM_PROMPT, buildTownGenerationPrompt } from '@/lib/prompts/town-generation'
 import { checkRateLimit } from '@/lib/rate-limit'
+import { truncateFields, TOWN_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -99,25 +101,24 @@ export async function POST(request: Request) {
     
     const { town, suggestedShops } = generatedData
 
-    if (!town) {
-      throw new Error('Invalid response from AI: missing town data')
-    }
+    console.log('Creating town in database...')
+    // Truncate town data to ensure field limits
+    const townData = truncateFields({
+      campaign_id: campaignId,
+      dm_id: user.id,
+      name: town.name,
+      description: town.description,
+      population: town.population,
+      size: town.size,
+      location: town.location,
+      ruler: town.ruler,
+      political_system: town.political_system,
+      history: town.history,
+    }, TOWN_FIELD_MAP)
 
-    // Create town
     const { data: createdTown, error: townError } = await supabase
       .from('towns')
-      .insert({
-        campaign_id: campaignId,
-        dm_id: user.id,
-        name: town.name,
-        description: town.description,
-        population: town.population,
-        size: town.size,
-        location: town.location,
-        ruler: town.ruler,
-        political_system: town.political_system,
-        history: town.history,
-      })
+      .insert(townData)
       .select()
       .single()
 

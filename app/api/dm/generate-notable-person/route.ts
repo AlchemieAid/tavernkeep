@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
+import { z } from 'zod'
 import { NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT, buildNotablePersonGenerationPrompt } from '@/lib/prompts/notable-person-generation'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { GenerateNotablePersonSchema } from '@/lib/validators'
+import { truncateFields, NOTABLE_PERSON_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

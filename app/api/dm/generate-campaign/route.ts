@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
+import { GenerateCampaignSchema } from '@/lib/validators/campaign'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
 import { checkRateLimit } from '@/lib/rate-limit'
 import { checkCache, storeInCache } from '@/lib/generation-cache'
-import { GenerateCampaignSchema } from '@/lib/validators'
-import type { Database } from '@/types/database'
+import { truncateFields, CAMPAIGN_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -63,20 +63,22 @@ export async function POST(request: Request) {
     if (cached.found && cached.data) {
       console.log('Cache hit! Reusing cached campaign generation')
       
-      // Create campaign from cached data
+      // Create campaign from cached data (truncate to ensure field limits)
+      const campaignData = truncateFields({
+        dm_id: user.id,
+        name: cached.data.campaign.name,
+        description: cached.data.campaign.description,
+        ruleset: cached.data.campaign.ruleset || '5e',
+        setting: cached.data.campaign.setting,
+        history: cached.data.campaign.history,
+        currency_name: cached.data.campaign.currency_name || 'gp',
+        currency_description: cached.data.campaign.currency_description,
+        pantheon: cached.data.campaign.pantheon,
+      }, CAMPAIGN_FIELD_MAP)
+
       const { data: createdCampaign, error: campaignError } = await supabase
         .from('campaigns')
-        .insert({
-          dm_id: user.id,
-          name: cached.data.campaign.name,
-          description: cached.data.campaign.description,
-          ruleset: cached.data.campaign.ruleset || '5e',
-          setting: cached.data.campaign.setting,
-          history: cached.data.campaign.history,
-          currency_name: cached.data.campaign.currency_name || 'gp',
-          currency_description: cached.data.campaign.currency_description,
-          pantheon: cached.data.campaign.pantheon,
-        } as any)
+        .insert(campaignData as any)
         .select()
         .single()
 
@@ -137,20 +139,22 @@ export async function POST(request: Request) {
       throw new Error('Invalid response from AI: missing campaign data')
     }
 
-    // Create campaign
+    // Create campaign (truncate to ensure field limits)
+    const campaignData = truncateFields({
+      dm_id: user.id,
+      name: campaign.name,
+      description: campaign.description,
+      ruleset: campaign.ruleset || ruleset || '5e',
+      setting: campaign.setting || setting,
+      history: campaign.history,
+      currency_name: campaign.currency_name || 'gp',
+      currency_description: campaign.currency_description,
+      pantheon: campaign.pantheon,
+    }, CAMPAIGN_FIELD_MAP)
+
     const { data: createdCampaign, error: campaignError } = await supabase
       .from('campaigns')
-      .insert({
-        dm_id: user.id,
-        name: campaign.name,
-        description: campaign.description,
-        ruleset: campaign.ruleset || ruleset || '5e',
-        setting: campaign.setting || setting,
-        history: campaign.history,
-        currency_name: campaign.currency_name || 'gp',
-        currency_description: campaign.currency_description,
-        pantheon: campaign.pantheon,
-      } as any)
+      .insert(campaignData as any)
       .select()
       .single()
 
