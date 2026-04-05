@@ -134,12 +134,14 @@ export default async function ShopEditorPage({
                         {' · '}
                         {item.category}
                         {item.is_hidden && (
-                          <span className="ml-2 text-xs text-amber-500">(Hidden from Players)</span>
+                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-600">
+                            Hidden Item
+                          </span>
                         )}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      {item.hidden_condition && (
+                      {item.is_hidden && (
                         <form action={toggleItemVisibility}>
                           <input type="hidden" name="itemId" value={item.id} />
                           <input type="hidden" name="currentlyHidden" value={item.is_hidden.toString()} />
