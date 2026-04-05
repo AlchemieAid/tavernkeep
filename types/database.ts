@@ -84,6 +84,19 @@ export interface PartyAccess {
   last_seen_at: string
 }
 
+export interface AIUsage {
+  id: string
+  dm_id: string
+  generation_type: 'campaign' | 'town' | 'shop' | 'item'
+  prompt: string
+  tokens_used: number
+  input_tokens: number
+  output_tokens: number
+  estimated_cost: number
+  model: string
+  created_at: string
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -116,6 +129,11 @@ export interface Database {
         Row: PartyAccess
         Insert: Omit<PartyAccess, 'id' | 'last_seen_at'>
         Update: Partial<Omit<PartyAccess, 'id'>>
+      }
+      ai_usage: {
+        Row: AIUsage
+        Insert: Omit<AIUsage, 'id' | 'created_at'>
+        Update: Partial<Omit<AIUsage, 'id' | 'dm_id' | 'created_at'>>
       }
     }
   }

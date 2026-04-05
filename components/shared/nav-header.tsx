@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { ProfileMenu } from './profile-menu'
 import { VersionBadge } from './version-badge'
+import { AIUsageCounter } from './ai-usage-counter'
 import Link from 'next/link'
 
 export async function NavHeader() {
@@ -26,7 +27,10 @@ export async function NavHeader() {
             <h1 className="headline-sm text-gold">TavernKeep</h1>
           </Link>
           
-          <div className="flex items-center gap-4">
+          <didiv className="flex items-center gap-3">
+              <v classNamge />
+              <AIUsaeeCount=r />
+           "<fdivlex items-center gap-4">
             <VersionBadge />
             <ProfileMenu 
               userEmail={user.email || null}

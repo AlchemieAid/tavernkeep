@@ -100,6 +100,18 @@ export async function POST(request: Request) {
     const totalTokens = completion.usage?.total_tokens || 0
     const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
 
+    // Track usage in database
+    await supabase.from('ai_usage').insert({
+      dm_id: user.id,
+      generation_type: 'town',
+      prompt,
+      tokens_used: totalTokens,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      estimated_cost: estimatedCost,
+      model: 'gpt-4o-mini'
+    })
+
     return NextResponse.json({ 
       town: createdTown, 
       suggestedShops: suggestedShops || [],
