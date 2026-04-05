@@ -4,7 +4,7 @@ import OpenAI from 'openai'
 import { z } from 'zod'
 import { TOWN_GENERATION_SYSTEM_PROMPT, buildTownGenerationPrompt } from '@/lib/prompts/town-generation'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { truncateFields, TOWN_FIELD_MAP } from '@/lib/utils/truncate-fields'
+import { truncateFields, TOWN_FIELD_MAP, NOTABLE_PERSON_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 
     const { data: createdTown, error: townError } = await supabase
       .from('towns')
-      .insert(townData)
+      .insert(townData as any)
       .select()
       .single()
 

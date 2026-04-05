@@ -38,6 +38,12 @@ export default async function TownPage({
     .eq('town_id', townId)
     .order('created_at', { ascending: false })
 
+  const { data: notablePeople } = await supabase
+    .from('notable_people')
+    .select('*')
+    .eq('town_id', townId)
+    .order('created_at', { ascending: false })
+
   const activeShop = shops?.find(s => s.is_active)
 
   async function deleteShop(shopId: string) {
@@ -156,6 +162,50 @@ export default async function TownPage({
               View Active Shop QR Code
             </Link>
             </Button>
+          )}
+        </div>
+
+        <div>
+          <h2 className="headline-sm text-on-surface mb-4">Notable People</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {notablePeople?.map((person) => (
+              <Card key={person.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>{person.name}</CardTitle>
+                      <CardDescription className="capitalize">
+                        {person.race} · {person.role?.replace('_', ' ')}
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {person.backstory && (
+                    <p className="text-sm text-on-surface-variant">{person.backstory}</p>
+                  )}
+                  {person.personality_traits && person.personality_traits.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {person.personality_traits.map((trait, idx) => (
+                        <span key={idx} className="text-xs px-2 py-1 bg-surface-variant rounded">
+                          {trait}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {!notablePeople?.length && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="body-lg text-on-surface-variant">
+                  No notable people yet. They will be generated automatically when you create a town.
+                </p>
+              </CardContent>
+            </Card>
           )}
         </div>
 
