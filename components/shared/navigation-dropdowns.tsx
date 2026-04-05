@@ -35,9 +35,45 @@ export function NavigationDropdowns() {
       if (campaignsData) {
         setCampaigns(campaignsData)
         
-        // Auto-select campaign from URL or first campaign
-        const campaignIdFromPath = pathname.match(/\/campaigns\/([^\/]+)/)?.[1]
-        const initialCampaign = campaignIdFromPath || campaignsData[0]?.id
+        // Detect campaign from URL
+        let campaignId: string | null = null
+        
+        // Check if we're on a campaign page
+        const campaignMatch = pathname.match(/\/campaigns\/([^\/]+)/)
+        if (campaignMatch) {
+          campaignId = campaignMatch[1]
+        }
+        
+        // Check if we're on a town page - fetch the campaign_id
+        const townMatch = pathname.match(/\/towns\/([^\/]+)/)
+        if (townMatch && !campaignId) {
+          const { data: townData } = await supabase
+            .from('towns')
+            .select('campaign_id')
+            .eq('id', townMatch[1])
+            .single()
+          
+          if (townData) {
+            campaignId = townData.campaign_id
+          }
+        }
+        
+        // Check if we're on a shop page - fetch the campaign_id
+        const shopMatch = pathname.match(/\/shops\/([^\/]+)/)
+        if (shopMatch && !campaignId) {
+          const { data: shopData } = await supabase
+            .from('shops')
+            .select('campaign_id')
+            .eq('id', shopMatch[1])
+            .single()
+          
+          if (shopData) {
+            campaignId = shopData.campaign_id
+          }
+        }
+        
+        // Fallback to first campaign
+        const initialCampaign = campaignId || campaignsData[0]?.id
         
         if (initialCampaign) {
           setSelectedCampaign(initialCampaign)
