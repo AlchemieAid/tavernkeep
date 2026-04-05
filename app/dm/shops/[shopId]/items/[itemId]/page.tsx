@@ -64,7 +64,7 @@ export default async function EditItemPage({
     const base_price_gp = parseFloat(formData.get('base_price_gp') as string)
     const stock_quantity = parseInt(formData.get('stock_quantity') as string)
     const is_hidden = formData.get('is_hidden') === 'on'
-    const reveal_condition = formData.get('reveal_condition') as string || null
+    const hidden_condition = formData.get('hidden_condition') as string || null
 
     const { error } = await supabase
       .from('items')
@@ -76,8 +76,8 @@ export default async function EditItemPage({
         base_price_gp,
         stock_quantity,
         is_hidden,
-        reveal_condition,
-      })
+        hidden_condition,
+      } as any)
       .eq('id', itemId)
 
     if (error) {
@@ -198,13 +198,16 @@ export default async function EditItemPage({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="reveal_condition">Reveal Condition</Label>
+                <Label htmlFor="hidden_condition">Hidden Condition</Label>
                 <Input
-                  id="reveal_condition"
-                  name="reveal_condition"
-                  defaultValue={item.reveal_condition || ''}
+                  id="hidden_condition"
+                  name="hidden_condition"
+                  defaultValue={item.hidden_condition || ''}
                   placeholder="e.g., Ask about rare artifacts"
                 />
+                <p className="text-xs text-on-surface-variant">
+                  Condition that must be met for this item to be revealed to players
+                </p>
               </div>
             </div>
 
