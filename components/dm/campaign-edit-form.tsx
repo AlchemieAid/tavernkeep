@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Save, X } from 'lucide-react'
 import Link from 'next/link'
+import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 
 interface Campaign {
   id: string
@@ -95,7 +96,11 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 placeholder="e.g., The Cursed Kingdom"
                 required
                 disabled={isSaving}
+                maxLength={FIELD_LIMITS.CAMPAIGN_NAME}
               />
+              <p className="text-xs text-on-surface-variant">
+                {formData.name.length}/{FIELD_LIMITS.CAMPAIGN_NAME} characters
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -107,7 +112,11 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 placeholder="Brief campaign overview..."
                 rows={3}
                 disabled={isSaving}
+                maxLength={FIELD_LIMITS.CAMPAIGN_DESCRIPTION}
               />
+              <p className="text-xs text-on-surface-variant">
+                {formData.description.length}/{FIELD_LIMITS.CAMPAIGN_DESCRIPTION} characters
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -126,9 +135,10 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 onChange={(e) => setFormData({ ...formData, ruleset: e.target.value })}
                 placeholder="e.g., 5e, Pathfinder, 3.5e"
                 disabled={isSaving}
+                maxLength={FIELD_LIMITS.CAMPAIGN_RULESET}
               />
               <p className="text-xs text-on-surface-variant">
-                RPG system (5e, 4e, 3e, 2e, Pathfinder, Traveler, etc.)
+                RPG system ({formData.ruleset.length}/{FIELD_LIMITS.CAMPAIGN_RULESET} chars)
               </p>
             </div>
 
@@ -140,9 +150,10 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 onChange={(e) => setFormData({ ...formData, setting: e.target.value })}
                 placeholder="e.g., Forgotten Realms, Eberron, Custom World"
                 disabled={isSaving}
+                maxLength={FIELD_LIMITS.CAMPAIGN_SETTING}
               />
               <p className="text-xs text-on-surface-variant">
-                World or setting name and brief description
+                World or setting name and brief description ({formData.setting.length}/{FIELD_LIMITS.CAMPAIGN_SETTING} chars)
               </p>
             </div>
 
@@ -154,10 +165,10 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 onChange={(e) => setFormData({ ...formData, currency_name: e.target.value })}
                 placeholder="e.g., gp, sc, drakes"
                 disabled={isSaving}
-                maxLength={20}
+                maxLength={FIELD_LIMITS.CAMPAIGN_CURRENCY_NAME}
               />
               <p className="text-xs text-on-surface-variant">
-                Short currency abbreviation used for item pricing (max 20 characters)
+                Short currency abbreviation ({formData.currency_name.length}/{FIELD_LIMITS.CAMPAIGN_CURRENCY_NAME} chars)
               </p>
             </div>
 
@@ -169,10 +180,10 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 onChange={(e) => setFormData({ ...formData, currency_description: e.target.value })}
                 placeholder="e.g., Gold Pieces (gp), Silver Crowns (sc), Copper Bits (cb)"
                 disabled={isSaving}
-                maxLength={200}
+                maxLength={FIELD_LIMITS.CAMPAIGN_CURRENCY_DESCRIPTION}
               />
               <p className="text-xs text-on-surface-variant">
-                Full description of currency system (optional)
+                Full description of currency system ({formData.currency_description.length}/{FIELD_LIMITS.CAMPAIGN_CURRENCY_DESCRIPTION} chars)
               </p>
             </div>
           </CardContent>
@@ -193,7 +204,11 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 placeholder="Major historical events, past conflicts, legendary figures..."
                 rows={4}
                 disabled={isSaving}
+                maxLength={FIELD_LIMITS.CAMPAIGN_HISTORY}
               />
+              <p className="text-xs text-on-surface-variant">
+                {formData.history.length}/{FIELD_LIMITS.CAMPAIGN_HISTORY} characters
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -205,7 +220,11 @@ export function CampaignEditForm({ campaign }: CampaignEditFormProps) {
                 placeholder="Major gods, religious systems, divine powers..."
                 rows={4}
                 disabled={isSaving}
+                maxLength={FIELD_LIMITS.CAMPAIGN_PANTHEON}
               />
+              <p className="text-xs text-on-surface-variant">
+                {formData.pantheon.length}/{FIELD_LIMITS.CAMPAIGN_PANTHEON} characters
+              </p>
             </div>
           </CardContent>
         </Card>

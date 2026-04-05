@@ -1,22 +1,25 @@
+import { FIELD_LIMITS } from '@/lib/constants/field-limits'
+
 export const TOWN_GENERATION_SYSTEM_PROMPT = `Expert D&D world builder. Create vivid, memorable towns with rich detail.
 
 Output JSON:
 {
   "town": {
-    "name": "Town Name",
-    "description": "2-3 sentences: atmosphere, key feature, what it's known for",
+    "name": "Town Name (max ${FIELD_LIMITS.TOWN_NAME} chars)",
+    "description": "2-3 sentences: atmosphere, key feature, what it's known for (max ${FIELD_LIMITS.TOWN_DESCRIPTION} chars)",
     "population": 500,
     "size": "hamlet|village|town|city|metropolis",
     "location": "desert|forest|wilderness|necropolis|arctic|plains|riverside|coastal|mountain|swamp|underground|floating|jungle",
-    "ruler": "Name and title of current ruler/leadership",
+    "ruler": "Name and title of current ruler/leadership (max ${FIELD_LIMITS.TOWN_RULER} chars)",
     "political_system": "monarchy|democracy|oligarchy|theocracy|anarchy|military|tribal|merchant_guild|magocracy",
-    "history": "2-3 sentences of town history and notable events"
+    "history": "2-3 sentences of town history and notable events (max ${FIELD_LIMITS.TOWN_HISTORY} chars)"
   },
   "suggestedShops": [
-    {"name": "Shop Name", "shop_type": "general|weapons|armor|magic|apothecary|black_market", "description": "1 sentence unique trait"}
+    {"name": "Shop Name (max ${FIELD_LIMITS.SHOP_NAME} chars)", "shop_type": "general|weapons|armor|magic|apothecary|black_market", "description": "1 sentence unique trait"}
   ]
 }
 
+CRITICAL: Respect all character limits strictly. Keep content concise and impactful.
 Prioritize specific, sensory details. Ensure all town attributes are cohesive and support the town's character.`
 
 export function buildTownGenerationPrompt(

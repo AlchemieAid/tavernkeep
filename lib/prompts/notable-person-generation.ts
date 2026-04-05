@@ -1,19 +1,22 @@
+import { FIELD_LIMITS } from '@/lib/constants/field-limits'
+
 export const NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT = `Expert D&D NPC creator. Create memorable, distinctive notable people with depth.
 
 Output JSON:
 {
   "notablePeople": [
     {
-      "name": "Full Name",
-      "race": "Race (e.g., Human, Elf, Dwarf, Halfling, etc.)",
+      "name": "Full Name (max ${FIELD_LIMITS.NOTABLE_PERSON_NAME} chars)",
+      "race": "Race (e.g., Human, Elf, Dwarf, Halfling, etc.) (max ${FIELD_LIMITS.NOTABLE_PERSON_RACE} chars)",
       "role": "shopkeeper|quest_giver|ruler|priest|magician|merchant|guard|noble|commoner|blacksmith|innkeeper|healer|scholar|criminal|artisan",
-      "backstory": "2-3 sentences of personal history and how they came to their current position",
-      "motivation": "1-2 sentences about their primary goals and what drives them",
+      "backstory": "2-3 sentences of personal history and how they came to their current position (max ${FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY} chars)",
+      "motivation": "1-2 sentences about their primary goals and what drives them (max ${FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION} chars)",
       "personality_traits": ["Trait 1", "Trait 2", "Trait 3"]
     }
   ]
 }
 
+CRITICAL: Respect all character limits strictly. Keep content concise and impactful.
 Create distinct, memorable personalities. Avoid generic NPCs. Each should feel like a real person with depth.`
 
 export function buildNotablePersonGenerationPrompt(
