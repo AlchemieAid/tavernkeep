@@ -139,21 +139,12 @@ export default async function ShopEditorPage({
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                      {item.is_hidden && (
+                      {item.hidden_condition && (
                         <form action={toggleItemVisibility}>
                           <input type="hidden" name="itemId" value={item.id} />
                           <input type="hidden" name="currentlyHidden" value={item.is_hidden.toString()} />
-                          <Button type="submit" size="sm" variant="outline" title="Reveal to Players">
-                            <EyeOff className="w-4 h-4" />
-                          </Button>
-                        </form>
-                      )}
-                      {!item.is_hidden && item.hidden_condition && (
-                        <form action={toggleItemVisibility}>
-                          <input type="hidden" name="itemId" value={item.id} />
-                          <input type="hidden" name="currentlyHidden" value={item.is_hidden.toString()} />
-                          <Button type="submit" size="sm" variant="outline" title="Hide from Players">
-                            <Eye className="w-4 h-4" />
+                          <Button type="submit" size="sm" variant="outline" title={item.is_hidden ? "Reveal to Players" : "Hide from Players"}>
+                            {item.is_hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </Button>
                         </form>
                       )}
