@@ -234,7 +234,7 @@
 ## 🆕 New Requirements (2026-04-05)
 
 ### Campaign-Level Parameters
-**Status**: ✅ Database Complete | ⚠️ UI Pending  
+**Status**: ✅ Database Applied | ⚠️ UI Pending  
 **Priority**: High
 
 Add configurable parameters that inform AI generation:
@@ -258,7 +258,7 @@ Add configurable parameters that inform AI generation:
 ---
 
 ### Town-Level Parameters
-**Status**: ✅ Database Complete | ⚠️ UI Pending  
+**Status**: ✅ Database Applied | ⚠️ UI Pending  
 **Priority**: High
 
 Add town-specific parameters:
@@ -283,7 +283,7 @@ Add town-specific parameters:
 ---
 
 ### Notable People System (NEW ENTITY)
-**Status**: ✅ Database Complete | ⚠️ UI Pending  
+**Status**: ✅ Database Applied | ⚠️ UI Pending  
 **Priority**: High
 
 **Major Architectural Change**: Replace "Shop Keepers" with "Notable People" entity.
@@ -317,7 +317,7 @@ Add town-specific parameters:
 ---
 
 ### Shop Parameter Analysis
-**Status**: ✅ Database Complete | ⚠️ UI Pending  
+**Status**: ✅ Database Applied | ⚠️ UI Pending  
 **Priority**: Medium
 
 **Current Parameters** (already good):
@@ -338,7 +338,7 @@ Add town-specific parameters:
 ---
 
 ### Item Parameter Analysis
-**Status**: ✅ Database Complete | ⚠️ UI Pending  
+**Status**: ✅ Database Applied | ⚠️ UI Pending  
 **Priority**: Low
 
 **Current Parameters** (already comprehensive):
