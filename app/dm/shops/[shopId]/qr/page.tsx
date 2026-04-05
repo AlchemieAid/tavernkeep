@@ -147,15 +147,6 @@ export default function QRCodePage() {
           </CardContent>
         </Card>
 
-        {!shop.is_active && (
-          <Card className="bg-surface-container-low border-outline">
-            <CardContent className="py-6">
-              <p className="body-sm text-on-surface-variant text-center">
-                ⚠️ This shop is currently inactive. Activate it from the shop editor to make it accessible to players.
-              </p>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </main>
   )

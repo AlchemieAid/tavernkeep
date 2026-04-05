@@ -38,6 +38,7 @@ export default async function DashboardPage() {
       .eq('dm_id', user.id)
 
     revalidatePath('/dm/dashboard')
+    revalidatePath('/', 'layout') // Refresh navigation dropdowns
   }
 
   return (

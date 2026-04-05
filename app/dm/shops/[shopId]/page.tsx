@@ -93,9 +93,14 @@ export default async function ShopEditorPage({
               {shop.shop_type} · {shop.economic_tier}
             </p>
           </div>
-          <Button asChild>
-            <Link href={`/dm/shops/${shopId}/edit`}>Edit Shop</Link>
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button asChild>
+              <Link href={`/dm/shops/${shopId}/edit`}>Edit Shop</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href={`/dm/shops/${shopId}/qr`}>QR Code</Link>
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-4">
