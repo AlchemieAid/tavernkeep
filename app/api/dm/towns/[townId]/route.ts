@@ -61,9 +61,26 @@ export async function PATCH(
       )
     }
 
+    // If ruler_id is provided, fetch the notable person's name to update ruler field
+    let updateData = { ...validation.data }
+    if (validation.data.ruler_id) {
+      const { data: notablePerson } = await supabase
+        .from('notable_people')
+        .select('name')
+        .eq('id', validation.data.ruler_id)
+        .single()
+      
+      if (notablePerson) {
+        updateData.ruler = notablePerson.name
+      }
+    } else if (validation.data.ruler_id === null) {
+      // If ruler_id is explicitly set to null, clear the ruler name too
+      updateData.ruler = null
+    }
+
     const { data: town, error } = await supabase
       .from('towns')
-      .update(validation.data as any)
+      .update(updateData as any)
       .eq('id', townId)
       .eq('dm_id', user.id)
       .select()

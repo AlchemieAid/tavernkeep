@@ -27,5 +27,12 @@ export default async function EditTownPage({
     notFound()
   }
 
-  return <TownEditForm town={town} />
+  // Fetch notable people for this town
+  const { data: notablePeople } = await supabase
+    .from('notable_people')
+    .select('id, name, role')
+    .eq('town_id', townId)
+    .order('name', { ascending: true })
+
+  return <TownEditForm town={town} notablePeople={notablePeople || []} />
 }

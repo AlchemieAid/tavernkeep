@@ -31,6 +31,7 @@ export const UpdateTownSchema = z.object({
   size: townSizeEnum.optional().nullable(),
   location: geographicLocationEnum.optional().nullable(),
   ruler: z.string().max(FIELD_LIMITS.TOWN_RULER).optional().nullable(),
+  ruler_id: z.string().uuid().optional().nullable(),
   political_system: politicalSystemEnum.optional().nullable(),
   history: z.string().max(FIELD_LIMITS.TOWN_HISTORY).optional().nullable(),
 })

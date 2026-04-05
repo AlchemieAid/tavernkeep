@@ -21,15 +21,23 @@ interface Town {
   size: string | null
   location: string | null
   ruler: string | null
+  ruler_id: string | null
   political_system: string | null
   history: string | null
 }
 
-interface TownEditFormProps {
-  town: Town
+interface NotablePerson {
+  id: string
+  name: string
+  role: string
 }
 
-export function TownEditForm({ town }: TownEditFormProps) {
+interface TownEditFormProps {
+  town: Town
+  notablePeople: NotablePerson[]
+}
+
+export function TownEditForm({ town, notablePeople }: TownEditFormProps) {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +47,7 @@ export function TownEditForm({ town }: TownEditFormProps) {
     population: town.population?.toString() || '',
     size: town.size || '',
     location: town.location || '',
-    ruler: town.ruler || '',
+    ruler_id: town.ruler_id || '',
     political_system: town.political_system || '',
     history: town.history || '',
   })
@@ -58,6 +66,7 @@ export function TownEditForm({ town }: TownEditFormProps) {
           population: formData.population ? parseInt(formData.population) : null,
           size: formData.size || null,
           location: formData.location || null,
+          ruler_id: formData.ruler_id || null,
           political_system: formData.political_system || null,
         }),
       })
@@ -199,17 +208,27 @@ export function TownEditForm({ town }: TownEditFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ruler">Ruler / Leadership</Label>
-              <Input
-                id="ruler"
-                value={formData.ruler}
-                onChange={(e) => setFormData({ ...formData, ruler: e.target.value })}
-                placeholder="e.g., Mayor Thornwick"
+              <Label htmlFor="ruler_id">Ruler / Leadership</Label>
+              <Select
+                value={formData.ruler_id}
+                onValueChange={(value) => setFormData({ ...formData, ruler_id: value })}
                 disabled={isSaving}
-                maxLength={FIELD_LIMITS.TOWN_RULER}
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a ruler (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {notablePeople.map((person) => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name} ({person.role.replace('_', ' ')})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-on-surface-variant">
-                {formData.ruler.length}/{FIELD_LIMITS.TOWN_RULER} characters
+                {notablePeople.length === 0 
+                  ? 'No notable people yet. Create some first to assign a ruler.' 
+                  : 'Select from notable people in this town'}
               </p>
             </div>
 
