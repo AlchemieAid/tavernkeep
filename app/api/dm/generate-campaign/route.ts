@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           dm_id: user.id,
           name: cached.data.campaign.name,
           description: cached.data.campaign.description,
-        })
+        } as any)
         .select()
         .single()
 
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
         dm_id: user.id,
         name: campaign.name,
         description: campaign.description,
-      })
+      } as any)
       .select()
       .single()
 
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
       output_tokens: outputTokens,
       estimated_cost: estimatedCost,
       model: 'gpt-4o-mini'
-    })
+    } as any)
 
     // Store in cache for future reuse
     const cacheId = await storeInCache(
