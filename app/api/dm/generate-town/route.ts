@@ -149,7 +149,8 @@ export async function POST(request: Request) {
     } as any)
 
     return NextResponse.json({ 
-      town: createdTown, 
+      town: { ...createdTown, ruler: rulerName || createdTown.ruler },
+      notablePeople: notablePeople || [],
       suggestedShops: suggestedShops || [],
       usage: {
         tokens: totalTokens,

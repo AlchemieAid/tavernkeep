@@ -10,17 +10,30 @@ Output JSON:
     "population": 500,
     "size": "hamlet|village|town|city|metropolis",
     "location": "desert|forest|wilderness|necropolis|arctic|plains|riverside|coastal|mountain|swamp|underground|floating|jungle",
-    "ruler": "Name and title of current ruler/leadership (max ${FIELD_LIMITS.TOWN_RULER} chars)",
     "political_system": "monarchy|democracy|oligarchy|theocracy|anarchy|military|tribal|merchant_guild|magocracy",
     "history": "2-3 sentences of town history and notable events (max ${FIELD_LIMITS.TOWN_HISTORY} chars)"
   },
+  "notablePeople": [
+    {
+      "name": "Full Name (max ${FIELD_LIMITS.NOTABLE_PERSON_NAME} chars)",
+      "race": "Race (max ${FIELD_LIMITS.NOTABLE_PERSON_RACE} chars)",
+      "role": "ruler|priest|magician|merchant|guard|noble|commoner|blacksmith|innkeeper|healer|scholar|criminal|artisan|quest_giver",
+      "backstory": "2-3 sentences (max ${FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY} chars)",
+      "motivation": "1-2 sentences (max ${FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION} chars)",
+      "personality_traits": ["Trait 1", "Trait 2", "Trait 3"]
+    }
+  ],
   "suggestedShops": [
     {"name": "Shop Name (max ${FIELD_LIMITS.SHOP_NAME} chars)", "shop_type": "general|weapons|armor|magic|apothecary|black_market", "description": "1 sentence unique trait"}
   ]
 }
 
-CRITICAL: Respect all character limits strictly. Keep content concise and impactful.
-Prioritize specific, sensory details. Ensure all town attributes are cohesive and support the town's character.`
+CRITICAL: 
+- Respect all character limits strictly. Keep content concise and impactful.
+- ALWAYS include at least one notable person with role "ruler" who leads the town
+- The ruler's name should match the town's political system and setting
+- Generate 2-4 additional notable people with diverse roles (priest, merchant, innkeeper, etc.)
+- Ensure all elements feel cohesive and support the town's character.`
 
 export function buildTownGenerationPrompt(
   userPrompt: string, 
@@ -42,9 +55,12 @@ Requirements:
 - Appropriate population (hamlet: 20-100, village: 100-1000, town: 1000-5000, city: 5000-25000, metropolis: 25000+)
 - Geographic size classification
 - Geographic location type
-- Named ruler/leadership with title
 - Form of government
 - 2-3 sentences of town history
+- 3-5 notable people including:
+  * REQUIRED: One ruler/leader (role: "ruler")
+  * 2-4 other diverse roles (priest, merchant, innkeeper, healer, etc.)
+  * Each with name, race, backstory, motivation, and personality traits
 - 3-6 shops with types and 1-sentence traits
 
 Be atmospheric and specific. Ensure all elements feel cohesive.`
