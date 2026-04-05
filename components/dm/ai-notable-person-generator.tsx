@@ -18,7 +18,7 @@ export function AINotablePersonGenerator({ townId }: AINotablePersonGeneratorPro
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
-  const [role, setRole] = useState('')
+  const [role, setRole] = useState<string | undefined>(undefined)
   const [count, setCount] = useState('1')
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -33,7 +33,7 @@ export function AINotablePersonGenerator({ townId }: AINotablePersonGeneratorPro
         body: JSON.stringify({
           townId,
           prompt,
-          role: role || undefined,
+          ...(role && { role }),
           count: parseInt(count),
         }),
       })
@@ -46,7 +46,7 @@ export function AINotablePersonGenerator({ townId }: AINotablePersonGeneratorPro
 
       router.refresh()
       setPrompt('')
-      setRole('')
+      setRole(undefined)
       setCount('1')
     } catch (err) {
       setError((err as Error).message)
@@ -90,14 +90,13 @@ export function AINotablePersonGenerator({ townId }: AINotablePersonGeneratorPro
               <Label htmlFor="role">Role (Optional)</Label>
               <Select
                 value={role}
-                onValueChange={setRole}
+                onValueChange={(value) => setRole(value)}
                 disabled={isGenerating}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Any role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any role</SelectItem>
                   <SelectItem value="ruler">Ruler</SelectItem>
                   <SelectItem value="priest">Priest</SelectItem>
                   <SelectItem value="magician">Magician</SelectItem>
