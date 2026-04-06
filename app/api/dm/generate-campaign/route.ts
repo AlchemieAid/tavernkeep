@@ -63,6 +63,14 @@ export async function POST(request: Request) {
     if (cached.found && cached.data) {
       console.log('Cache hit! Reusing cached campaign generation')
       
+      // Generate invite token and slug
+      const inviteToken = crypto.randomUUID()
+      const slug = cached.data.campaign.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50)
+      
       // Create campaign from cached data (truncate to ensure field limits)
       const campaignData = truncateFields({
         dm_id: user.id,
@@ -74,6 +82,8 @@ export async function POST(request: Request) {
         currency_name: cached.data.campaign.currency_name || 'gp',
         currency_description: cached.data.campaign.currency_description,
         pantheon: cached.data.campaign.pantheon,
+        invite_token: inviteToken,
+        slug: slug,
       }, CAMPAIGN_FIELD_MAP)
 
       const { data: createdCampaign, error: campaignError } = await supabase
@@ -139,6 +149,14 @@ export async function POST(request: Request) {
       throw new Error('Invalid response from AI: missing campaign data')
     }
 
+    // Generate invite token and slug
+    const inviteToken = crypto.randomUUID()
+    const slug = campaign.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50)
+    
     // Create campaign (truncate to ensure field limits)
     const campaignData = truncateFields({
       dm_id: user.id,
@@ -150,6 +168,8 @@ export async function POST(request: Request) {
       currency_name: campaign.currency_name || 'gp',
       currency_description: campaign.currency_description,
       pantheon: campaign.pantheon,
+      invite_token: inviteToken,
+      slug: slug,
     }, CAMPAIGN_FIELD_MAP)
 
     const { data: createdCampaign, error: campaignError } = await supabase

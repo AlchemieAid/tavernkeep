@@ -43,12 +43,22 @@ export default async function NewCampaignPage() {
     const name = formData.get('name') as string
     const description = formData.get('description') as string
 
+    // Generate invite token and slug
+    const inviteToken = crypto.randomUUID()
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 50)
+
     const { data: campaign, error } = await supabase
       .from('campaigns')
       .insert({
         dm_id: user.id,
         name,
         description,
+        invite_token: inviteToken,
+        slug: slug,
       })
       .select()
       .single()
