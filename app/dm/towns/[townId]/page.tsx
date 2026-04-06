@@ -10,6 +10,7 @@ import { Pencil } from 'lucide-react'
 import { AINotablePersonGenerator } from '@/components/dm/ai-notable-person-generator'
 import { AIShopGenerator } from '@/components/dm/ai-shop-generator'
 import { CreationCardPair } from '@/components/shared/creation-card-pair'
+import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 
 export default async function TownPage({
   params,
@@ -78,12 +79,20 @@ export default async function TownPage({
             </p>
           )}
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/dm/towns/${townId}/edit`}>
-            <Pencil className="w-4 h-4 mr-2" />
-            Edit Town
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <VisibilityToggle
+            entityType="town"
+            entityId={town.id}
+            isRevealed={town.is_revealed}
+            entityName={town.name}
+          />
+          <Button asChild>
+            <Link href={`/dm/towns/${townId}/edit`}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -42,6 +42,7 @@ export interface Town {
   ruler: string | null
   political_system: PoliticalSystem | null
   history: string | null
+  is_revealed: boolean
   created_at: string
   updated_at: string
 }
@@ -62,6 +63,7 @@ export interface NotablePerson {
   motivation: string | null
   personality_traits: string[] | null
   image_url: string | null
+  is_revealed: boolean
   created_at: string
   updated_at: string
 }
@@ -74,6 +76,7 @@ export interface Shop {
   name: string
   slug: string
   is_active: boolean
+  is_revealed: boolean
   shop_type: ShopType
   location_descriptor: string | null
   economic_tier: EconomicTier

@@ -8,6 +8,7 @@ import { RARITY_COLORS } from '@/lib/constants'
 import { DeleteMenu } from '@/components/shared/delete-menu'
 import { AIItemGenerator } from '@/components/dm/ai-item-generator'
 import { Eye, EyeOff } from 'lucide-react'
+import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 
 export default async function ShopEditorPage({
   params,
@@ -97,6 +98,12 @@ export default async function ShopEditorPage({
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <VisibilityToggle
+              entityType="shop"
+              entityId={shop.id}
+              isRevealed={shop.is_revealed}
+              entityName={shop.name}
+            />
             <Button asChild>
               <Link href={`/dm/shops/${shopId}/edit`}>Edit Shop</Link>
             </Button>
