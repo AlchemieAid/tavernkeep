@@ -524,13 +524,15 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 
 ---
 
-### Phase 1: Player Authentication & Campaign Membership (Week 1)
+### Phase 1: Player Authentication, Characters & Campaign Membership (Week 1)
 
 #### Database Schema
 - ❌ Create `players` table (player profiles separate from DMs)
+- ❌ Create `characters` table (multiple characters per player per campaign)
 - ❌ Create `campaign_members` table (player-campaign relationships)
 - ❌ Add `invite_token` to campaigns table (unique, regeneratable)
 - ❌ Create RLS policies for player access control
+- ❌ Create RLS policies for character access control
 - ❌ Create indexes for performance
 
 #### Authentication
@@ -539,17 +541,28 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 - ❌ Build player profile creation on first login
 - ❌ Add player profile edit page
 
+#### Character System
+- ❌ Create character creation flow (after joining campaign)
+- ❌ Build character selection UI (dropdown in navigation)
+- ❌ Add "Switch Character" functionality
+- ❌ Add character avatar upload
+- ❌ Enforce unique character names per player per campaign
+- ❌ Create character management page (view all characters)
+
 #### Campaign Membership
 - ❌ Create `/join/[invite_token]` route for campaign invites
 - ❌ Build campaign invite generation UI for DMs
 - ❌ Create QR code for campaign invite
 - ❌ Build "Join Campaign" flow with membership creation
+- ❌ Prompt character creation after joining campaign
 - ❌ Add campaign members list to DM campaign view
 - ❌ Add "Revoke Access" functionality for DMs
 - ❌ Create player campaign list view
 
 **Deliverables**:
 - Players can create accounts via magic link
+- Players can create multiple characters per campaign
+- Quick character switching in navigation
 - DMs can generate invite links/QR codes
 - Players can join campaigns via invite
 - DMs can manage campaign membership
@@ -589,68 +602,117 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 
 ---
 
-### Phase 3: Shopping Cart (Week 2)
+### Phase 3: Shopping Cart with Item Locking (Week 2)
 
 #### Database Schema
-- ❌ Create `cart_items` table
-- ❌ Create RLS policies for cart access
-- ❌ Create indexes for cart queries
+- ❌ Create `cart_items` table with character_id and locked_at
+- ❌ Create RLS policies for cart access (character-specific)
+- ❌ Create indexes for cart queries and item locks
+- ❌ Add unique constraint: one cart per character per shop
+
+#### Item Locking System
+- ❌ Implement item lock check before adding to cart
+- ❌ Create `locked_at` timestamp on cart_items
+- ❌ Build item lock query (check if item in any cart)
+- ❌ Add lock release on cart cancellation
+- ❌ Add lock release on transaction finalization
+
+#### Cart Conflict Detection
+- ❌ Check for active cart in other shops before opening new cart
+- ❌ Build confirmation modal: "Cancel cart at [Shop Name]?"
+- ❌ Implement cart cancellation flow (release locks)
+- ❌ Add navigation guard to prevent accidental cart loss
 
 #### Player Shop View Updates
 - ❌ Add "Add to Cart" button to item cards
-- ❌ Add quantity selector
+- ❌ Disable "Add to Cart" for locked items
+- ❌ Show "In [CharacterName]'s Cart" badge on locked items
 - ❌ Add cart icon with item count to navigation
-- ❌ Create cart sidebar/modal
-- ❌ Add "Remove from Cart" functionality
-- ❌ Add "Clear Cart" functionality
+- ❌ Create cart sidebar/modal (shop-specific)
+- ❌ Add "Remove from Cart" functionality (releases lock)
+- ❌ Add "Cancel Cart" functionality (releases all locks)
 - ❌ Show out-of-stock items as disabled
 
 #### Real-time Cart Sync
 - ❌ Set up Supabase Realtime subscription for cart_items
+- ❌ Subscribe to item locks (update UI when item locked)
 - ❌ Implement optimistic updates for cart actions
 - ❌ Handle concurrent modifications gracefully
 - ❌ Add loading states for cart operations
 
 #### DM Cart Visibility
 - ❌ Create "Pending Transactions" panel on DM campaign view
-- ❌ Show all player carts grouped by player
-- ❌ Display cart totals and item counts
-- ❌ Add "Finalize Transaction" button per player
+- ❌ Show all character carts grouped by player
+- ❌ Display cart totals and item counts per character
+- ❌ Add "Finalize Transaction" button per character
+- ❌ Show which items are locked in shop inventory view
 
 **Deliverables**:
-- Players can add items to cart
-- Cart persists across sessions
+- Players can add items to cart (one shop at a time)
+- Items lock when added to cart (unavailable to others)
+- Visual indicators for locked items
+- Cart conflict detection prevents data loss
 - Real-time cart sync between players and DM
-- DM can view all player carts
+- DM can view all character carts
 
 ---
 
-### Phase 4: Transactions & Inventory (Week 2-3)
+### Phase 4: Transactions & Inventory with Weight System (Week 2-3)
 
 #### Database Schema
-- ❌ Create `player_inventory` table (with item snapshots)
-- ❌ Create `transactions` table (audit trail)
-- ❌ Create RLS policies for inventory access
-- ❌ Create indexes for inventory queries
+- ❌ Create `player_inventory` table (with item snapshots + character_id)
+- ❌ Add container support to `player_inventory` (container_id, is_container, weight_reduction_percent, max_capacity_lbs)
+- ❌ Create `transactions` table (audit trail + character_id)
+- ❌ Create `inventory_transfers` table (gift tracking)
+- ❌ Create RLS policies for inventory access (character-specific)
+- ❌ Create indexes for inventory queries and container relationships
 
 #### Transaction Finalization
 - ❌ Build transaction finalization API endpoint
-- ❌ Implement cart → inventory copy logic
+- ❌ Implement cart → character inventory copy logic
 - ❌ Implement stock quantity decrement
-- ❌ Implement cart clearing after finalization
-- ❌ Add transaction record creation
+- ❌ Implement cart clearing + lock release after finalization
+- ❌ Add transaction record creation (with character_id)
 - ❌ Add error handling for insufficient stock
+- ❌ Add error handling for locked items
 - ❌ Add DM notes field to transaction
 
+#### Weight System
+- ❌ Ensure all items have weight_lbs property
+- ❌ Build weight calculation function (with container support)
+- ❌ Display total weight on inventory screen
+- ❌ Display per-item weight on item cards
+- ❌ Add weight to item creation/edit forms
+
+#### Container/Bag System
+- ❌ Add "is_container" checkbox to item creation
+- ❌ Add weight_reduction_percent field (0-100%)
+- ❌ Add max_capacity_lbs field for containers
+- ❌ Build container capacity validation
+- ❌ Create "Move to Bag" UI (dropdown or drag-drop)
+- ❌ Build grouped inventory view (loose items + containers)
+- ❌ Show bag capacity: "15 lbs / 50 lbs"
+- ❌ Calculate reduced weight for contained items
+
 #### Player Inventory Screen
-- ❌ Create `/player/inventory/[campaignId]` route
-- ❌ Build inventory grid/list view
+- ❌ Create `/player/inventory/[characterId]` route (character-specific)
+- ❌ Build inventory grid/list view with grouping
+- ❌ Add total weight display at top
 - ❌ Add state filter dropdown (All, Available, Equipped, etc.)
 - ❌ Add search functionality
-- ❌ Add sort options (Date, Price, Rarity, Name)
+- ❌ Add sort options (Date, Price, Rarity, Name, Weight)
 - ❌ Create item detail modal
-- ❌ Add state change UI (dropdown + notes)
+- ❌ Add kebab menu with state options
 - ❌ Add state change history tracking
+
+#### Inventory Gifting
+- ❌ Add "Gift" option to kebab menu
+- ❌ Build player selection modal (other characters in campaign)
+- ❌ Create gift transfer API endpoint
+- ❌ Implement item transfer logic (from_character → to_character)
+- ❌ Create inventory_transfer record
+- ❌ Send push notification to recipient
+- ❌ Add "Received Gifts" indicator
 
 #### Item State Management
 - ❌ Create state change API endpoint
@@ -658,13 +720,16 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 - ❌ Add state change timestamp tracking
 - ❌ Add state notes field
 - ❌ Create state icons/badges
+- ❌ Add quick state change via kebab menu
 
 **Deliverables**:
-- DM can finalize transactions
-- Items move from cart to player inventory
+- DM can finalize transactions (character-specific)
+- Items move from cart to character inventory
 - Shop stock decrements correctly
+- Weight system with container support
+- Players can gift items to other characters
 - Players can manage inventory state
-- Full transaction audit trail
+- Full transaction and transfer audit trail
 
 ---
 
@@ -714,7 +779,7 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 
 ---
 
-### Phase 6: QR Code Expansion (Week 4)
+### Phase 6: QR Codes & Push Notifications (Week 4)
 
 #### Campaign Invite QR
 - ❌ Generate unique invite token per campaign
@@ -738,11 +803,28 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 - ❌ Create `/c/[campaign]/i/[item_slug]` route (item detail)
 - ❌ Add membership + visibility checks to all routes
 
+#### Push Notifications
+- ❌ Create `push_subscriptions` table
+- ❌ Generate VAPID keys for Web Push API
+- ❌ Create service worker for background notifications
+- ❌ Build notification permission request flow (onboarding)
+- ❌ Implement push subscription storage
+- ❌ Create push notification API endpoint
+
+#### Notification Triggers
+- ❌ Send notification when DM enables live mode
+- ❌ Send notification when transaction finalized
+- ❌ Send notification when gift received
+- ❌ Add notification preferences page
+- ❌ Add opt-out toggles per notification type
+
 **Deliverables**:
 - QR codes for all entity types
 - Shareable links for all entities
 - Campaign invite QR code
 - All routes enforce membership + visibility
+- Push notifications for key events
+- Player notification preferences
 
 ---
 
@@ -752,15 +834,50 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 - ❌ Test all player views at 375px, 390px, 428px
 - ❌ Ensure touch targets ≥ 44x44px
 - ❌ Optimize cart UI for mobile
-- ❌ Optimize inventory UI for mobile
+- ❌ Optimize inventory UI for mobile (grouped view with containers)
 - ❌ Test live mode banner on mobile
+- ❌ Test character switching on mobile
+- ❌ Test gift selection modal on mobile
 
 #### Performance
 - ❌ Add database indexes for all foreign keys
-- ❌ Optimize cart queries with materialized views if needed
+- ❌ Add indexes for character_id on all related tables
+- ❌ Optimize cart queries with item lock checks
+- ❌ Optimize weight calculation queries
 - ❌ Test real-time sync with 10+ concurrent players
 - ❌ Monitor Supabase Realtime connection limits
+- ❌ Test push notification delivery speed
 - ❌ Implement connection pooling if needed
+
+#### Cart Locking Tests
+- ❌ Test concurrent item add attempts (race condition)
+- ❌ Test cart cancellation releases locks correctly
+- ❌ Test transaction finalization releases locks
+- ❌ Test locked item visibility across players
+- ❌ Test cart conflict detection when switching shops
+- ❌ Test cart persistence across sessions
+
+#### Weight System Tests
+- ❌ Test weight calculation with nested containers
+- ❌ Test bag capacity enforcement
+- ❌ Test weight reduction percentages (50%, 75%, 100%)
+- ❌ Test moving items between containers
+- ❌ Test total weight display updates in real-time
+
+#### Character System Tests
+- ❌ Test character creation flow
+- ❌ Test character switching preserves state
+- ❌ Test character-specific inventory isolation
+- ❌ Test character-specific cart isolation
+- ❌ Test character-specific transaction history
+- ❌ Test multiple characters per player per campaign
+
+#### Inventory Gifting Tests
+- ❌ Test gift transfer between characters
+- ❌ Test gift notification delivery
+- ❌ Test transfer audit trail
+- ❌ Test gifting items in containers
+- ❌ Test gifting to offline players
 
 #### Error Handling
 - ❌ Add error boundaries to all player routes
@@ -768,18 +885,29 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 - ❌ Handle network failures gracefully
 - ❌ Add retry logic for failed transactions
 - ❌ Add user-friendly error messages
+- ❌ Handle item lock conflicts gracefully
+- ❌ Handle bag capacity exceeded errors
+- ❌ Handle push notification permission denied
 
 #### Documentation
 - ❌ Create DM guide for live mode
 - ❌ Create player onboarding flow
+- ❌ Document character system
 - ❌ Document QR code system
-- ❌ Document cart and inventory features
+- ❌ Document cart locking mechanics
+- ❌ Document inventory weight system
+- ❌ Document container/bag system
+- ❌ Document gifting system
 - ❌ Create troubleshooting guide
+- ❌ Document "DM as Player" limitation
 
 **Deliverables**:
 - Mobile-optimized player experience
 - Robust error handling
-- Performance tested with multiple players
+- Performance tested with multiple concurrent players
+- Cart locking tested under load
+- Weight system validated
+- Character system fully functional
 - Complete documentation
 
 ---
@@ -825,15 +953,41 @@ Transform TavernKeep into a live multiplayer platform where DMs and players coll
 
 ---
 
-### Open Questions
+### Questions Resolved
 
-1. **Player Roles**: Should there be different player roles (e.g., "Party Leader")?
-2. **Cart Sharing**: Should players be able to gift cart items to other players?
-3. **Inventory Limits**: Should players have weight/slot limits?
-4. **Transaction History**: Should players see full purchase history across all campaigns?
-5. **Notifications**: Should players get push notifications for live mode or transactions?
-6. **Multi-Campaign**: Can a player be in multiple campaigns? (Assumed: Yes)
-7. **DM as Player**: Can a DM have a player profile in their own campaign? (Assumed: No)
+✅ **Player Roles**: Not needed initially (future feature, parking lot)
+✅ **Cart Sharing**: No - carts are character-specific, one at a time per character
+✅ **Inventory Limits**: No hard limits, but weight is displayed for DM discretion
+✅ **Transaction History**: Yes, per character across all sessions in that campaign
+✅ **Notifications**: Yes, via Web Push API for live mode, transactions, and gifts
+✅ **Multi-Campaign**: Yes, players can join multiple campaigns with different characters
+✅ **DM as Player**: Not supported initially - advise using separate account (parking lot)
+
+### New Considerations
+
+1. **Bag Capacity Enforcement**: Should the system prevent adding items to bags that exceed capacity, or just warn?
+   - **Recommendation**: Hard enforcement - prevent adding items that exceed capacity
+   
+2. **Character Deletion**: What happens to character's inventory when character is deleted?
+   - **Recommendation**: Soft delete characters, keep inventory for audit trail
+   
+3. **Gift Rejection**: Can players reject gifts?
+   - **Recommendation**: No - gifts are automatically accepted. Players can re-gift if unwanted.
+   
+4. **Offline Gifting**: Can players gift to characters that are offline?
+   - **Recommendation**: Yes - gift appears in inventory next time they log in
+   
+5. **Cart Timeout**: Should carts expire after inactivity?
+   - **Recommendation**: No timeout initially - carts persist until manually canceled or finalized
+   
+6. **Item Lock Timeout**: Should item locks expire if player is inactive?
+   - **Recommendation**: No timeout - locks only release on cart cancel or transaction finalize
+   
+7. **Transaction Approval**: Can players decline a finalized transaction?
+   - **Recommendation**: No - DM finalization is final. DM should confirm with player first.
+   
+8. **Weight Display Units**: Pounds only, or support other units?
+   - **Recommendation**: Pounds only (D&D standard)
 
 ---
 
