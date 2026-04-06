@@ -9,6 +9,7 @@ import { ActionMenu } from '@/components/shared/delete-menu'
 import { Pencil } from 'lucide-react'
 import { CreationCardPair } from '@/components/shared/creation-card-pair'
 import { CampaignInviteModal } from '@/components/dm/campaign-invite-modal'
+import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 
 export default async function CampaignPage({
   params,
@@ -167,15 +168,25 @@ export default async function CampaignPage({
                         <CardDescription className="mt-2">{town.description}</CardDescription>
                       )}
                     </div>
-                    <ActionMenu
-                      itemType="town"
-                      itemId={town.id}
-                      editPath={`/dm/towns/${town.id}/edit`}
-                      onDelete={async (id) => {
-                        'use server'
-                        await deleteTown(id)
-                      }}
-                    />
+                    <div className="flex items-center gap-1">
+                      <VisibilityToggle
+                        entityType="town"
+                        entityId={town.id}
+                        isRevealed={town.is_revealed}
+                        entityName={town.name}
+                        onToggle={toggleTownVisibility}
+                        variant="icon"
+                      />
+                      <ActionMenu
+                        itemType="town"
+                        itemId={town.id}
+                        editPath={`/dm/towns/${town.id}/edit`}
+                        onDelete={async (id) => {
+                          'use server'
+                          await deleteTown(id)
+                        }}
+                      />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>

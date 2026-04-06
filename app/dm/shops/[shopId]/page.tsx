@@ -88,6 +88,25 @@ export default async function ShopEditorPage({
     revalidatePath(`/dm/shops/${shopId}`)
   }
 
+  async function toggleShopVisibility(shopId: string, isRevealed: boolean) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('shops')
+      .update({ is_revealed: isRevealed })
+      .eq('id', shopId)
+      .eq('dm_id', user.id)
+
+    revalidatePath(`/dm/shops/${shopId}`)
+  }
+
   return (
     <div className="space-y-8">
         <div className="flex items-center justify-between">
@@ -103,6 +122,7 @@ export default async function ShopEditorPage({
               entityId={shop.id}
               isRevealed={shop.is_revealed}
               entityName={shop.name}
+              onToggle={toggleShopVisibility}
             />
             <Button asChild>
               <Link href={`/dm/shops/${shopId}/edit`}>Edit Shop</Link>

@@ -68,6 +68,82 @@ export default async function TownPage({
     revalidatePath(`/dm/towns/${townId}`)
   }
 
+  async function deleteNotablePerson(personId: string) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('notable_people')
+      .delete()
+      .eq('id', personId)
+      .eq('dm_id', user.id)
+
+    revalidatePath(`/dm/towns/${townId}`)
+  }
+
+  async function toggleTownVisibility(townId: string, isRevealed: boolean) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('towns')
+      .update({ is_revealed: isRevealed })
+      .eq('id', townId)
+      .eq('dm_id', user.id)
+
+    revalidatePath(`/dm/towns/${townId}`)
+  }
+
+  async function toggleShopVisibility(shopId: string, isRevealed: boolean) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('shops')
+      .update({ is_revealed: isRevealed })
+      .eq('id', shopId)
+      .eq('dm_id', user.id)
+
+    revalidatePath(`/dm/towns/${townId}`)
+  }
+
+  async function togglePersonVisibility(personId: string, isRevealed: boolean) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    await supabase
+      .from('notable_people')
+      .update({ is_revealed: isRevealed })
+      .eq('id', personId)
+      .eq('dm_id', user.id)
+
+    revalidatePath(`/dm/towns/${townId}`)
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between">
@@ -85,6 +161,7 @@ export default async function TownPage({
             entityId={town.id}
             isRevealed={town.is_revealed}
             entityName={town.name}
+            onToggle={toggleTownVisibility}
           />
           <Button asChild>
             <Link href={`/dm/towns/${townId}/edit`}>
@@ -189,21 +266,31 @@ export default async function TownPage({
                         {person.race} · {person.role?.replace('_', ' ')}
                       </CardDescription>
                     </div>
-                    <ActionMenu
-                      itemType="notable-person"
-                      itemId={person.id}
-                      editPath={`/dm/notable-people/${person.id}/edit`}
-                      onDelete={async (id) => {
-                        'use server'
-                        const supabase = await createClient()
-                        await supabase
-                          .from('notable_people')
-                          .delete()
-                          .eq('id', id)
-                          .eq('dm_id', user.id)
-                        revalidatePath(`/dm/towns/${townId}`)
-                      }}
-                    />
+                    <div className="flex items-center gap-1">
+                      <VisibilityToggle
+                        entityType="notable_person"
+                        entityId={person.id}
+                        isRevealed={person.is_revealed}
+                        entityName={person.name}
+                        onToggle={togglePersonVisibility}
+                        variant="icon"
+                      />
+                      <ActionMenu
+                        itemType="notable-person"
+                        itemId={person.id}
+                        editPath={`/dm/notable-people/${person.id}/edit`}
+                        onDelete={async (id) => {
+                          'use server'
+                          const supabase = await createClient()
+                          await supabase
+                            .from('notable_people')
+                            .delete()
+                            .eq('id', id)
+                            .eq('dm_id', user.id)
+                          revalidatePath(`/dm/towns/${townId}`)
+                        }}
+                      />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -249,20 +336,32 @@ export default async function TownPage({
               <Card key={shop.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <CardTitle>{shop.name}</CardTitle>
-                    <ActionMenu
-                      itemType="shop"
-                      itemId={shop.id}
-                      editPath={`/dm/shops/${shop.id}/edit`}
-                      onDelete={async (id) => {
-                        'use server'
-                        await deleteShop(id)
-                      }}
-                    />
+                    <div className="flex-1">
+                      <CardTitle>{shop.name}</CardTitle>
+                      <CardDescription>
+                        {shop.shop_type} · {shop.economic_tier}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <VisibilityToggle
+                        entityType="shop"
+                        entityId={shop.id}
+                        isRevealed={shop.is_revealed}
+                        entityName={shop.name}
+                        onToggle={toggleShopVisibility}
+                        variant="icon"
+                      />
+                      <ActionMenu
+                        itemType="shop"
+                        itemId={shop.id}
+                        editPath={`/dm/shops/${shop.id}/edit`}
+                        onDelete={async (id) => {
+                          'use server'
+                          await deleteShop(id)
+                        }}
+                      />
+                    </div>
                   </div>
-                  <CardDescription>
-                    {shop.shop_type} · {shop.economic_tier}
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Button asChild variant="outline" className="w-full">
