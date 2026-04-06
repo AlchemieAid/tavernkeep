@@ -3,11 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { ActionMenu } from '@/components/shared/delete-menu'
 import { Pencil } from 'lucide-react'
 import { AINotablePersonGenerator } from '@/components/dm/ai-notable-person-generator'
 import { AIShopGenerator } from '@/components/dm/ai-shop-generator'
+import { CreationCardPair } from '@/components/shared/creation-card-pair'
 
 export default async function TownPage({
   params,
@@ -152,124 +154,64 @@ export default async function TownPage({
         )}
       </div>
 
-      <div>
-        <h2 className="headline-sm text-on-surface mb-4">Notable People</h2>
-        
-        <div className="mb-6">
-          <AINotablePersonGenerator townId={townId} />
-        </div>
+      <Tabs defaultValue="notable-people" className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="notable-people">Notable People</TabsTrigger>
+          <TabsTrigger value="shops">Shops</TabsTrigger>
+        </TabsList>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {notablePeople?.map((person) => (
-            <Card key={person.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle>{person.name}</CardTitle>
-                    <CardDescription className="capitalize">
-                      {person.race} · {person.role?.replace('_', ' ')}
-                    </CardDescription>
+        <TabsContent value="notable-people" className="space-y-6">
+          <CreationCardPair
+            aiGenerator={<AINotablePersonGenerator townId={townId} />}
+            manualTitle="Create Notable Person Manually"
+            manualDescription="Add a custom character with full control over details"
+            manualButtonText="Create Notable Person"
+            manualButtonHref={`/dm/towns/${townId}/notable-people/new`}
+          />
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {notablePeople?.map((person) => (
+              <Card key={person.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle>{person.name}</CardTitle>
+                      <CardDescription className="capitalize">
+                        {person.race} · {person.role?.replace('_', ' ')}
+                      </CardDescription>
+                    </div>
+                    <ActionMenu
+                      itemType="notable-person"
+                      itemId={person.id}
+                      editPath={`/dm/notable-people/${person.id}/edit`}
+                      onDelete={async (id) => {
+                        'use server'
+                        const supabase = await createClient()
+                        await supabase
+                          .from('notable_people')
+                          .delete()
+                          .eq('id', id)
+                          .eq('dm_id', user.id)
+                        revalidatePath(`/dm/towns/${townId}`)
+                      }}
+                    />
                   </div>
-                  <ActionMenu
-                    itemType="notable-person"
-                    itemId={person.id}
-                    editPath={`/dm/notable-people/${person.id}/edit`}
-                    onDelete={async (id) => {
-                      'use server'
-                      const supabase = await createClient()
-                      await supabase
-                        .from('notable_people')
-                        .delete()
-                        .eq('id', id)
-                        .eq('dm_id', user.id)
-                      revalidatePath(`/dm/towns/${townId}`)
-                    }}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {person.backstory && (
-                  <p className="text-sm text-on-surface-variant">{person.backstory}</p>
-                )}
-                {person.personality_traits && person.personality_traits.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {person.personality_traits.map((trait, idx) => (
-                      <span key={idx} className="text-xs px-2 py-1 bg-surface-variant rounded">
-                        {trait}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {!notablePeople?.length && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="body-lg text-on-surface-variant">
-                No notable people yet. Use the generator above to create interesting characters for your town.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <div>
-        <h2 className="headline-sm text-on-surface mb-4">Shops</h2>
-        
-        <div className="grid gap-4 md:grid-cols-2 mb-6">
-          <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Create Shop Manually</CardTitle>
-              <CardDescription>
-                Build a custom shop with your own details
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link href={`/dm/towns/${townId}/shops/new`}>Create Shop</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {shops?.map((shop) => (
-            <Card key={shop.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle>{shop.name}</CardTitle>
-                  <ActionMenu
-                    itemType="shop"
-                    itemId={shop.id}
-                    editPath={`/dm/shops/${shop.id}/edit`}
-                    onDelete={async (id) => {
-                      'use server'
-                      await deleteShop(id)
-                    }}
-                  />
-                </div>
-                <CardDescription>
-                  {shop.shop_type} · {shop.economic_tier}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/dm/shops/${shop.id}`}>
-                    Manage Shop
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href={`/shop/${shop.slug}`} target="_blank">
-                    View Public Shop
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {person.backstory && (
+                    <p className="text-sm text-on-surface-variant">{person.backstory}</p>
+                  )}
+                  {person.personality_traits && person.personality_traits.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {person.personality_traits.map((trait, idx) => (
+                        <span key={idx} className="text-xs px-2 py-1 bg-surface-variant rounded">
+                          {trait}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ))}
           </div>
 
@@ -282,18 +224,20 @@ export default async function TownPage({
               </CardContent>
             </Card>
           )}
-        </div>
+        </TabsContent>
 
-        <div>
-          <h2 className="headline-sm text-on-surface mb-4">Shops</h2>
-          
-          <div className="mb-6">
-            <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
-          </div>
+        <TabsContent value="shops" className="space-y-6">
+          <CreationCardPair
+            aiGenerator={<AIShopGenerator campaignId={town.campaign_id} townId={townId} />}
+            manualTitle="Create Shop Manually"
+            manualDescription="Build a custom shop with your own details"
+            manualButtonText="Create Shop"
+            manualButtonHref={`/dm/towns/${townId}/shops/new`}
+          />
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {shops?.map((shop) => (
-              <Card key={shop.id} className={shop.is_active ? 'ring-2 ring-gold' : ''}>
+              <Card key={shop.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle>{shop.name}</CardTitle>
@@ -317,13 +261,11 @@ export default async function TownPage({
                       Manage Shop
                     </Link>
                   </Button>
-                  {shop.is_active && (
-                    <Button asChild variant="outline" className="w-full">
-                      <Link href={`/shop/${shop.slug}`} target="_blank">
-                        Preview Shop
-                      </Link>
-                    </Button>
-                  )}
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href={`/shop/${shop.slug}`} target="_blank">
+                      View Public Shop
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             ))}
@@ -338,7 +280,8 @@ export default async function TownPage({
               </CardContent>
             </Card>
           )}
-        </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { AITownGenerator } from '@/components/dm/ai-town-generator'
 import { ActionMenu } from '@/components/shared/delete-menu'
 import { Pencil } from 'lucide-react'
+import { CreationCardPair } from '@/components/shared/creation-card-pair'
 
 export default async function CampaignPage({
   params,
@@ -137,23 +138,13 @@ export default async function CampaignPage({
           )}
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Town Creation</CardTitle>
-              <CardDescription>
-                Create a town manually with full control over all settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link href={`/dm/campaigns/${campaignId}/towns/new`}>Create Town Manually</Link>
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <AITownGenerator campaignId={campaignId} />
-        </div>
+        <CreationCardPair
+          aiGenerator={<AITownGenerator campaignId={campaignId} />}
+          manualTitle="Create Town Manually"
+          manualDescription="Create a town manually with full control over all settings"
+          manualButtonText="Create Town"
+          manualButtonHref={`/dm/campaigns/${campaignId}/towns/new`}
+        />
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Towns</h2>
