@@ -14,6 +14,7 @@ export function NavigationDropdowns() {
   const [shops, setShops] = useState<Shop[]>([])
   const [notablePeople, setNotablePeople] = useState<NotablePerson[]>([])
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
+  const [selectedTown, setSelectedTown] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -45,18 +46,23 @@ export function NavigationDropdowns() {
           campaignId = campaignMatch[1]
         }
         
-        // Check if we're on a town page - fetch the campaign_id
+        // Check if we're on a town page - fetch the campaign_id and set selected town
         const townMatch = pathname.match(/\/towns\/([^\/]+)/)
         if (townMatch && !campaignId) {
+          const townId = townMatch[1]
+          setSelectedTown(townId)
+          
           const { data: townData } = await supabase
             .from('towns')
             .select('campaign_id')
-            .eq('id', townMatch[1])
+            .eq('id', townId)
             .single()
           
           if (townData) {
             campaignId = townData.campaign_id
           }
+        } else if (!townMatch) {
+          setSelectedTown(null)
         }
         
         // Check if we're on a shop page - fetch the campaign_id
@@ -78,7 +84,7 @@ export function NavigationDropdowns() {
         
         if (initialCampaign) {
           setSelectedCampaign(initialCampaign)
-          await loadCampaignData(initialCampaign)
+          await loadCampaignData(initialCampaign, townMatch ? townMatch[1] : null)
         }
       }
 
@@ -88,7 +94,7 @@ export function NavigationDropdowns() {
     loadData()
   }, [pathname])
 
-  async function loadCampaignData(campaignId: string) {
+  async function loadCampaignData(campaignId: string, townId: string | null = null) {
     const supabase = createClient()
 
     // Load towns for this campaign
@@ -102,48 +108,73 @@ export function NavigationDropdowns() {
       setTowns(townsData)
     }
 
-    // Load shops for this campaign
-    const { data: shopsData } = await supabase
+    // Load shops - filter by town if on a town page, otherwise show all for campaign
+    let shopsQuery = supabase
       .from('shops')
       .select('*')
       .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: false })
+    
+    if (townId) {
+      shopsQuery = shopsQuery.eq('town_id', townId)
+    }
+    
+    const { data: shopsData } = await shopsQuery.order('created_at', { ascending: false })
 
     if (shopsData) {
       setShops(shopsData)
     }
 
-    // Load notable people for this campaign (via towns)
-    // First get all town IDs for this campaign
-    const { data: campaignTowns } = await supabase
-      .from('towns')
-      .select('id')
-      .eq('campaign_id', campaignId)
-    
-    if (campaignTowns && campaignTowns.length > 0) {
-      const townIds = campaignTowns.map(t => t.id)
-      
+    // Load notable people - filter by town if on a town page, otherwise show all for campaign
+    if (townId) {
+      // If on a town page, only show people from that town
       const { data: notablePeopleData } = await supabase
         .from('notable_people')
         .select('*')
-        .in('town_id', townIds)
+        .eq('town_id', townId)
         .order('created_at', { ascending: false })
 
       if (notablePeopleData) {
         setNotablePeople(notablePeopleData)
+      } else {
+        setNotablePeople([])
       }
     } else {
-      setNotablePeople([])
+      // If on campaign page, show all people from all towns in campaign
+      const { data: campaignTowns } = await supabase
+        .from('towns')
+        .select('id')
+        .eq('campaign_id', campaignId)
+      
+      if (campaignTowns && campaignTowns.length > 0) {
+        const townIds = campaignTowns.map(t => t.id)
+        
+        const { data: notablePeopleData } = await supabase
+          .from('notable_people')
+          .select('*')
+          .in('town_id', townIds)
+          .order('created_at', { ascending: false })
+
+        if (notablePeopleData) {
+          setNotablePeople(notablePeopleData)
+        }
+      } else {
+        setNotablePeople([])
+      }
     }
   }
 
   const handleCampaignChange = async (campaignId: string) => {
     setSelectedCampaign(campaignId)
-    await loadCampaignData(campaignId)
+    setSelectedTown(null)
+    await loadCampaignData(campaignId, null)
     router.push(`/dm/campaigns/${campaignId}`)
   }
 
-  const handleTownChange = (townId: string) => {
+  const handleTownChange = async (townId: string) => {
+    setSelectedTown(townId)
+    if (selectedCampaign) {
+      await loadCampaignData(selectedCampaign, townId)
+    }
     router.push(`/dm/towns/${townId}`)
   }
 
