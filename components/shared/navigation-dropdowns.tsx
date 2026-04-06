@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
-import type { Campaign, Town, Shop } from '@/types/database'
+import type { Campaign, Town, Shop, NotablePerson } from '@/types/database'
 
 export function NavigationDropdowns() {
   const router = useRouter()
@@ -12,6 +12,7 @@ export function NavigationDropdowns() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [towns, setTowns] = useState<Town[]>([])
   const [shops, setShops] = useState<Shop[]>([])
+  const [notablePeople, setNotablePeople] = useState<NotablePerson[]>([])
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -111,6 +112,17 @@ export function NavigationDropdowns() {
     if (shopsData) {
       setShops(shopsData)
     }
+
+    // Load notable people for this campaign (via towns)
+    const { data: notablePeopleData } = await supabase
+      .from('notable_people')
+      .select('*, towns!inner(campaign_id)')
+      .eq('towns.campaign_id', campaignId)
+      .order('created_at', { ascending: false })
+
+    if (notablePeopleData) {
+      setNotablePeople(notablePeopleData as any)
+    }
   }
 
   const handleCampaignChange = async (campaignId: string) => {
@@ -125,6 +137,10 @@ export function NavigationDropdowns() {
 
   const handleShopChange = (shopId: string) => {
     router.push(`/dm/shops/${shopId}`)
+  }
+
+  const handleNotablePersonChange = (personId: string) => {
+    router.push(`/dm/notable-people/${personId}/edit`)
   }
 
   if (loading || campaigns.length === 0) {
@@ -176,6 +192,30 @@ export function NavigationDropdowns() {
                   className="w-full text-left px-4 py-2 text-sm hover:bg-surface transition-colors"
                 >
                   {town.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notable People Dropdown */}
+      {selectedCampaign && notablePeople.length > 0 && (
+        <div className="relative group">
+          <button className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md hover:bg-surface-container transition-colors">
+            <span>People</span>
+            <ChevronDown className="w-4 h-4" />
+          </button>
+          
+          <div className="absolute top-full left-0 mt-1 w-64 bg-surface-container border border-outline rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <div className="py-1 max-h-80 overflow-y-auto">
+              {notablePeople.map((person) => (
+                <button
+                  key={person.id}
+                  onClick={() => handleNotablePersonChange(person.id)}
+                  className="w-full text-left px-4 py-2 text-sm hover:bg-surface transition-colors"
+                >
+                  {person.name}
                 </button>
               ))}
             </div>
