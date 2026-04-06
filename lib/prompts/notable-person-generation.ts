@@ -11,7 +11,7 @@ Output JSON:
       "role": "shopkeeper|quest_giver|ruler|priest|magician|merchant|guard|noble|commoner|blacksmith|innkeeper|healer|scholar|criminal|artisan",
       "backstory": "2-3 sentences of personal history and how they came to their current position (max ${FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY} chars)",
       "motivation": "1-2 sentences about their primary goals and what drives them (max ${FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION} chars)",
-      "personality_traits": ["Trait 1", "Trait 2", "Trait 3"]
+      "personality_traits": ["Single-word trait 1", "Single-word trait 2", "Single-word trait 3"]
     }
   ]
 }
@@ -39,7 +39,7 @@ Requirements:
 - Clear role: ${role || 'any appropriate role'}
 - 2-3 sentence backstory (personal history, how they got here)
 - 1-2 sentence motivation (goals, drives)
-- 3-5 distinctive personality traits for roleplay
+- 3-5 distinctive single-word personality traits for roleplay (e.g., "Brave", "Cunning", "Greedy")
 - Each person should feel unique and memorable
 
 Be specific and vivid. Create real, flawed, interesting people.`

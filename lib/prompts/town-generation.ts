@@ -20,7 +20,7 @@ Output JSON:
       "role": "ruler|priest|magician|merchant|guard|noble|commoner|blacksmith|innkeeper|healer|scholar|criminal|artisan|quest_giver",
       "backstory": "2-3 sentences (max ${FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY} chars)",
       "motivation": "1-2 sentences (max ${FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION} chars)",
-      "personality_traits": ["Trait 1", "Trait 2", "Trait 3"]
+      "personality_traits": ["Single-word trait 1", "Single-word trait 2", "Single-word trait 3"]
     }
   ],
   "suggestedShops": [
@@ -60,7 +60,7 @@ Requirements:
 - 3-5 notable people including:
   * REQUIRED: One ruler/leader (role: "ruler")
   * 2-4 other diverse roles (priest, merchant, innkeeper, healer, etc.)
-  * Each with name, race, backstory, motivation, and personality traits
+  * Each with name, race, backstory, motivation, and single-word personality traits (e.g., "Brave", "Cunning")
 - 3-6 shops with types and 1-sentence traits
 
 Be atmospheric and specific. Ensure all elements feel cohesive.`
