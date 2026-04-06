@@ -114,14 +114,26 @@ export function NavigationDropdowns() {
     }
 
     // Load notable people for this campaign (via towns)
-    const { data: notablePeopleData } = await supabase
-      .from('notable_people')
-      .select('*, towns!inner(campaign_id)')
-      .eq('towns.campaign_id', campaignId)
-      .order('created_at', { ascending: false })
+    // First get all town IDs for this campaign
+    const { data: campaignTowns } = await supabase
+      .from('towns')
+      .select('id')
+      .eq('campaign_id', campaignId)
+    
+    if (campaignTowns && campaignTowns.length > 0) {
+      const townIds = campaignTowns.map(t => t.id)
+      
+      const { data: notablePeopleData } = await supabase
+        .from('notable_people')
+        .select('*')
+        .in('town_id', townIds)
+        .order('created_at', { ascending: false })
 
-    if (notablePeopleData) {
-      setNotablePeople(notablePeopleData as any)
+      if (notablePeopleData) {
+        setNotablePeople(notablePeopleData)
+      }
+    } else {
+      setNotablePeople([])
     }
   }
 
