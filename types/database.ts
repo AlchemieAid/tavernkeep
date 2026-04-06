@@ -21,6 +21,8 @@ export interface Campaign {
   history: string | null
   currency: string
   pantheon: string | null
+  invite_token: string
+  slug: string | null
   created_at: string
 }
 
@@ -134,6 +136,35 @@ export interface PartyAccess {
   last_seen_at: string
 }
 
+export interface Player {
+  id: string
+  user_id: string
+  display_name: string
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Character {
+  id: string
+  player_id: string
+  campaign_id: string
+  name: string
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CampaignMember {
+  id: string
+  campaign_id: string
+  player_id: string
+  invited_by: string | null
+  joined_at: string
+  last_active_at: string
+  is_active: boolean
+}
+
 export interface AIUsage {
   id: string
   dm_id: string
@@ -223,6 +254,21 @@ export interface Database {
         Row: NotablePerson
         Insert: Omit<NotablePerson, 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Omit<NotablePerson, 'id' | 'town_id' | 'dm_id' | 'created_at' | 'updated_at'>>
+      }
+      players: {
+        Row: Player
+        Insert: Omit<Player, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Player, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+      }
+      characters: {
+        Row: Character
+        Insert: Omit<Character, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<Character, 'id' | 'player_id' | 'campaign_id' | 'created_at' | 'updated_at'>>
+      }
+      campaign_members: {
+        Row: CampaignMember
+        Insert: Omit<CampaignMember, 'id' | 'joined_at' | 'last_active_at'>
+        Update: Partial<Omit<CampaignMember, 'id' | 'campaign_id' | 'player_id' | 'joined_at'>>
       }
     }
   }
