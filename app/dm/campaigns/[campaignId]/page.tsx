@@ -8,6 +8,7 @@ import { AITownGenerator } from '@/components/dm/ai-town-generator'
 import { ActionMenu } from '@/components/shared/delete-menu'
 import { Pencil } from 'lucide-react'
 import { CreationCardPair } from '@/components/shared/creation-card-pair'
+import { CampaignInviteModal } from '@/components/dm/campaign-invite-modal'
 
 export default async function CampaignPage({
   params,
@@ -70,12 +71,19 @@ export default async function CampaignPage({
               </p>
             )}
           </div>
-          <Button asChild>
-            <Link href={`/dm/campaigns/${campaignId}/edit`}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Edit Campaign
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <CampaignInviteModal
+              campaignId={campaignId}
+              campaignName={campaign.name}
+              inviteToken={campaign.invite_token}
+            />
+            <Button asChild>
+              <Link href={`/dm/campaigns/${campaignId}/edit`}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit Campaign
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
