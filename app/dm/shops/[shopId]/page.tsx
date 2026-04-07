@@ -61,7 +61,7 @@ export default async function ShopEditorPage({
     revalidatePath(`/dm/shops/${shopId}`)
   }
 
-  async function toggleItemVisibility(formData: FormData) {
+  async function toggleItemVisibility(itemId: string, isRevealed: boolean) {
     'use server'
     
     const supabase = await createClient()
@@ -71,18 +71,14 @@ export default async function ShopEditorPage({
       redirect('/login')
     }
 
-    const itemId = formData.get('itemId') as string
-    const currentRevealState = formData.get('currentRevealState') === 'true'
-
-    console.log('Toggling item reveal state:', { itemId, currentRevealState, newValue: !currentRevealState })
-
     const { error } = await supabase
       .from('items')
-      .update({ reveal_state: !currentRevealState } as any)
+      .update({ is_revealed: isRevealed } as any)
       .eq('id', itemId)
 
     if (error) {
-      console.error('Error toggling item reveal state:', error)
+      console.error('Error toggling item visibility:', error)
+      throw error
     }
 
     revalidatePath(`/dm/shops/${shopId}`)
@@ -179,15 +175,14 @@ export default async function ShopEditorPage({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {item.is_hidden && (
-                        <form action={toggleItemVisibility}>
-                          <input type="hidden" name="itemId" value={item.id} />
-                          <input type="hidden" name="currentRevealState" value={item.reveal_state.toString()} />
-                          <Button type="submit" size="sm" variant="outline" title={item.reveal_state ? "Hide from Players" : "Reveal to Players"}>
-                            {item.reveal_state ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                          </Button>
-                        </form>
-                      )}
+                      <VisibilityToggle
+                        entityType="shop"
+                        entityId={item.id}
+                        isRevealed={item.is_revealed || false}
+                        entityName={item.name}
+                        onToggle={toggleItemVisibility}
+                        variant="icon"
+                      />
                       <DeleteMenu
                         itemType="item"
                         itemId={item.id}
