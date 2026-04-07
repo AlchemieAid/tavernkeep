@@ -6,13 +6,14 @@ import { AddToCartButton } from '@/components/player/add-to-cart-button'
 import { Coins, Package, User } from 'lucide-react'
 
 interface PlayerShopPageProps {
-  params: {
+  params: Promise<{
     campaignId: string
     shopId: string
-  }
+  }>
 }
 
 export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
+  const { campaignId, shopId } = await params
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
@@ -36,7 +37,7 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   const { data: membership } = await supabase
     .from('campaign_members')
     .select('id')
-    .eq('campaign_id', params.campaignId)
+    .eq('campaign_id', campaignId)
     .eq('player_id', player.id)
     .eq('is_active', true)
     .single()
@@ -49,12 +50,12 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   const { data: character } = await supabase
     .from('characters')
     .select('id, name')
-    .eq('campaign_id', params.campaignId)
+    .eq('campaign_id', campaignId)
     .eq('player_id', player.id)
     .single()
 
   if (!character) {
-    redirect(`/player/campaigns/${params.campaignId}/characters/new`)
+    redirect(`/player/campaigns/${campaignId}/characters/new`)
   }
 
   // Get shop (RLS policy ensures it's revealed)
@@ -79,8 +80,8 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
       shop_exterior_image_url,
       shop_interior_image_url
     `)
-    .eq('id', params.shopId)
-    .eq('campaign_id', params.campaignId)
+    .eq('id', shopId)
+    .eq('campaign_id', campaignId)
     .eq('is_revealed', true)
     .single()
 
@@ -92,7 +93,7 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   const { data: items } = await supabase
     .from('items')
     .select('id, name, description, price, rarity, stock_quantity, weight_lbs, requires_attunement')
-    .eq('shop_id', params.shopId)
+    .eq('shop_id', shopId)
     .eq('is_revealed', true)
     .order('rarity', { ascending: true })
     .order('price', { ascending: true })
@@ -101,7 +102,7 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   const { data: cartItems } = await supabase
     .from('cart_items')
     .select('item_id')
-    .eq('shop_id', params.shopId)
+    .eq('shop_id', shopId)
 
   const lockedItemIds = new Set(cartItems?.map(ci => ci.item_id) || [])
 
