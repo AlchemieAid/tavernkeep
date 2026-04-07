@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { ShoppingCart, Trash2 } from 'lucide-react'
+import { ShoppingCart as ShoppingCartIcon, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface CartItem {
@@ -108,7 +108,7 @@ export function ShoppingCart({ characterId, shopId }: ShoppingCartProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="relative">
-          <ShoppingCart className="w-4 h-4 mr-2" />
+          <ShoppingCartIcon className="w-4 h-4 mr-2" />
           Cart
           {itemCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-gold text-surface text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
@@ -124,7 +124,7 @@ export function ShoppingCart({ characterId, shopId }: ShoppingCartProps) {
         
         {cartItems.length === 0 ? (
           <div className="py-12 text-center">
-            <ShoppingCart className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <ShoppingCartIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">Your cart is empty</p>
           </div>
         ) : (
