@@ -168,6 +168,17 @@ export interface CampaignMember {
   is_active: boolean
 }
 
+export interface CartItem {
+  id: string
+  character_id: string
+  item_id: string
+  shop_id: string
+  quantity: number
+  locked_at: string
+  created_at: string
+  updated_at: string
+}
+
 export interface AIUsage {
   id: string
   dm_id: string
@@ -272,6 +283,11 @@ export interface Database {
         Row: CampaignMember
         Insert: Omit<CampaignMember, 'id' | 'joined_at' | 'last_active_at'>
         Update: Partial<Omit<CampaignMember, 'id' | 'campaign_id' | 'player_id' | 'joined_at'>>
+      }
+      cart_items: {
+        Row: CartItem
+        Insert: Omit<CartItem, 'id' | 'locked_at' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<CartItem, 'id' | 'character_id' | 'item_id' | 'shop_id' | 'locked_at' | 'created_at' | 'updated_at'>>
       }
     }
   }
