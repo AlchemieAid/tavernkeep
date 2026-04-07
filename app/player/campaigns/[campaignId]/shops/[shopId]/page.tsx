@@ -78,7 +78,9 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
       keeper_personality_traits,
       keeper_image_url,
       shop_exterior_image_url,
-      shop_interior_image_url
+      shop_interior_image_url,
+      campaign_id,
+      campaigns!inner(currency)
     `)
     .eq('id', shopId)
     .eq('campaign_id', campaignId)
@@ -88,6 +90,9 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   if (error || !shop) {
     notFound()
   }
+
+  // Extract currency from campaign
+  const currency = (shop as any).campaigns?.currency || 'gp'
 
   // Get revealed items in this shop
   const { data: items } = await supabase
@@ -214,7 +219,7 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Price</span>
                         <span className="font-semibold">
-                          {Math.round(item.base_price_gp * shop.price_modifier)} gp
+                          {Math.round(item.base_price_gp * shop.price_modifier)} {currency}
                         </span>
                       </div>
                       
