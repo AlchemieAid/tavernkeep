@@ -9,6 +9,7 @@ import { DeleteMenu } from '@/components/shared/delete-menu'
 import { AIItemGenerator } from '@/components/dm/ai-item-generator'
 import { Eye, EyeOff } from 'lucide-react'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
+import { PendingTransactions } from '@/components/dm/pending-transactions'
 
 export default async function ShopEditorPage({
   params,
@@ -141,6 +142,11 @@ export default async function ShopEditorPage({
           <Button asChild variant="outline">
             <Link href={`/shop/${shop.slug}`} target="_blank">Preview Shop</Link>
           </Button>
+        </div>
+
+        <div>
+          <h2 className="headline-sm text-on-surface mb-4">Pending Transactions</h2>
+          <PendingTransactions shopId={shopId} />
         </div>
 
         <div>

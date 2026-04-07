@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ShoppingCart } from '@/components/player/shopping-cart'
+import { ShoppingBag } from '@/components/player/shopping-cart'
 import { AddToCartButton } from '@/components/player/add-to-cart-button'
 import { Coins, Package, User } from 'lucide-react'
 
@@ -107,18 +107,23 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   const lockedItemIds = new Set(cartItems?.map(ci => ci.item_id) || [])
 
   return (
-    <main className="min-h-screen p-6 bg-surface">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Header with Cart */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-foreground">{shop.name}</h1>
-            <p className="text-muted-foreground capitalize">
-              {shop.shop_type.replace('_', ' ')} · {shop.economic_tier}
-            </p>
+    <main className="min-h-screen bg-surface">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-surface border-b border-border shadow-sm">
+        <div className="max-w-6xl mx-auto p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-foreground">{shop.name}</h1>
+              <p className="text-muted-foreground capitalize">
+                {shop.shop_type.replace('_', ' ')} · {shop.economic_tier}
+              </p>
+            </div>
+            <ShoppingBag characterId={character.id} shopId={shop.id} />
           </div>
-          <ShoppingCart characterId={character.id} shopId={shop.id} />
         </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
 
         {/* Shop Details */}
         <Card>

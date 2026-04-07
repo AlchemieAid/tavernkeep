@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ShoppingCart, Lock } from 'lucide-react'
+import { Backpack, Lock } from 'lucide-react'
 
 interface AddToCartButtonProps {
   characterId: string
@@ -56,7 +56,7 @@ export function AddToCartButton({
     return (
       <Button variant="outline" disabled className="w-full">
         <Lock className="w-4 h-4 mr-2" />
-        In Another Cart
+        In Another Bag
       </Button>
     )
   }
@@ -67,8 +67,8 @@ export function AddToCartButton({
       disabled={isLoading}
       className="w-full"
     >
-      <ShoppingCart className="w-4 h-4 mr-2" />
-      {isLoading ? 'Adding...' : 'Add to Cart'}
+      <Backpack className="w-4 h-4 mr-2" />
+      {isLoading ? 'Adding...' : 'Add to Bag'}
     </Button>
   )
 }

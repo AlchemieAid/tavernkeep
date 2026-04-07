@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { ShoppingCart as ShoppingCartIcon, Trash2 } from 'lucide-react'
+import { Backpack, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface CartItem {
@@ -23,7 +23,7 @@ interface ShoppingCartProps {
   shopId: string
 }
 
-export function ShoppingCart({ characterId, shopId }: ShoppingCartProps) {
+export function ShoppingBag({ characterId, shopId }: ShoppingCartProps) {
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -108,8 +108,8 @@ export function ShoppingCart({ characterId, shopId }: ShoppingCartProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="relative">
-          <ShoppingCartIcon className="w-4 h-4 mr-2" />
-          Cart
+          <Backpack className="w-4 h-4 mr-2" />
+          Bag
           {itemCount > 0 && (
             <span className="absolute -top-2 -right-2 bg-gold text-surface text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
               {itemCount}
@@ -119,13 +119,13 @@ export function ShoppingCart({ characterId, shopId }: ShoppingCartProps) {
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Shopping Cart</DialogTitle>
+          <DialogTitle>Shopping Bag</DialogTitle>
         </DialogHeader>
         
         {cartItems.length === 0 ? (
           <div className="py-12 text-center">
-            <ShoppingCartIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">Your cart is empty</p>
+            <Backpack className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">Your bag is empty</p>
           </div>
         ) : (
           <div className="space-y-4">
