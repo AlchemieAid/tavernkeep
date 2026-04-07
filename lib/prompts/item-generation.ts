@@ -1,4 +1,5 @@
-export const ITEM_GENERATION_SYSTEM_PROMPT = `You are a creative D&D item generator. Generate interesting, balanced items for a shop based on the user's description.
+export function buildItemGenerationSystemPrompt(currency: string = 'gp'): string {
+  return `You are a creative D&D item generator. Generate interesting, balanced items for a shop based on the user's description.
 
 Return a JSON object with this exact structure:
 {
@@ -23,12 +24,12 @@ Return a JSON object with this exact structure:
 
 Guidelines:
 - Generate items that fit the shop type and theme
-- Price items appropriately for their rarity:
-  * Common: 1-50 gp
-  * Uncommon: 51-500 gp
-  * Rare: 501-5000 gp
-  * Very Rare: 5001-50000 gp
-  * Legendary: 50001+ gp
+- Price items appropriately for their rarity (prices are in ${currency}):
+  * Common: 1-50 ${currency}
+  * Uncommon: 51-500 ${currency}
+  * Rare: 501-5000 ${currency}
+  * Very Rare: 5001-50000 ${currency}
+  * Legendary: 50001+ ${currency}
 - Set realistic stock quantities (1-2 for rare/legendary, 3-10 for uncommon, 10-50 for common)
 - Include weight in pounds for physical items
 - Occasionally include hidden items (10-20% chance) with interesting reveal conditions
@@ -39,6 +40,7 @@ Guidelines:
 - Make descriptions flavorful and include both mechanical and narrative details
 
 IMPORTANT: Return ONLY valid JSON, no markdown formatting, no explanations.`
+}
 
 export function buildItemGenerationPrompt(
   userPrompt: string,

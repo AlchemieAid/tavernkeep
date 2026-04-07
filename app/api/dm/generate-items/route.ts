@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
-import { ITEM_GENERATION_SYSTEM_PROMPT, buildItemGenerationPrompt } from '@/lib/prompts/item-generation'
+import { buildItemGenerationSystemPrompt, buildItemGenerationPrompt } from '@/lib/prompts/item-generation'
 import { GenerateItemsSchema } from '@/lib/validators/item'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     // Verify shop ownership and get context
     const { data: shop, error: shopError } = await supabase
       .from('shops')
-      .select('id, name, shop_type, economic_tier, campaign_id, campaigns(name, description, ruleset, setting, currency_name, currency_description)')
+      .select('id, name, shop_type, economic_tier, campaign_id, campaigns(name, description, ruleset, setting, currency)')
       .eq('id', shopId)
       .eq('dm_id', user.id)
       .single()
@@ -80,14 +80,16 @@ export async function POST(request: Request) {
       campaign.description,
       campaign.setting && `Setting: ${campaign.setting}`,
       campaign.ruleset && `Ruleset: ${campaign.ruleset}`,
-      campaign.currency_name && `Currency: ${campaign.currency_name}`,
+      campaign.currency && `Currency: ${campaign.currency}`,
     ].filter(Boolean).join('\n') : undefined
 
-    console.log('Generating items with prompt:', prompt, 'count:', count)
+    const currency = campaign?.currency || 'gp'
+
+    console.log('Generating items with prompt:', prompt, 'count:', count, 'currency:', currency)
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: ITEM_GENERATION_SYSTEM_PROMPT },
+        { role: 'system', content: buildItemGenerationSystemPrompt(currency) },
         { role: 'user', content: buildItemGenerationPrompt(prompt, shopContext, campaignContext, count) },
       ],
       temperature: 0.9,
