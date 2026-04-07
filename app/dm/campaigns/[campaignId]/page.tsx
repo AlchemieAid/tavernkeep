@@ -73,7 +73,7 @@ export default async function CampaignPage({
 
     const { error } = await supabase
       .from('towns')
-      .update({ is_revealed: isRevealed })
+      .update({ is_revealed: isRevealed } as any)
       .eq('id', townId)
       .eq('dm_id', user.id)
 

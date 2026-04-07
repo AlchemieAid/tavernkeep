@@ -97,11 +97,16 @@ export default async function TownPage({
       redirect('/login')
     }
 
-    await supabase
+    const { error: townError } = await supabase
       .from('towns')
-      .update({ is_revealed: isRevealed })
+      .update({ is_revealed: isRevealed } as any)
       .eq('id', townId)
       .eq('dm_id', user.id)
+
+    if (townError) {
+      console.error('Error toggling town visibility:', townError)
+      throw townError
+    }
 
     revalidatePath(`/dm/towns/${townId}`)
   }
@@ -116,11 +121,16 @@ export default async function TownPage({
       redirect('/login')
     }
 
-    await supabase
+    const { error: shopError } = await supabase
       .from('shops')
-      .update({ is_revealed: isRevealed })
+      .update({ is_revealed: isRevealed } as any)
       .eq('id', shopId)
       .eq('dm_id', user.id)
+
+    if (shopError) {
+      console.error('Error toggling shop visibility:', shopError)
+      throw shopError
+    }
 
     revalidatePath(`/dm/towns/${townId}`)
   }
@@ -135,11 +145,16 @@ export default async function TownPage({
       redirect('/login')
     }
 
-    await supabase
+    const { error: personError } = await supabase
       .from('notable_people')
-      .update({ is_revealed: isRevealed })
+      .update({ is_revealed: isRevealed } as any)
       .eq('id', personId)
       .eq('dm_id', user.id)
+
+    if (personError) {
+      console.error('Error toggling person visibility:', personError)
+      throw personError
+    }
 
     revalidatePath(`/dm/towns/${townId}`)
   }

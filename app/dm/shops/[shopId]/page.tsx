@@ -98,11 +98,16 @@ export default async function ShopEditorPage({
       redirect('/login')
     }
 
-    await supabase
+    const { error } = await supabase
       .from('shops')
-      .update({ is_revealed: isRevealed })
+      .update({ is_revealed: isRevealed } as any)
       .eq('id', shopId)
       .eq('dm_id', user.id)
+
+    if (error) {
+      console.error('Error toggling shop visibility:', error)
+      throw error
+    }
 
     revalidatePath(`/dm/shops/${shopId}`)
   }
