@@ -41,4 +41,7 @@ next-env.d.ts
 .branches
 .temp
 
+# testing/debug scripts
+/testing
+
 .vercel
