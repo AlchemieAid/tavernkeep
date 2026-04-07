@@ -61,6 +61,30 @@ export default async function CampaignPage({
     revalidatePath(`/dm/campaigns/${campaignId}`)
   }
 
+  async function toggleTownVisibility(townId: string, isRevealed: boolean) {
+    'use server'
+    
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      redirect('/login')
+    }
+
+    const { error } = await supabase
+      .from('towns')
+      .update({ is_revealed: isRevealed })
+      .eq('id', townId)
+      .eq('dm_id', user.id)
+
+    if (error) {
+      console.error('Error toggling town visibility:', error)
+      throw error
+    }
+
+    revalidatePath(`/dm/campaigns/${campaignId}`)
+  }
+
   return (
     <div className="space-y-8">
         <div className="flex items-start justify-between gap-4">
