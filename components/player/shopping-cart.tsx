@@ -13,7 +13,7 @@ interface CartItem {
   quantity: number
   items: {
     name: string
-    price: number
+    base_price_gp: number
     rarity: string
   }
 }
@@ -63,7 +63,7 @@ export function ShoppingBag({ characterId, shopId }: ShoppingCartProps) {
         quantity,
         items (
           name,
-          price,
+          base_price_gp,
           rarity
         )
       `)
@@ -99,7 +99,7 @@ export function ShoppingBag({ characterId, shopId }: ShoppingCartProps) {
   }
 
   const totalPrice = cartItems.reduce((sum, item) => {
-    return sum + (item.items.price * item.quantity)
+    return sum + (item.items.base_price_gp * item.quantity)
   }, 0)
 
   const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
@@ -155,7 +155,7 @@ export function ShoppingBag({ characterId, shopId }: ShoppingCartProps) {
                       Quantity: {cartItem.quantity}
                     </div>
                     <div className="font-semibold">
-                      {cartItem.items.price * cartItem.quantity} gp
+                      {cartItem.items.base_price_gp * cartItem.quantity} gp
                     </div>
                   </div>
                 </CardContent>
