@@ -1,5 +1,11 @@
 -- Fix items RLS policy to use is_revealed instead of is_hidden
--- Phase 2 added is_revealed but didn't update the player access policy
+-- Phase 2 missed adding is_revealed to items table
+
+-- Add is_revealed column to items table (default false - hidden until DM reveals)
+ALTER TABLE items ADD COLUMN IF NOT EXISTS is_revealed BOOLEAN NOT NULL DEFAULT false;
+
+-- Create index for filtering revealed items
+CREATE INDEX IF NOT EXISTS items_shop_revealed_idx ON items(shop_id, is_revealed);
 
 -- Drop old policy
 DROP POLICY IF EXISTS "Anyone can read visible items in active shops" ON items;
