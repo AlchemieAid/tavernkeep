@@ -121,6 +121,11 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
               <h1 className="text-4xl font-bold text-foreground">{shop.name}</h1>
               <p className="text-muted-foreground capitalize">
                 {shop.shop_type.replace('_', ' ')} · {shop.economic_tier}
+                {shop.price_modifier !== 1 && (
+                  <span className="ml-2 text-sm">
+                    ({shop.price_modifier > 1 ? '+' : ''}{Math.round((shop.price_modifier - 1) * 100)}% prices)
+                  </span>
+                )}
               </p>
             </div>
             <ShoppingBag characterId={character.id} shopId={shop.id} />

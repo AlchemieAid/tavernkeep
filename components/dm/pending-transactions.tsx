@@ -39,10 +39,10 @@ export function PendingTransactions({ shopId }: PendingTransactionsProps) {
 
   useEffect(() => {
     loadPendingCarts()
-    
-    // Subscribe to cart changes
+
+    // Subscribe to cart changes for real-time updates
     const channel = supabase
-      .channel('dm-cart-changes')
+      .channel('pending-transactions')
       .on(
         'postgres_changes',
         {
