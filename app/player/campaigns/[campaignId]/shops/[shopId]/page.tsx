@@ -92,11 +92,11 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
   // Get revealed items in this shop
   const { data: items } = await supabase
     .from('items')
-    .select('id, name, description, price, rarity, stock_quantity, weight_lbs, requires_attunement')
+    .select('id, name, description, base_price_gp, rarity, stock_quantity, weight_lbs, properties')
     .eq('shop_id', shopId)
     .eq('is_revealed', true)
     .order('rarity', { ascending: true })
-    .order('price', { ascending: true })
+    .order('base_price_gp', { ascending: true })
 
   // Get items already in cart (to show as locked)
   const { data: cartItems } = await supabase
@@ -196,7 +196,6 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
                     <CardTitle className="text-lg">{item.name}</CardTitle>
                     <CardDescription className="capitalize">
                       {item.rarity}
-                      {item.requires_attunement && ' · Requires Attunement'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -210,7 +209,7 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Price</span>
                         <span className="font-semibold">
-                          {Math.round(item.price * shop.price_modifier)} gp
+                          {Math.round(item.base_price_gp * shop.price_modifier)} gp
                         </span>
                       </div>
                       
