@@ -1,82 +1,110 @@
-# Supabase CLI Setup Guide
+# Supabase CLI Setup Guide - CORRECT WORKFLOW
 
-## ✅ Step 1: Get Your Project Reference ID
+## 🎯 The Simple Truth
 
-1. Go to https://supabase.com/dashboard
-2. Select your TavernKeep project
-3. Click **Project Settings** (gear icon in sidebar)
-4. Under **General** → **Reference ID**, copy the ID (looks like `abcdefghijklmnop`)
+Supabase branches are for **GitHub integration**, not CLI merging. For direct CLI workflow, you just push migrations straight to production. Here's the correct approach:
+
+---
+
+## ✅ Step 1: Login to Supabase CLI
+
+```bash
+npx supabase login
+```
+
+Follow the browser prompt to authenticate.
 
 ## ✅ Step 2: Link Your Local Project
-
-Run this command and paste your project ref when prompted:
 
 ```bash
 npx supabase link
 ```
 
-It will ask:
-- **Project ref**: Paste the ID from step 1
-- **Database password**: Your database password (from Supabase dashboard)
+It will show you a list of your projects. Select your TavernKeep project.
 
-## ✅ Step 3: Create a Development Branch
+**OR** if you know your project ref:
 
 ```bash
-npx supabase branches create dev-migrations
+npx supabase link --project-ref YOUR_PROJECT_REF
 ```
 
-This creates a safe testing environment separate from production.
+Get your project ref from: Dashboard → Project Settings → General → Reference ID
 
-## ✅ Step 4: Check Migration Status
+## ✅ Step 3: Check What's Already Applied
+
+See which migrations are already in production:
 
 ```bash
-npx supabase db remote list
+npx supabase migration list --linked
 ```
 
-This shows which migrations are already applied to production.
+This shows:
+- ✅ Green = Already applied
+- ⏸️ Gray = Not yet applied
 
-## ✅ Step 5: Push Migrations to Branch
+## ✅ Step 4: Push All Migrations to Production
+
+This is the magic command:
 
 ```bash
-npx supabase db push --db-url <branch-connection-string>
+npx supabase db push
 ```
 
-Get the branch connection string from:
+This will:
+1. Compare your local `supabase/migrations/` folder with production
+2. Apply any missing migrations in order
+3. Skip migrations that are already applied
+
+**That's it!** No branches, no merge, just push.
+
+---
+
+## 🔒 Want to Test First? Use a Preview Branch
+
+If you want to test migrations safely before production:
+
+### Create a Preview Branch (via Dashboard)
+
+1. Go to Supabase Dashboard → Branches
+2. Click "Create Preview Branch"
+3. Name it `dev-migrations`
+4. Get the connection string
+
+### Push to Preview Branch
+
 ```bash
-npx supabase branches get dev-migrations
+npx supabase db push --db-url "postgresql://postgres:[PASSWORD]@[BRANCH-URL]:5432/postgres"
 ```
 
-## ✅ Step 6: Test on Branch
+### Test Your App
 
-1. Update your `.env.local` to point to the branch database temporarily
-2. Test the app
-3. Verify everything works
-
-## ✅ Step 7: Merge to Production
-
-Once tested:
-
-```bash
-npx supabase branches merge dev-migrations
+Update `.env.local` temporarily:
+```
+NEXT_PUBLIC_SUPABASE_URL=https://[branch-id].supabase.co
 ```
 
-This applies all migrations to production safely!
+### Deploy to Production (via Dashboard)
+
+Once tested, go to Dashboard → Branches → Click "Promote to Production"
+
+This merges the branch database state to production.
 
 ## 🔄 Future Workflow
 
 After this one-time setup, whenever you create a new migration:
 
 ```bash
-# Create migration file
+# 1. Create migration file
 npx supabase migration new my_feature_name
 
-# Edit the generated file in supabase/migrations/
+# 2. Edit the generated file in supabase/migrations/
+# Add your SQL changes
 
-# Push to production
+# 3. Push to production
 npx supabase db push
 ```
 
-That's it! No more manual SQL.
+**That's it!** No more manual SQL, no branches needed for simple workflows.
 
 ---
 
