@@ -110,11 +110,18 @@ export class GenerationOrchestrator {
   /**
    * Main entry point: Generate a complete campaign hierarchy
    */
+  private generatedNames: {
+    towns: Set<string>
+    shops: Set<string>
+    people: Set<string>
+  } = { towns: new Set(), shops: new Set(), people: new Set() }
+
   async generateCampaign(prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
+    this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
     
     try {
-      this.emitStepStarted('init', 'Initializing world generator...')
+      this.emitStepStarted('init', 'Connecting to database...')
       
       // Create supabase client with timeout
       const supabasePromise = createClient()
@@ -125,7 +132,7 @@ export class GenerationOrchestrator {
         )
       ]) as any
       
-      this.emitStepStarted('campaign', 'Consulting the AI sages...')
+      this.emitStepStarted('campaign', 'Generating campaign with AI (this takes 10-20 seconds)...')
 
       // 1. Generate Campaign
       const campaignResult = await this.generateCampaignEntity(supabase, prompt, ruleset, setting)
@@ -168,13 +175,21 @@ export class GenerationOrchestrator {
    * Generate a single campaign entity
    */
   private async generateCampaignEntity(supabase: any, prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
-    // Rate limit check
-    const rateLimit = await checkRateLimit(this.dmId, 'campaign')
+    // Rate limit check with timeout
+    this.emitStepStarted('rate_limit', 'Checking rate limits...')
+    const rateLimitPromise = checkRateLimit(this.dmId, 'campaign')
+    const rateLimit = await Promise.race([
+      rateLimitPromise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Rate limit check timeout')), 5000)
+      )
+    ])
     if (!rateLimit.allowed) {
       return { success: false, error: rateLimit.message }
     }
 
-    const completion = await openai.chat.completions.create({
+    // OpenAI call with timeout
+    const openaiPromise = openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: CAMPAIGN_GENERATION_SYSTEM_PROMPT },
@@ -183,6 +198,13 @@ export class GenerationOrchestrator {
       temperature: 0.8,
       response_format: { type: 'json_object' },
     })
+    
+    const completion = await Promise.race([
+      openaiPromise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('AI generation timeout - OpenAI is slow')), 60000)
+      )
+    ])
 
     const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
     const { campaign, suggestedTowns } = generatedData
@@ -240,11 +262,33 @@ export class GenerationOrchestrator {
   /**
    * Generate towns for a campaign
    */
+  private makeUniqueName(name: string, existingNames: Set<string>): string {
+    if (!existingNames.has(name)) return name
+    
+    // Add roman numeral or random suffix
+    const baseName = name.replace(/\s+(I|II|III|IV|V|VI|VII|VIII|IX|X)$/i, '')
+    let counter = 2
+    let newName = `${baseName} ${this.toRoman(counter)}`
+    
+    while (existingNames.has(newName) && counter < 20) {
+      counter++
+      newName = `${baseName} ${this.toRoman(counter)}`
+    }
+    
+    return newName
+  }
+  
+  private toRoman(num: number): string {
+    const roman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX']
+    return roman[num - 1] || `${num}`
+  }
+
   private async generateTownsForCampaign(supabase: any, campaign: any, originalPrompt: string) {
     const townCount = this.getRandomCount(this.config.campaign.townCount)
     
     this.progress.totalSteps += townCount
     this.progress.results.towns = []
+    this.emitStepStarted('towns', `Generating ${townCount} towns...`)
 
     // Build context for town generation
     const contextBuilder = createContextBuilder(this.userId, this.dmId)
@@ -263,7 +307,9 @@ export class GenerationOrchestrator {
 
     // Generate each town
     for (let i = 0; i < townCount; i++) {
-      const townPrompt = `${originalPrompt} - Town ${i + 1} of ${townCount}`
+      this.emitStepStarted(`town_${i + 1}`, `Generating town ${i + 1} of ${townCount}...`)
+      
+      const townPrompt = `${originalPrompt} - Town ${i + 1} of ${townCount}. CRITICAL: Do not use these existing town names: ${Array.from(this.generatedNames.towns).join(', ')}`
       
       const townResult = await this.generateTownEntity(
         supabase, 
@@ -276,6 +322,8 @@ export class GenerationOrchestrator {
       if (townResult.success && townResult.data) {
         this.progress.results.towns.push(townResult.data)
         this.progress.completedSteps++
+        this.generatedNames.towns.add(townResult.data.name)
+        this.emitEntityCreated('town', townResult.data)
       }
     }
   }
@@ -291,7 +339,8 @@ export class GenerationOrchestrator {
     parentContextBuilder: any
   ): Promise<GeneratorResult<any>> {
     
-    const completion = await openai.chat.completions.create({
+    // OpenAI call with timeout
+    const openaiPromise = openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
         { role: 'system', content: TOWN_GENERATION_SYSTEM_PROMPT },
@@ -300,6 +349,13 @@ export class GenerationOrchestrator {
       temperature: 0.8,
       response_format: { type: 'json_object' },
     })
+    
+    const completion = await Promise.race([
+      openaiPromise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Town generation timeout')), 60000)
+      )
+    ])
 
     const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
     const { town, notablePeople, suggestedShops } = generatedData
@@ -308,11 +364,17 @@ export class GenerationOrchestrator {
       return { success: false, error: 'Invalid AI response: missing town data' }
     }
 
+    // Check for duplicate and make unique
+    const uniqueName = this.makeUniqueName(town.name, this.generatedNames.towns)
+    if (uniqueName !== town.name) {
+      console.log(`Renamed duplicate town from "${town.name}" to "${uniqueName}"`)
+    }
+    
     // Create town
     const townData = truncateFields({
       campaign_id: campaignId,
       dm_id: this.dmId,
-      name: town.name,
+      name: uniqueName,
       description: town.description,
       population: town.population,
       size: town.size,
@@ -360,13 +422,13 @@ export class GenerationOrchestrator {
 
     // Auto-generate Notable People
     if (this.config.town.autoGenerateNotablePeople && notablePeople?.length > 0) {
-      await this.generateNotablePeopleForTown(supabase, createdTown.id, notablePeople, townContextBuilder)
+      await this.generateNotablePeopleForTown(supabase, createdTown.id, notablePeople, townContextBuilder, createdTown.name)
     }
 
     // Auto-generate Shops
     if (this.config.town.autoGenerateShops) {
       const shopCount = this.getRandomCount(this.config.town.shopCount)
-      await this.generateShopsForTown(supabase, campaignId, createdTown.id, shopCount, townContextBuilder)
+      await this.generateShopsForTown(supabase, campaignId, createdTown.id, shopCount, townContextBuilder, createdTown.name)
     }
 
     return { success: true, data: createdTown }
@@ -379,15 +441,25 @@ export class GenerationOrchestrator {
     supabase: any,
     townId: string,
     peopleData: any[],
-    contextBuilder: any
+    contextBuilder: any,
+    townName: string
   ) {
     const context = contextBuilder.buildNotablePersonContext()
+    const peopleCount = this.getRandomCount(this.config.town.notablePeopleCount)
+    
+    this.emitStepStarted('people', `Creating ${peopleCount} notable people for ${townName}...`)
 
-    for (const person of peopleData.slice(0, this.getRandomCount(this.config.town.notablePeopleCount))) {
+    for (const person of peopleData.slice(0, peopleCount)) {
+      // Check for duplicate name
+      const uniqueName = this.makeUniqueName(person.name, this.generatedNames.people)
+      if (uniqueName !== person.name) {
+        console.log(`Renamed duplicate person from "${person.name}" to "${uniqueName}"`)
+      }
+      
       const personRecord = truncateFields({
         town_id: townId,
         dm_id: this.dmId,
-        name: person.name,
+        name: uniqueName,
         race: person.race,
         role: person.role,
         backstory: person.backstory,
@@ -402,10 +474,12 @@ export class GenerationOrchestrator {
         .single()
 
       if (createdPerson) {
+        this.generatedNames.people.add(createdPerson.name)
         if (!this.progress.results.notablePeople) {
           this.progress.results.notablePeople = []
         }
         this.progress.results.notablePeople.push(createdPerson)
+        this.emitEntityCreated('notable_person', createdPerson)
       }
     }
   }
@@ -418,14 +492,21 @@ export class GenerationOrchestrator {
     campaignId: string,
     townId: string,
     count: number,
-    contextBuilder: any
+    contextBuilder: any,
+    townName: string
   ) {
     const context = contextBuilder.buildShopContext()
+    
+    this.emitStepStarted('shops', `Creating ${count} shops for ${townName}...`)
+    this.progress.totalSteps += count
 
     for (let i = 0; i < count; i++) {
-      const shopPrompt = `Generate a shop that fits in this town`
+      this.emitStepStarted(`shop_${i + 1}`, `Generating shop ${i + 1} of ${count} for ${townName}...`)
+      
+      const shopPrompt = `Generate a shop that fits in this town. CRITICAL: Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}`
 
-      const completion = await openai.chat.completions.create({
+      // OpenAI call with timeout
+      const openaiPromise = openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [
           { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
@@ -434,11 +515,21 @@ export class GenerationOrchestrator {
         temperature: 0.8,
         response_format: { type: 'json_object' },
       })
+      
+      const completion = await Promise.race([
+        openaiPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Shop generation timeout')), 60000)
+        )
+      ])
 
       const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
       const { shop: shopData, items: itemsData } = generatedData
 
-      if (!shopData) continue
+      if (!shopData) {
+        console.error('Shop generation failed: no shop data in AI response')
+        continue
+      }
 
       // Create shopkeeper as notable person
       const { data: shopkeeper } = await supabase
@@ -482,12 +573,19 @@ export class GenerationOrchestrator {
         .select()
         .single()
 
-      if (error || !createdShop) continue
+      if (error || !createdShop) {
+        console.error('Shop creation failed:', error)
+        continue
+      }
 
+      this.generatedNames.shops.add(createdShop.name)
+      
       if (!this.progress.results.shops) {
         this.progress.results.shops = []
       }
       this.progress.results.shops.push(createdShop)
+      this.progress.completedSteps++
+      this.emitEntityCreated('shop', createdShop)
 
       // Track usage
       await this.trackAIUsage(
@@ -504,7 +602,8 @@ export class GenerationOrchestrator {
 
       // Auto-generate items if configured
       if (this.config.shop.autoGenerateItems && itemsData?.length > 0) {
-        await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder)
+        this.emitStepStarted('items', `Generating ${itemsData.length} items for ${createdShop.name}...`)
+        await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder, createdShop.name)
       }
     }
   }
@@ -516,9 +615,13 @@ export class GenerationOrchestrator {
     supabase: any,
     shopId: string,
     itemsData: any[],
-    contextBuilder: any
+    contextBuilder: any,
+    shopName: string
   ) {
     const itemCount = Math.min(itemsData.length, this.getRandomCount(this.config.shop.itemCount))
+    
+    this.emitStepStarted('items', `Creating ${itemCount} items for ${shopName}...`)
+    this.progress.totalSteps += itemCount
     const itemsToInsert = itemsData.slice(0, itemCount).map((item: any) => ({
       shop_id: shopId,
       name: item.name,
@@ -538,16 +641,27 @@ export class GenerationOrchestrator {
       source: 'generated',
     }))
 
-    const { data: createdItems } = await supabase
+    const { data: createdItems, error: itemsError } = await supabase
       .from('items')
       .insert(itemsToInsert)
       .select()
+
+    if (itemsError) {
+      console.error('Items creation failed:', itemsError)
+      return
+    }
 
     if (createdItems) {
       if (!this.progress.results.items) {
         this.progress.results.items = []
       }
       this.progress.results.items.push(...createdItems)
+      this.progress.completedSteps += createdItems.length
+      
+      // Emit each item creation
+      for (const item of createdItems) {
+        this.emitEntityCreated('item', item)
+      }
     }
   }
 
