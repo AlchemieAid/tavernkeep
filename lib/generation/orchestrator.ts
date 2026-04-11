@@ -175,9 +175,9 @@ export class GenerationOrchestrator {
    * Generate a single campaign entity
    */
   private async generateCampaignEntity(supabase: any, prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
-    // Rate limit check with timeout
+    // Rate limit check with timeout (pass existing supabase client for speed)
     this.emitStepStarted('rate_limit', 'Checking rate limits...')
-    const rateLimitPromise = checkRateLimit(this.dmId, 'campaign')
+    const rateLimitPromise = checkRateLimit(this.dmId, 'campaign', supabase)
     const rateLimit = await Promise.race([
       rateLimitPromise,
       new Promise<never>((_, reject) => 
@@ -499,8 +499,20 @@ export class GenerationOrchestrator {
     
     this.emitStepStarted('shops', `Creating ${count} shops for ${townName}...`)
     this.progress.totalSteps += count
+    
+    // Check rate limit for shops before starting
+    const shopRateLimit = await checkRateLimit(this.dmId, 'shop', supabase)
+    if (!shopRateLimit.allowed) {
+      console.warn(`Shop rate limit exceeded for ${townName}:`, shopRateLimit.message)
+      this.progress.errors.push(`Shop generation limited: ${shopRateLimit.message}`)
+      return // Skip shop generation for this town
+    }
+    
+    let shopsCreated = 0
+    let shopsAttempted = 0
 
     for (let i = 0; i < count; i++) {
+      shopsAttempted++
       this.emitStepStarted(`shop_${i + 1}`, `Generating shop ${i + 1} of ${count} for ${townName}...`)
       
       const shopPrompt = `Generate a shop that fits in this town. CRITICAL: Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}`
@@ -574,10 +586,13 @@ export class GenerationOrchestrator {
         .single()
 
       if (error || !createdShop) {
-        console.error('Shop creation failed:', error)
+        console.error(`Shop ${i + 1} creation failed for ${townName}:`, error)
+        this.progress.errors.push(`Shop ${i + 1} in ${townName} failed: ${error?.message || 'Unknown error'}`)
         continue
       }
-
+      
+      shopsCreated++
+      console.log(`✓ Created shop: ${createdShop.name} in ${townName}`)
       this.generatedNames.shops.add(createdShop.name)
       
       if (!this.progress.results.shops) {
@@ -605,6 +620,12 @@ export class GenerationOrchestrator {
         this.emitStepStarted('items', `Generating ${itemsData.length} items for ${createdShop.name}...`)
         await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder, createdShop.name)
       }
+    }
+    
+    console.log(`Shop generation complete for ${townName}: ${shopsCreated}/${shopsAttempted} shops created`)
+    
+    if (shopsCreated === 0 && shopsAttempted > 0) {
+      this.progress.errors.push(`WARNING: No shops were created for ${townName} after ${shopsAttempted} attempts`)
     }
   }
 

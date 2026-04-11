@@ -1,5 +1,3 @@
-import { createClient } from '@/lib/supabase/server'
-
 interface RateLimitConfig {
   maxRequests: number
   windowMinutes: number
@@ -14,9 +12,15 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
 
 export async function checkRateLimit(
   userId: string,
-  generationType: 'campaign' | 'town' | 'shop' | 'item'
+  generationType: 'campaign' | 'town' | 'shop' | 'item',
+  supabase?: any // Optional: pass existing client to avoid creating new one
 ): Promise<{ allowed: boolean; remaining: number; resetAt: Date; message: string }> {
-  const supabase = await createClient()
+  // Lazy import only if needed
+  if (!supabase) {
+    const { createClient } = await import('@/lib/supabase/server')
+    supabase = await createClient()
+  }
+  
   const config = RATE_LIMITS[generationType]
   
   // Calculate time window
