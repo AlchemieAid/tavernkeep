@@ -622,9 +622,18 @@ export class GenerationOrchestrator {
       )
 
       // Auto-generate items if configured
-      if (this.config.shop.autoGenerateItems && itemsData?.length > 0) {
-        this.emitStepStarted('items', `Generating ${itemsData.length} items for ${createdShop.name}...`)
-        await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder, createdShop.name)
+      if (this.config.shop.autoGenerateItems) {
+        if (itemsData && itemsData.length > 0) {
+          console.log(`[ITEMS] AI returned ${itemsData.length} items for ${createdShop.name}`)
+          await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder, createdShop.name)
+        } else {
+          console.log(`[ITEMS] AI returned no items for ${createdShop.name}, generating fallback items...`)
+          // Generate fallback items based on shop type
+          const fallbackItems = this.generateFallbackItems(createdShop.shop_type, createdShop.economic_tier)
+          await this.generateItemsForShop(supabase, createdShop.id, fallbackItems, contextBuilder, createdShop.name)
+        }
+      } else {
+        console.log(`[ITEMS] Skipping item generation for ${createdShop.name} - autoGenerateItems is disabled`)
       }
     }
     
@@ -690,6 +699,106 @@ export class GenerationOrchestrator {
         this.emitEntityCreated('item', item)
       }
     }
+  }
+
+  /**
+   * Generate fallback items when AI doesn't return any
+   */
+  private generateFallbackItems(shopType: string, economicTier: string): any[] {
+    const baseItems: Record<string, any[]> = {
+      'general': [
+        { name: 'Rope (50ft)', description: 'Sturdy hemp rope', category: 'adventuring_gear', rarity: 'common', base_price_gp: 1, stock_quantity: 5 },
+        { name: 'Torch', description: 'Burns for 1 hour', category: 'adventuring_gear', rarity: 'common', base_price_gp: 0.1, stock_quantity: 10 },
+        { name: 'Waterskin', description: 'Holds 4 pints of liquid', category: 'adventuring_gear', rarity: 'common', base_price_gp: 0.2, stock_quantity: 8 },
+        { name: 'Backpack', description: 'Standard adventurer\'s pack', category: 'adventuring_gear', rarity: 'common', base_price_gp: 2, stock_quantity: 4 },
+        { name: 'Bedroll', description: 'For camping in the wild', category: 'adventuring_gear', rarity: 'common', base_price_gp: 1, stock_quantity: 6 },
+      ],
+      'weapon': [
+        { name: 'Dagger', description: 'Simple but effective blade', category: 'weapon', rarity: 'common', base_price_gp: 2, stock_quantity: 5 },
+        { name: 'Shortsword', description: 'Light and versatile', category: 'weapon', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
+        { name: 'Longsword', description: 'A classic warrior\'s weapon', category: 'weapon', rarity: 'common', base_price_gp: 15, stock_quantity: 2 },
+        { name: 'Crossbow', description: 'Light crossbow with 20 bolts', category: 'weapon', rarity: 'common', base_price_gp: 25, stock_quantity: 2 },
+        { name: 'Quarterstaff', description: 'A simple wooden staff', category: 'weapon', rarity: 'common', base_price_gp: 0.2, stock_quantity: 8 },
+      ],
+      'armor': [
+        { name: 'Leather Armor', description: 'Flexible and quiet protection', category: 'armor', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
+        { name: 'Studded Leather', description: 'Reinforced leather armor', category: 'armor', rarity: 'common', base_price_gp: 45, stock_quantity: 2 },
+        { name: 'Shield', description: 'Wooden shield with steel rim', category: 'armor', rarity: 'common', base_price_gp: 10, stock_quantity: 4 },
+        { name: 'Chain Shirt', description: 'Light chainmail protection', category: 'armor', rarity: 'common', base_price_gp: 50, stock_quantity: 1 },
+      ],
+      'potion': [
+        { name: 'Potion of Healing', description: 'Restores 2d4+2 hit points', category: 'potion', rarity: 'common', base_price_gp: 50, stock_quantity: 3, identified: true },
+        { name: 'Potion of Greater Healing', description: 'Restores 4d4+4 hit points', category: 'potion', rarity: 'uncommon', base_price_gp: 150, stock_quantity: 1, identified: true },
+        { name: 'Antitoxin', description: 'Grants advantage on poison saves', category: 'potion', rarity: 'common', base_price_gp: 50, stock_quantity: 2 },
+        { name: 'Potion of Climbing', description: 'Grants climb speed for 1 hour', category: 'potion', rarity: 'common', base_price_gp: 50, stock_quantity: 1, identified: false },
+      ],
+      'magic': [
+        { name: 'Scroll of Cure Wounds', description: 'A weathered magical scroll', category: 'scroll', rarity: 'common', base_price_gp: 25, stock_quantity: 2, identified: false, is_hidden: true, hidden_condition: 'Detect Magic or spellcasting ability' },
+        { name: 'Scroll of Shield', description: 'Arcane writings on parchment', category: 'scroll', rarity: 'common', base_price_gp: 25, stock_quantity: 2, identified: false },
+        { name: 'Component Pouch', description: 'Contains spell components', category: 'adventuring_gear', rarity: 'common', base_price_gp: 25, stock_quantity: 3 },
+        { name: 'Arcane Focus (Crystal)', description: 'A crystal for spellcasting', category: 'adventuring_gear', rarity: 'common', base_price_gp: 10, stock_quantity: 2 },
+      ],
+      'tavern': [
+        { name: 'Common Wine (bottle)', description: 'Cheap local vintage', category: 'food_drink', rarity: 'common', base_price_gp: 0.5, stock_quantity: 10 },
+        { name: 'Fine Wine (bottle)', description: 'Imported quality wine', category: 'food_drink', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
+        { name: 'Ale (mug)', description: 'Local brewed ale', category: 'food_drink', rarity: 'common', base_price_gp: 0.1, stock_quantity: 20 },
+        { name: 'Bread', description: 'Fresh baked daily', category: 'food_drink', rarity: 'common', base_price_gp: 0.1, stock_quantity: 8 },
+        { name: 'Cheese Wheel', description: 'Aged local cheese', category: 'food_drink', rarity: 'common', base_price_gp: 1, stock_quantity: 4 },
+        { name: 'Stew (bowl)', description: 'Hearty meat and vegetable stew', category: 'food_drink', rarity: 'common', base_price_gp: 0.5, stock_quantity: 12 },
+      ],
+      'blacksmith': [
+        { name: 'Iron Nails (20)', description: 'For construction or repairs', category: 'adventuring_gear', rarity: 'common', base_price_gp: 1, stock_quantity: 10 },
+        { name: 'Horseshoes', description: 'Set of 4 iron horseshoes', category: 'adventuring_gear', rarity: 'common', base_price_gp: 1, stock_quantity: 6 },
+        { name: 'Hammer', description: 'A sturdy smith\'s hammer', category: 'tool', rarity: 'common', base_price_gp: 1, stock_quantity: 4 },
+        { name: 'Piton', description: 'Iron spike for climbing', category: 'adventuring_gear', rarity: 'common', base_price_gp: 0.05, stock_quantity: 10 },
+        { name: 'Crowbar', description: 'Forged iron crowbar', category: 'tool', rarity: 'common', base_price_gp: 2, stock_quantity: 3 },
+      ],
+      'jewelry': [
+        { name: 'Silver Ring', description: 'Simple silver band', category: 'jewelry', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
+        { name: 'Gold Locket', description: 'Small locket on a chain', category: 'jewelry', rarity: 'common', base_price_gp: 25, stock_quantity: 2 },
+        { name: 'Brass Bracelet', description: 'Intricate brasswork', category: 'jewelry', rarity: 'common', base_price_gp: 5, stock_quantity: 4 },
+        { name: 'Copper Earrings', description: 'Pair of copper earrings', category: 'jewelry', rarity: 'common', base_price_gp: 3, stock_quantity: 3 },
+        { name: 'Signet Ring', description: 'A noble\'s signet', category: 'jewelry', rarity: 'uncommon', base_price_gp: 75, stock_quantity: 1, identified: false, is_hidden: true, hidden_condition: 'Appraisal or detect magic' },
+      ],
+      'bookstore': [
+        { name: 'Blank Journal', description: 'Leather-bound blank book', category: 'adventuring_gear', rarity: 'common', base_price_gp: 10, stock_quantity: 4 },
+        { name: 'Charcoal Sticks', description: 'For writing or sketching', category: 'adventuring_gear', rarity: 'common', base_price_gp: 0.5, stock_quantity: 8 },
+        { name: 'Ink Bottle', description: 'Black ink for writing', category: 'adventuring_gear', rarity: 'common', base_price_gp: 10, stock_quantity: 5 },
+        { name: 'Quill Pen', description: 'Goose feather quill', category: 'adventuring_gear', rarity: 'common', base_price_gp: 0.2, stock_quantity: 10 },
+        { name: 'Common Almanac', description: 'Local history and facts', category: 'book', rarity: 'common', base_price_gp: 15, stock_quantity: 2 },
+      ],
+    }
+
+    // Normalize shop type
+    const normalizedType = shopType.toLowerCase().replace(/\s+/g, '_')
+    
+    // Find matching category or default to general
+    let items = baseItems['general']
+    for (const [key, value] of Object.entries(baseItems)) {
+      if (normalizedType.includes(key)) {
+        items = value
+        break
+      }
+    }
+
+    // Adjust quantity and price based on economic tier
+    const tierModifier: Record<string, { priceMult: number; quantityMult: number }> = {
+      'luxury': { priceMult: 3, quantityMult: 0.5 },
+      'affluent': { priceMult: 2, quantityMult: 0.75 },
+      'comfortable': { priceMult: 1.5, quantityMult: 1 },
+      'modest': { priceMult: 1, quantityMult: 1.25 },
+      'poor': { priceMult: 0.75, quantityMult: 1.5 },
+      'squalid': { priceMult: 0.5, quantityMult: 2 },
+    }
+
+    const modifier = tierModifier[economicTier?.toLowerCase()] || tierModifier['modest']
+    
+    // Return modified items
+    return items.map(item => ({
+      ...item,
+      base_price_gp: Math.round(item.base_price_gp * modifier.priceMult * 100) / 100,
+      stock_quantity: Math.max(1, Math.floor(item.stock_quantity * modifier.quantityMult)),
+    }))
   }
 
   /**
