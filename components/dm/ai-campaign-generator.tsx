@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Sparkles, Check } from 'lucide-react'
+import { Loader2, Sparkles, Check, MapPin, Store, Users, Package } from 'lucide-react'
 
 interface UsageInfo {
   tokens: number
@@ -13,14 +13,34 @@ interface UsageInfo {
   model: string
 }
 
-type GenerationStep = 'idle' | 'validating' | 'checking_rate_limit' | 'generating_ai' | 'saving_campaign' | 'complete'
+interface GenerationResults {
+  campaign?: { id: string; name: string }
+  towns?: Array<{ id: string; name: string }>
+  shops?: Array<{ id: string; name: string }>
+  notablePeople?: Array<{ id: string; name: string }>
+  items?: Array<{ id: string; name: string }>
+}
+
+type GenerationStep = 
+  | 'idle' 
+  | 'validating' 
+  | 'checking_rate_limit' 
+  | 'generating_campaign'
+  | 'generating_towns'
+  | 'generating_shops'
+  | 'generating_people'
+  | 'generating_items'
+  | 'complete'
 
 const STEP_LABELS: Record<GenerationStep, string> = {
   idle: 'Ready',
   validating: 'Validating Request',
   checking_rate_limit: 'Checking Rate Limit',
-  generating_ai: 'Refining the World',
-  saving_campaign: 'Creating Campaign',
+  generating_campaign: 'Creating Campaign World',
+  generating_towns: 'Building Towns',
+  generating_shops: 'Stocking Shops',
+  generating_people: 'Creating Notable People',
+  generating_items: 'Adding Items',
   complete: 'Complete'
 }
 
@@ -32,23 +52,30 @@ export function AICampaignGenerator() {
   const [lastUsage, setLastUsage] = useState<UsageInfo | null>(null)
   const router = useRouter()
 
+  const [results, setResults] = useState<GenerationResults | null>(null)
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return
 
     setIsGenerating(true)
     setError(null)
+    setResults(null)
     setCurrentStep('validating')
 
     try {
       setCurrentStep('checking_rate_limit')
       
-      const response = await fetch('/api/dm/generate-campaign', {
+      // Use new hierarchical generation API
+      const response = await fetch('/api/dm/generate-hierarchy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          // Default config - creates full hierarchy
+        }),
       })
 
-      setCurrentStep('generating_ai')
+      setCurrentStep('generating_campaign')
       
       const result = await response.json()
 
@@ -56,29 +83,38 @@ export function AICampaignGenerator() {
         throw new Error(result.error?.message || 'Failed to generate campaign')
       }
 
-      setCurrentStep('saving_campaign')
+      setCurrentStep('generating_towns')
+      // Simulate progression for better UX (actual generation happens server-side)
+      await new Promise(r => setTimeout(r, 500))
+      
+      setCurrentStep('generating_shops')
+      await new Promise(r => setTimeout(r, 500))
+      
+      setCurrentStep('generating_people')
+      await new Promise(r => setTimeout(r, 500))
+      
+      setCurrentStep('generating_items')
+      await new Promise(r => setTimeout(r, 500))
 
-      // Handle both response formats for backward compatibility
-      const campaign = result.data?.campaign || result.campaign
-      const usage = result.data?.usage || result.usage
-
-      if (!campaign) {
-        console.error('Invalid response structure:', result)
-        throw new Error('Invalid response from server - missing campaign data')
+      // Store results
+      const generationResults: GenerationResults = {
+        campaign: result.data?.campaign,
+        towns: result.data?.towns,
+        shops: result.data?.shops,
+        notablePeople: result.data?.notablePeople,
+        items: result.data?.items,
       }
-
-      // Store usage info
-      if (usage) {
-        setLastUsage(usage)
-      }
+      setResults(generationResults)
 
       setCurrentStep('complete')
 
-      // Redirect to the new campaign after a brief delay to show completion
+      // Redirect to the new campaign after showing completion
       setTimeout(() => {
-        router.push(`/dm/campaigns/${campaign.id}`)
-        router.refresh()
-      }, 1500)
+        if (generationResults.campaign) {
+          router.push(`/dm/campaigns/${generationResults.campaign.id}`)
+          router.refresh()
+        }
+      }, 2500)
     } catch (err) {
       console.error('Campaign generation error:', err)
       setError((err as Error).message)
@@ -95,7 +131,7 @@ export function AICampaignGenerator() {
           AI Campaign Generator
         </CardTitle>
         <CardDescription>
-          Describe your campaign idea and let AI create a rich setting with suggested towns
+          Describe your campaign idea and AI will create a complete world: campaign → towns → shops → notable people → items
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -116,23 +152,24 @@ export function AICampaignGenerator() {
 
         {isGenerating && (
           <div className="bg-surface-container p-4 rounded-md space-y-2">
-            <p className="text-sm font-semibold text-on-surface">Generation Progress</p>
+            <p className="text-sm font-semibold text-on-surface">Building Your World</p>
             <div className="space-y-2">
-              {(['validating', 'checking_rate_limit', 'generating_ai', 'saving_campaign', 'complete'] as GenerationStep[]).map((step) => {
-                const stepIndex = ['validating', 'checking_rate_limit', 'generating_ai', 'saving_campaign', 'complete'].indexOf(step)
-                const currentIndex = ['validating', 'checking_rate_limit', 'generating_ai', 'saving_campaign', 'complete'].indexOf(currentStep)
+              {(['validating', 'checking_rate_limit', 'generating_campaign', 'generating_towns', 'generating_shops', 'generating_people', 'generating_items', 'complete'] as GenerationStep[]).map((step) => {
+                const steps = ['validating', 'checking_rate_limit', 'generating_campaign', 'generating_towns', 'generating_shops', 'generating_people', 'generating_items', 'complete']
+                const stepIndex = steps.indexOf(step)
+                const currentIndex = steps.indexOf(currentStep)
                 const isComplete = stepIndex < currentIndex || currentStep === 'complete'
                 const isCurrent = step === currentStep
                 
+                const getStepIcon = () => {
+                  if (isComplete) return <Check className="w-4 h-4 text-green-600" />
+                  if (isCurrent) return <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  return <div className="w-4 h-4 rounded-full border-2 border-outline" />
+                }
+                
                 return (
                   <div key={step} className="flex items-center gap-2 text-sm">
-                    {isComplete ? (
-                      <Check className="w-4 h-4 text-green-600" />
-                    ) : isCurrent ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full border-2 border-outline" />
-                    )}
+                    {getStepIcon()}
                     <span className={isCurrent ? 'font-semibold text-on-surface' : isComplete ? 'text-on-surface-variant' : 'text-outline'}>
                       {STEP_LABELS[step]}
                     </span>
@@ -143,11 +180,31 @@ export function AICampaignGenerator() {
           </div>
         )}
 
-        {lastUsage && currentStep === 'complete' && (
-          <div className="text-sm text-green-700 bg-green-50 p-3 rounded-md space-y-1">
-            <p className="font-semibold">Generation Complete!</p>
-            <p>Tokens: {lastUsage.tokens.toLocaleString()} | Cost: ${lastUsage.estimatedCost}</p>
-            <p className="text-xs">Model: {lastUsage.model}</p>
+        {currentStep === 'complete' && results && (
+          <div className="text-sm text-green-700 bg-green-50 p-4 rounded-md space-y-2">
+            <p className="font-semibold flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              World Created Successfully!
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {results.towns?.length || 0} Towns
+              </div>
+              <div className="flex items-center gap-1">
+                <Store className="w-3 h-3" />
+                {results.shops?.length || 0} Shops
+              </div>
+              <div className="flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {results.notablePeople?.length || 0} Notable People
+              </div>
+              <div className="flex items-center gap-1">
+                <Package className="w-3 h-3" />
+                {results.items?.length || 0} Items
+              </div>
+            </div>
+            <p className="text-xs text-green-600">Redirecting to your new campaign...</p>
           </div>
         )}
 
@@ -170,7 +227,7 @@ export function AICampaignGenerator() {
         </Button>
 
         <p className="text-xs text-on-surface-variant">
-          This will create a new campaign with AI-generated lore and suggested towns. You can customize everything afterwards.
+          Creates a complete hierarchy: 2-4 towns, 3-5 shops per town, 3-5 notable people per town, 5-10 items per shop. All context-aware and customizable.
         </p>
       </CardContent>
     </Card>
