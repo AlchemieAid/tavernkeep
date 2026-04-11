@@ -104,11 +104,12 @@ export interface GenerationStep {
 }
 
 export type GenerationEvent = 
-  | { type: 'step_started'; step: string; progress: GenerationProgress }
+  | { type: 'step_started'; step: string; progress: GenerationProgress; details?: string }
   | { type: 'step_completed'; step: string; data: any; progress: GenerationProgress }
   | { type: 'step_failed'; step: string; error: string; progress: GenerationProgress }
+  | { type: 'entity_created'; entityType: string; entity: any; progress: GenerationProgress }
   | { type: 'completed'; results: GenerationProgress['results'] }
-  | { type: 'failed'; error: string }
+  | { type: 'failed'; error: string; progress?: GenerationProgress }
 
 export interface GenerationOptions {
   config?: Partial<GenerationConfig>

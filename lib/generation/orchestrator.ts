@@ -111,16 +111,27 @@ export class GenerationOrchestrator {
    * Main entry point: Generate a complete campaign hierarchy
    */
   async generateCampaign(prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
-    const supabase = await createClient()
-    
     this.progress.status = 'running'
-    this.emit({ type: 'step_started', step: 'campaign', progress: { ...this.progress } })
-
+    
     try {
+      this.emitStepStarted('init', 'Initializing world generator...')
+      
+      // Create supabase client with timeout
+      const supabasePromise = createClient()
+      const supabase = await Promise.race([
+        supabasePromise,
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+        )
+      ]) as any
+      
+      this.emitStepStarted('campaign', 'Consulting the AI sages...')
+
       // 1. Generate Campaign
       const campaignResult = await this.generateCampaignEntity(supabase, prompt, ruleset, setting)
+      
       if (!campaignResult.success) {
-        throw new Error(campaignResult.error)
+        return { success: false, error: campaignResult.error }
       }
 
       const campaign = campaignResult.data
@@ -145,9 +156,10 @@ export class GenerationOrchestrator {
       return { success: true, data: this.progress.results }
     } catch (error) {
       const errorMsg = (error as Error).message
+      console.error('Generation error:', error)
       this.progress.status = 'error'
       this.progress.errors.push(errorMsg)
-      this.emit({ type: 'failed', error: errorMsg })
+      this.emit({ type: 'failed', error: errorMsg, progress: { ...this.progress } })
       return { success: false, error: errorMsg }
     }
   }
