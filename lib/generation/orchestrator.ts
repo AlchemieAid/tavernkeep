@@ -67,6 +67,25 @@ export class GenerationOrchestrator {
     }
   }
 
+  private emitStepStarted(step: string, details?: string) {
+    this.progress.currentStep = step
+    this.emit({ 
+      type: 'step_started', 
+      step, 
+      progress: { ...this.progress },
+      details
+    } as any)
+  }
+
+  private emitEntityCreated(type: string, entity: any) {
+    this.emit({
+      type: 'entity_created',
+      entityType: type,
+      entity,
+      progress: { ...this.progress }
+    } as any)
+  }
+
   private async trackAIUsage(
     supabase: any,
     type: string,
