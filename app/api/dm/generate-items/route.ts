@@ -117,6 +117,7 @@ export async function POST(request: Request) {
       stock_quantity: item.stock_quantity || 1,
       weight_lbs: item.weight_lbs,
       is_hidden: item.is_hidden || false,
+      is_revealed: !item.is_hidden, // Hidden items start as not revealed
       hidden_condition: item.hidden_condition,
       attunement_required: item.attunement_required || false,
       cursed: item.cursed || false,

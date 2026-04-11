@@ -10,7 +10,7 @@ Return a JSON object with this exact structure:
     "inventory_volatility": "static" | "slow" | "moderate" | "fast",
     "keeper_name": "Shopkeeper name",
     "keeper_race": "Race (optional)",
-    "keeper_personality": "Brief personality description",
+    "keeper_personality": ["Single-word trait 1", "Single-word trait 2", "Single-word trait 3"],
     "keeper_backstory": "One sentence backstory",
     "price_modifier": 1.0,
     "haggle_enabled": true,
@@ -34,7 +34,7 @@ Guidelines:
 - Generate 8-15 items that fit the shop theme
 - Price items appropriately for their rarity and the economic tier
 - Include a mix of common and uncommon items, with occasional rare items
-- Make shopkeeper personalities memorable and fitting to the shop type
+- Shopkeeper personality: 3-5 single-word traits (e.g., "Gruff", "Honest", "Greedy")
 - Set realistic stock quantities (1-3 for rare items, 5-20 for common items)
 - Occasionally include 1-2 hidden items with interesting reveal conditions
 - Adjust price_modifier based on location (1.0 = standard, 0.8 = cheap, 1.2 = expensive)
