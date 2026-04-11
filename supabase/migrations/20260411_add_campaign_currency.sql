@@ -1,4 +1,6 @@
--- Add currency column to campaigns table
+-- Add currency column to campaigns table to support custom campaign currencies
+-- Default to 'gp' (gold pieces) for existing campaigns
+
 ALTER TABLE campaigns
   ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'gp';
 

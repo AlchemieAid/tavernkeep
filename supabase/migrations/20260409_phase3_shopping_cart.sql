@@ -5,7 +5,7 @@
 -- CART ITEMS TABLE
 -- ============================================================================
 
-CREATE TABLE cart_items (
+CREATE TABLE IF NOT EXISTS cart_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   character_id UUID NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
   item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
@@ -24,22 +24,30 @@ CREATE TABLE cart_items (
 -- ============================================================================
 
 -- Index for fetching a character's cart
-CREATE INDEX cart_items_character_idx ON cart_items(character_id);
+CREATE INDEX IF NOT EXISTS cart_items_character_idx ON cart_items(character_id);
 
 -- Index for checking if an item is locked by anyone
-CREATE INDEX cart_items_item_idx ON cart_items(item_id);
+CREATE INDEX IF NOT EXISTS cart_items_item_idx ON cart_items(item_id);
 
 -- Index for fetching all carts in a shop (DM view)
-CREATE INDEX cart_items_shop_idx ON cart_items(shop_id);
+CREATE INDEX IF NOT EXISTS cart_items_shop_idx ON cart_items(shop_id);
 
 -- Composite index for character + shop queries
-CREATE INDEX cart_items_character_shop_idx ON cart_items(character_id, shop_id);
+CREATE INDEX IF NOT EXISTS cart_items_character_shop_idx ON cart_items(character_id, shop_id);
 
 -- ============================================================================
 -- RLS POLICIES FOR CART ACCESS
 -- ============================================================================
 
 ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Players can view own character cart" ON cart_items;
+DROP POLICY IF EXISTS "Players can add to own character cart" ON cart_items;
+DROP POLICY IF EXISTS "Players can update own character cart" ON cart_items;
+DROP POLICY IF EXISTS "Players can delete from own character cart" ON cart_items;
+DROP POLICY IF EXISTS "DMs can view all carts in their campaigns" ON cart_items;
+DROP POLICY IF EXISTS "DMs can delete carts in their campaigns" ON cart_items;
 
 -- Players can read their own character's cart items
 CREATE POLICY "Players can view own character cart"
