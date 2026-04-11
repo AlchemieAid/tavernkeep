@@ -7,8 +7,9 @@ ALTER TABLE items ADD COLUMN IF NOT EXISTS is_revealed BOOLEAN NOT NULL DEFAULT 
 -- Create index for filtering revealed items
 CREATE INDEX IF NOT EXISTS items_shop_revealed_idx ON items(shop_id, is_revealed);
 
--- Drop old policy
+-- Drop old policies
 DROP POLICY IF EXISTS "Anyone can read visible items in active shops" ON items;
+DROP POLICY IF EXISTS "Players can view revealed items in their campaigns" ON items;
 
 -- Create new policy using is_revealed for player access
 CREATE POLICY "Players can view revealed items in their campaigns"
