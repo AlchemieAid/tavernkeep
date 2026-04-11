@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { DeleteMenu } from '@/components/shared/delete-menu'
-import { AICampaignGenerator } from '@/components/dm/ai-campaign-generator'
+import { AIWorldGenerator } from '@/components/dm/ai-world-generator'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
