@@ -18,8 +18,9 @@ export function NavigationDropdowns() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const supabase = createClient()
+    
     async function loadData() {
-      const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
@@ -92,6 +93,27 @@ export function NavigationDropdowns() {
     }
 
     loadData()
+
+    // Subscribe to campaign changes (create, update, delete)
+    const channel = supabase
+      .channel('navigation-campaigns')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'campaigns'
+        },
+        () => {
+          // Reload campaigns when any change occurs
+          loadData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [pathname])
 
   async function loadCampaignData(campaignId: string, townId: string | null = null) {
