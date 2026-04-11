@@ -175,15 +175,21 @@ export class GenerationOrchestrator {
    * Generate a single campaign entity
    */
   private async generateCampaignEntity(supabase: any, prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
-    // Rate limit check with timeout (pass existing supabase client for speed)
+    // Rate limit check with aggressive 2-second timeout (pass existing supabase client for speed)
     this.emitStepStarted('rate_limit', 'Checking rate limits...')
+    console.log('[ORCHESTRATOR] Starting rate limit check...')
+    
+    const rateLimitStart = Date.now()
     const rateLimitPromise = checkRateLimit(this.dmId, 'campaign', supabase)
     const rateLimit = await Promise.race([
       rateLimitPromise,
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Rate limit check timeout')), 5000)
+        setTimeout(() => reject(new Error(`Rate limit check timed out after 2s`)), 2000)
       )
     ])
+    
+    console.log(`[ORCHESTRATOR] Rate limit check completed in ${Date.now() - rateLimitStart}ms`)
+    
     if (!rateLimit.allowed) {
       return { success: false, error: rateLimit.message }
     }
