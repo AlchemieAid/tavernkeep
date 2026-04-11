@@ -42,6 +42,7 @@ export default async function NewCampaignPage() {
 
     const name = formData.get('name') as string
     const description = formData.get('description') as string
+    const currency = formData.get('currency') as string || 'gp'
 
     // Generate invite token and slug
     const inviteToken = crypto.randomUUID()
@@ -57,6 +58,7 @@ export default async function NewCampaignPage() {
         dm_id: user.id,
         name,
         description,
+        currency,
         invite_token: inviteToken,
         slug: slug,
       })
@@ -104,6 +106,20 @@ export default async function NewCampaignPage() {
                   name="description"
                   placeholder="A classic adventure for new adventurers"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency (optional)</Label>
+                <Input
+                  id="currency"
+                  name="currency"
+                  placeholder="e.g., gp, sh, drakes"
+                  defaultValue="gp"
+                  maxLength={20}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Currency abbreviation used in this campaign (defaults to "gp")
+                </p>
               </div>
 
               <div className="flex gap-4">
