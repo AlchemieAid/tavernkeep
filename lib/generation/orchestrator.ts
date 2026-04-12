@@ -816,7 +816,7 @@ export class GenerationOrchestrator {
         description: item.description,
         category: item.category,
         rarity: item.rarity,
-        base_price_gp: this.adjustPriceForEconomicTier(item.base_price_gp, economicTier),
+        base_price_gp: item.base_price_gp,
         weight_lbs: item.weight_lbs,
         stock_quantity: this.getStockQuantityForTier(economicTier),
         is_hidden: false,
@@ -872,7 +872,7 @@ export class GenerationOrchestrator {
         description: item.description,
         category: item.category,
         rarity: item.rarity,
-        base_price_gp: this.adjustPriceForEconomicTier(item.base_price, economicTier),
+        base_price_gp: item.base_price,
         weight_lbs: item.weight,
         stock_quantity: this.getStockQuantityForTier(economicTier),
         is_hidden: false,
@@ -887,20 +887,6 @@ export class GenerationOrchestrator {
       console.error(`[CATALOG] Exception fetching catalog items:`, err)
       return []
     }
-  }
-
-  /**
-   * Adjust catalog item price based on shop economic tier.
-   */
-  private adjustPriceForEconomicTier(basePrice: number, tier: string): number {
-    const multipliers: Record<string, number> = {
-      poor: 0.7,
-      modest: 0.9,
-      comfortable: 1.0,
-      wealthy: 1.2,
-      opulent: 1.5,
-    }
-    return Math.max(1, Math.round(basePrice * (multipliers[tier] || 1.0)))
   }
 
   /**
