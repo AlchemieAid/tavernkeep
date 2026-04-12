@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
 import { GenerateCampaignSchema } from '@/lib/validators/campaign'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, recordUsage } from '@/lib/rate-limit'
 import { checkCache, storeInCache } from '@/lib/generation-cache'
 import { truncateFields, CAMPAIGN_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         { 
           status: 429,
           headers: {
-            'X-RateLimit-Reset': rateLimit.resetAt?.toString() || ''
+            'X-RateLimit-Remaining': rateLimit.remaining.toString()
           }
         }
       )
@@ -192,17 +192,15 @@ export async function POST(request: Request) {
     const totalTokens = completion.usage?.total_tokens || 0
     const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
 
-    // Track usage in database
-    await supabase.from('ai_usage').insert({
-      dm_id: user.id,
-      generation_type: 'campaign',
+    // Track usage async (fire-and-forget, don't block response)
+    void recordUsage(user.id, 'campaign', {
       prompt,
-      tokens_used: totalTokens,
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-      estimated_cost: estimatedCost,
-      model: 'gpt-4o-mini'
-    } as any)
+      tokensUsed: totalTokens,
+      inputTokens,
+      outputTokens,
+      estimatedCost,
+      model: 'gpt-4o',
+    }, supabase)
 
     // Store in cache for future reuse
     const cacheId = await storeInCache(
