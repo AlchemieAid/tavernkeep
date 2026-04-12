@@ -30,6 +30,11 @@ export async function checkRateLimit(
   generationType: 'campaign' | 'town' | 'shop' | 'item',
   supabase?: any
 ): Promise<{ allowed: boolean; remaining: number; message: string }> {
+  // Bypass rate limits for testing when env var is set
+  if (process.env.DISABLE_RATE_LIMITS === 'true') {
+    return { allowed: true, remaining: 9999, message: 'Rate limits disabled (testing mode)' }
+  }
+
   const config = RATE_LIMITS[generationType]
   
   // Create a timeout promise

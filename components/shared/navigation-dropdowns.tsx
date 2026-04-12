@@ -210,8 +210,22 @@ export function NavigationDropdowns() {
     router.push(`/dm/notable-people/${personId}/edit`)
   }
 
-  if (loading || campaigns.length === 0) {
+  if (loading) {
     return null
+  }
+
+  // Always show at least the Item Library link
+  if (campaigns.length === 0) {
+    return (
+      <div className="flex items-center gap-2">
+        <Link
+          href="/dm/items"
+          className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md hover:bg-surface-container transition-colors"
+        >
+          Item Library
+        </Link>
+      </div>
+    )
   }
 
   return (

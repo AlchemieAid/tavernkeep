@@ -138,6 +138,7 @@ export interface ItemLibrary {
   dm_id: string
   name: string
   description: string | null
+  ruleset: string
   category: ItemCategory
   rarity: ItemRarity
   base_price_gp: number

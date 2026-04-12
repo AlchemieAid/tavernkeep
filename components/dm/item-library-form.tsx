@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Save, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import type { ItemLibrary } from '@/types/database'
-import { SHOP_TAG_OPTIONS, WEAPON_PROPERTIES, DAMAGE_TYPES } from '@/lib/validators/item-library'
+import { SHOP_TAG_OPTIONS, WEAPON_PROPERTIES, DAMAGE_TYPES, RULESET_OPTIONS } from '@/lib/validators/item-library'
 
 interface ItemLibraryFormProps {
   item?: ItemLibrary
@@ -52,7 +52,8 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
 
   const [name, setName] = useState(item?.name ?? '')
   const [description, setDescription] = useState(item?.description ?? '')
-  const [category, setCategory] = useState<string>(item?.category ?? 'misc')
+  const [ruleset, setRuleset] = useState<string>(item?.ruleset ?? '5e')
+  const [category, setCategory] = useState<string>(item?.category ?? '')
   const [rarity, setRarity] = useState<string>(item?.rarity ?? 'common')
   const [basePriceGp, setBasePriceGp] = useState(String(item?.base_price_gp ?? 0))
   const [weightLbs, setWeightLbs] = useState(String(item?.weight_lbs ?? ''))
@@ -172,6 +173,7 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
     const payload = {
       name: name.trim(),
       description: description.trim() || undefined,
+      ruleset,
       category: category as 'weapon' | 'armor' | 'potion' | 'scroll' | 'tool' | 'magic_item' | 'misc',
       rarity: rarity as 'common' | 'uncommon' | 'rare' | 'very_rare' | 'legendary',
       base_price_gp: Number(basePriceGp) || 0,
@@ -284,26 +286,60 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
         </div>
       )}
 
-      {/* ── Basic Info ─────────────────────────────────────────── */}
+      {/* ── Step 1: Ruleset & Category ─────────────────────────── */}
+      <Card className="border-primary/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">1</span>
+            Ruleset & Item Type
+          </CardTitle>
+          <CardDescription>First, choose your game system and what kind of item this is</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="ruleset">Ruleset *</Label>
+              <Select value={ruleset} onValueChange={setRuleset}>
+                <SelectTrigger id="ruleset"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {RULESET_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Determines which mechanics fields are available</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="category">Item Category *</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger id="category"><SelectValue placeholder="Select a type..." /></SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {!category && (
+            <div className="rounded-md bg-muted p-4 text-center">
+              <p className="text-sm text-muted-foreground">Select a category above to see the mechanical details fields</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Step 2: Basic Info ─────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Basic Info</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">2</span>
+            Basic Info
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2 space-y-1.5">
               <Label htmlFor="name">Name *</Label>
               <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Vorpal Longsword" required />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="category">Category *</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id="category"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-1.5">
@@ -349,12 +385,15 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
         </CardContent>
       </Card>
 
-      {/* ── Mechanical Stats ───────────────────────────────────── */}
+      {/* ── Step 3: Mechanical Stats (Crunchy Details) ─────────── */}
       {category === 'weapon' && (
-        <Card>
+        <Card className="border-gold/30">
           <CardHeader>
-            <CardTitle>Weapon Stats</CardTitle>
-            <CardDescription>These are what actually matter in play</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gold text-gold-foreground text-sm font-bold">3</span>
+              Weapon Stats — {ruleset === '5e' ? 'D&D 5e' : ruleset}
+            </CardTitle>
+            <CardDescription>The mechanical details that matter in combat</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -429,9 +468,13 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
       )}
 
       {category === 'armor' && (
-        <Card>
+        <Card className="border-gold/30">
           <CardHeader>
-            <CardTitle>Armor Stats</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gold text-gold-foreground text-sm font-bold">3</span>
+              Armor Stats — {ruleset === '5e' ? 'D&D 5e' : ruleset}
+            </CardTitle>
+            <CardDescription>AC calculation, DEX limits, and movement penalties</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -476,9 +519,13 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
       )}
 
       {category === 'potion' && (
-        <Card>
+        <Card className="border-gold/30">
           <CardHeader>
-            <CardTitle>Potion Effects</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gold text-gold-foreground text-sm font-bold">3</span>
+              Potion Effects — {ruleset === '5e' ? 'D&D 5e' : ruleset}
+            </CardTitle>
+            <CardDescription>Healing, temporary HP, duration, and effects</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -508,9 +555,13 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
       )}
 
       {category === 'scroll' && (
-        <Card>
+        <Card className="border-gold/30">
           <CardHeader>
-            <CardTitle>Scroll Stats</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gold text-gold-foreground text-sm font-bold">3</span>
+              Scroll Stats — {ruleset === '5e' ? 'D&D 5e' : ruleset}
+            </CardTitle>
+            <CardDescription>Spell level, save DC, and attack modifiers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
@@ -538,9 +589,13 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
       )}
 
       {category === 'magic_item' && (
-        <Card>
+        <Card className="border-gold/30">
           <CardHeader>
-            <CardTitle>Magic Item Stats</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gold text-gold-foreground text-sm font-bold">3</span>
+              Magic Item Stats — {ruleset === '5e' ? 'D&D 5e' : ruleset}
+            </CardTitle>
+            <CardDescription>Charges, bonuses, and special abilities</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -573,35 +628,35 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
         </Card>
       )}
 
-      {/* ── Shop Tags ──────────────────────────────────────────── */}
+      {/* ── Step 4: Shop Tags & DM Notes ─────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle>Shop Tags *</CardTitle>
-          <CardDescription>Which types of shops would stock this item?</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm font-bold">4</span>
+            Shop Tags & Notes
+          </CardTitle>
+          <CardDescription>Tag which shops stock this item and add private notes</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            {SHOP_TAG_OPTIONS.map(tag => (
-              <label key={tag.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                <Checkbox
-                  checked={shopTags.includes(tag.value)}
-                  onCheckedChange={(_: boolean) => toggleShopTag(tag.value)}
-                />
-                {tag.label}
-              </label>
-            ))}
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label>Shop Tags * <span className="text-muted-foreground font-normal">— Which shops stock this?</span></Label>
+            <div className="flex flex-wrap gap-4">
+              {SHOP_TAG_OPTIONS.map(tag => (
+                <label key={tag.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={shopTags.includes(tag.value)}
+                    onCheckedChange={(_: boolean) => toggleShopTag(tag.value)}
+                  />
+                  {tag.label}
+                </label>
+              ))}
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* ── DM Notes ───────────────────────────────────────────── */}
-      <Card>
-        <CardHeader>
-          <CardTitle>DM Notes</CardTitle>
-          <CardDescription>Private notes — never shown to players</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="House rules, quest hooks, backstory..." />
+          <div className="space-y-1.5">
+            <Label htmlFor="notes">DM Notes <span className="text-muted-foreground font-normal">— Private, never shown to players</span></Label>
+            <Textarea id="notes" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="House rules, quest hooks, backstory..." />
+          </div>
         </CardContent>
       </Card>
 

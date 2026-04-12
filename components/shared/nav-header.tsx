@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { ProfileMenu } from './profile-menu'
 import { VersionBadge } from './version-badge'
-import { AIUsageCounter } from './ai-usage-counter'
 import { NavigationDropdowns } from './navigation-dropdowns'
 import Link from 'next/link'
 
@@ -32,13 +31,10 @@ export async function NavHeader() {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <VersionBadge />
-              <AIUsageCounter />
-            </div>
+            <VersionBadge />
             <ProfileMenu 
               userEmail={user.email || null}
-              displayName={profile?.display_name || null}
+              displayName={(profile as { display_name: string | null } | null)?.display_name || null}
             />
           </div>
         </div>

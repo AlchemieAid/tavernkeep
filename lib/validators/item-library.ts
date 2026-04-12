@@ -53,6 +53,14 @@ export const magicItemPropertiesSchema = z.object({
   effect: z.string().optional(),
 })
 
+export const RULESET_OPTIONS = [
+  { value: '5e', label: 'D&D 5e' },
+  { value: 'pathfinder', label: 'Pathfinder' },
+  { value: 'pathfinder2e', label: 'Pathfinder 2e' },
+  { value: 'osr', label: 'OSR / Old School' },
+  { value: 'custom', label: 'Custom / Homebrew' },
+] as const
+
 export const SHOP_TAG_OPTIONS = [
   { value: 'general', label: 'General Store' },
   { value: 'weapons', label: 'Weapons' },
@@ -65,6 +73,7 @@ export const SHOP_TAG_OPTIONS = [
 export const itemLibrarySchema = z.object({
   name: z.string().min(1, 'Name is required').max(120),
   description: z.string().max(1000).optional(),
+  ruleset: z.string().default('5e'),
   category: z.enum(['weapon', 'armor', 'potion', 'scroll', 'tool', 'magic_item', 'misc']),
   rarity: z.enum(['common', 'uncommon', 'rare', 'very_rare', 'legendary']),
   base_price_gp: z.number().int().min(0),

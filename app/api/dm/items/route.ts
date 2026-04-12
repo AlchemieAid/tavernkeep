@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       dm_id: user.id,
       name: values.name,
       description: values.description || null,
+      ruleset: values.ruleset,
       category: values.category,
       rarity: values.rarity,
       base_price_gp: values.base_price_gp,
