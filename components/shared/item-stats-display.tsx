@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 interface ItemStatsDisplayProps {
   category: string
   properties: Record<string, unknown> | null
@@ -13,7 +15,7 @@ function n(val: unknown): number | null {
   return isNaN(parsed) ? null : parsed
 }
 
-function StatRow({ label, value }: { label: string; value: string }) {
+function StatRow({ label, value }: { label: string; value: string }): ReactNode {
   if (!value) return null
   return (
     <div className="flex items-center justify-between gap-2 text-xs">
@@ -39,18 +41,18 @@ export function ItemStatsDisplay({ category, properties }: ItemStatsDisplayProps
     const props = Array.isArray(p.properties) ? (p.properties as string[]) : []
     return (
       <div className="space-y-1 pt-1 border-t border-outline-variant">
-        {p.damage_dice && p.damage_type && (
+        {p.damage_dice && p.damage_type ? (
           <StatRow label="Damage" value={`${s(p.damage_dice)} ${s(p.damage_type)}`} />
-        )}
-        {p.versatile_damage && (
+        ) : null}
+        {p.versatile_damage ? (
           <StatRow label="Versatile" value={s(p.versatile_damage)} />
-        )}
-        {(p.range_short || p.range_long) && (
+        ) : null}
+        {(p.range_short || p.range_long) ? (
           <StatRow label="Range" value={`${s(p.range_short)}/${s(p.range_long)} ft`} />
-        )}
-        {p.weapon_category && p.weapon_type && (
+        ) : null}
+        {p.weapon_category && p.weapon_type ? (
           <StatRow label="Type" value={`${s(p.weapon_category)} ${s(p.weapon_type)}`} />
-        )}
+        ) : null}
         {props.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-0.5">
             {props.map((prop) => <Badge key={prop}>{prop}</Badge>)}
@@ -91,10 +93,10 @@ export function ItemStatsDisplay({ category, properties }: ItemStatsDisplayProps
     const healStr = healDice ? `${healDice}${healBonus ? `+${healBonus}` : ''} HP` : ''
     return (
       <div className="space-y-1 pt-1 border-t border-outline-variant">
-        {healStr && <StatRow label="Healing" value={healStr} />}
-        {p.temp_hp && <StatRow label="Temp HP" value={`+${s(p.temp_hp)}`} />}
-        {p.effect && <StatRow label="Effect" value={s(p.effect)} />}
-        {p.duration && <StatRow label="Duration" value={s(p.duration)} />}
+        {healStr ? <StatRow label="Healing" value={healStr} /> : null}
+        {p.temp_hp ? <StatRow label="Temp HP" value={`+${s(p.temp_hp)}`} /> : null}
+        {p.effect ? <StatRow label="Effect" value={s(p.effect)} /> : null}
+        {p.duration ? <StatRow label="Duration" value={s(p.duration)} /> : null}
       </div>
     )
   }
@@ -106,8 +108,8 @@ export function ItemStatsDisplay({ category, properties }: ItemStatsDisplayProps
     return (
       <div className="space-y-1 pt-1 border-t border-outline-variant">
         <StatRow label="Level" value={lvlStr} />
-        {p.save_dc && <StatRow label="Save DC" value={s(p.save_dc)} />}
-        {p.attack_bonus && <StatRow label="Attack" value={`+${s(p.attack_bonus)}`} />}
+        {p.save_dc ? <StatRow label="Save DC" value={s(p.save_dc)} /> : null}
+        {p.attack_bonus ? <StatRow label="Attack" value={`+${s(p.attack_bonus)}`} /> : null}
       </div>
     )
   }
@@ -116,14 +118,14 @@ export function ItemStatsDisplay({ category, properties }: ItemStatsDisplayProps
     const effects = Array.isArray(p.effects) ? (p.effects as string[]) : []
     return (
       <div className="space-y-1 pt-1 border-t border-outline-variant">
-        {p.charges !== undefined && <StatRow label="Charges" value={s(p.charges)} />}
-        {p.recharge && <StatRow label="Recharge" value={s(p.recharge)} />}
-        {p.darkvision_range && <StatRow label="Darkvision" value={`${s(p.darkvision_range)} ft`} />}
-        {p.ac_bonus && <StatRow label="AC bonus" value={`+${s(p.ac_bonus)}`} />}
-        {p.saving_throw_bonus && <StatRow label="Save bonus" value={`+${s(p.saving_throw_bonus)}`} />}
-        {p.capacity_weight && <StatRow label="Capacity" value={`${s(p.capacity_weight)} lbs`} />}
-        {p.effect && <StatRow label="Effect" value={s(p.effect)} />}
-        {effects.length > 0 && !p.effect && <StatRow label="Effect" value={effects[0]} />}
+        {p.charges !== undefined ? <StatRow label="Charges" value={s(p.charges)} /> : null}
+        {p.recharge ? <StatRow label="Recharge" value={s(p.recharge)} /> : null}
+        {p.darkvision_range ? <StatRow label="Darkvision" value={`${s(p.darkvision_range)} ft`} /> : null}
+        {p.ac_bonus ? <StatRow label="AC bonus" value={`+${s(p.ac_bonus)}`} /> : null}
+        {p.saving_throw_bonus ? <StatRow label="Save bonus" value={`+${s(p.saving_throw_bonus)}`} /> : null}
+        {p.capacity_weight ? <StatRow label="Capacity" value={`${s(p.capacity_weight)} lbs`} /> : null}
+        {p.effect ? <StatRow label="Effect" value={s(p.effect)} /> : null}
+        {effects.length > 0 && !p.effect ? <StatRow label="Effect" value={effects[0]} /> : null}
       </div>
     )
   }
