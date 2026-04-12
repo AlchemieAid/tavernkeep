@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,7 +35,7 @@ type GenerationStep =
 const STEP_LABELS: Record<GenerationStep, string> = {
   idle: 'Ready',
   validating: 'Validating Request',
-  checking_rate_limit: 'Checking Rate Limit',
+  checking_rate_limit: 'Establishing connection...',
   generating_campaign: 'Creating Campaign World',
   generating_towns: 'Building Towns',
   generating_shops: 'Stocking Shops',
@@ -44,15 +44,31 @@ const STEP_LABELS: Record<GenerationStep, string> = {
   complete: 'Complete'
 }
 
+const ESTIMATED_SECONDS = 30 // Cold start estimate
+
 export function AICampaignGenerator() {
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [currentStep, setCurrentStep] = useState<GenerationStep>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lastUsage, setLastUsage] = useState<UsageInfo | null>(null)
+  const [connectionTimer, setConnectionTimer] = useState(ESTIMATED_SECONDS)
   const router = useRouter()
 
   const [results, setResults] = useState<GenerationResults | null>(null)
+
+  // Countdown timer for connection phase
+  useEffect(() => {
+    if (currentStep === 'checking_rate_limit' && connectionTimer > 0) {
+      const interval = setInterval(() => {
+        setConnectionTimer((prev) => Math.max(0, prev - 1))
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+    if (currentStep !== 'checking_rate_limit' && connectionTimer !== ESTIMATED_SECONDS) {
+      setConnectionTimer(ESTIMATED_SECONDS)
+    }
+  }, [currentStep, connectionTimer])
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return
@@ -172,6 +188,9 @@ export function AICampaignGenerator() {
                     {getStepIcon()}
                     <span className={isCurrent ? 'font-semibold text-on-surface' : isComplete ? 'text-on-surface-variant' : 'text-outline'}>
                       {STEP_LABELS[step]}
+                      {isCurrent && step === 'checking_rate_limit' && connectionTimer > 0 && (
+                        <span className="ml-2 text-muted-foreground">({connectionTimer}s)</span>
+                      )}
                     </span>
                   </div>
                 )
