@@ -100,7 +100,7 @@ export default async function NewShopPage({
 
     const { error } = await supabase
       .from('shops')
-      .insert(shopData)
+      .insert(shopData as any)
 
     if (error) {
       console.error('Error creating shop:', JSON.stringify(error, null, 2))

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Plus, Search } from 'lucide-react'
 import { RARITY_COLORS } from '@/lib/constants'
 
+import type { Json } from '@/lib/supabase/database.types'
+
 interface PickerItem {
   id: string
   name: string
@@ -19,7 +21,7 @@ interface PickerItem {
   base_price_gp: number
   weight_lbs: number | null
   attunement_required: boolean
-  properties: Record<string, unknown> | null
+  properties: Json
   source: 'library' | 'catalog'
 }
 

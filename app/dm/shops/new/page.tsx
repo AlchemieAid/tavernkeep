@@ -74,7 +74,7 @@ export default async function NewShopPage({
         haggle_enabled,
         haggle_dc,
         is_active: true,
-      })
+      } as any)
       .select()
       .single()
 

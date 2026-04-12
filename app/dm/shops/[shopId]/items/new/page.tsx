@@ -63,7 +63,7 @@ export default async function NewItemPage({
         stock_quantity,
         is_hidden,
         hidden_condition,
-      })
+      } as any)
 
     if (error) {
       console.error('Error creating item:', error)

@@ -80,7 +80,7 @@ export default async function NewNotablePersonPage({
 
     const { error } = await supabase
       .from('notable_people')
-      .insert(notablePersonData)
+      .insert(notablePersonData as any)
 
     if (error) {
       console.error('Error creating notable person:', error)

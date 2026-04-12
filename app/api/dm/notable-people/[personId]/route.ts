@@ -30,7 +30,7 @@ export async function PATCH(
 
     const { data: person, error } = await supabase
       .from('notable_people')
-      .update(validation.data as unknown as Record<string, unknown>)
+      .update(validation.data as any)
       .eq('id', personId)
       .eq('dm_id', user.id)
       .select()

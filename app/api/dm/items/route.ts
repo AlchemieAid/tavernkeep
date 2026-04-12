@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     .eq('dm_id', user.id)
     .order('name', { ascending: true })
 
-  if (category) query = query.eq('category', category)
+  if (category) query = query.eq('category', category as any)
   if (shopTag) query = query.contains('shop_tags', [shopTag])
   if (search) query = query.ilike('name', `%${search}%`)
 

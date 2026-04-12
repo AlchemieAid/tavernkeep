@@ -4,6 +4,7 @@ import { ShopItemPicker } from '@/components/dm/shop-item-picker'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import type { ItemLibrary } from '@/types/database'
+import type { Json } from '@/lib/supabase/database.types'
 
 interface PickerItem {
   id: string
@@ -14,7 +15,7 @@ interface PickerItem {
   base_price_gp: number
   weight_lbs: number | null
   attunement_required: boolean
-  properties: Record<string, unknown> | null
+  properties: Json
   source: 'library' | 'catalog'
 }
 
@@ -65,17 +66,7 @@ export default async function AddItemsToShopPage({
     .eq('ruleset', '5e')
     .order('name', { ascending: true })
 
-  const catalogItems: PickerItem[] = (rawCatalog ?? []).map((i: {
-    id: string
-    name: string
-    description: string | null
-    category: string
-    rarity: string
-    base_price: number
-    weight: number | null
-    requires_attunement: boolean
-    system_stats: Record<string, unknown> | null
-  }) => ({
+  const catalogItems: PickerItem[] = (rawCatalog ?? []).map((i: any) => ({
     id: i.id,
     name: i.name,
     description: i.description,
@@ -84,8 +75,8 @@ export default async function AddItemsToShopPage({
     base_price_gp: i.base_price,
     weight_lbs: i.weight,
     attunement_required: i.requires_attunement,
-    properties: i.system_stats,
-    source: 'catalog',
+    properties: i.system_stats as Json,
+    source: 'catalog' as const,
   }))
 
   return (
@@ -104,8 +95,8 @@ export default async function AddItemsToShopPage({
       </div>
       <ShopItemPicker
         shopId={shopId}
-        libraryItems={libraryItems}
-        catalogItems={catalogItems}
+        libraryItems={libraryItems as any}
+        catalogItems={catalogItems as any}
         shopType={shop.shop_type}
       />
     </div>
