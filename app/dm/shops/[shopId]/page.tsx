@@ -7,7 +7,8 @@ import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
 import type { Item } from '@/types/database'
 import { DeleteMenu } from '@/components/shared/delete-menu'
-import { Library, Eye, EyeOff } from 'lucide-react'
+import { AIItemGenerator } from '@/components/dm/ai-item-generator'
+import { Eye, EyeOff } from 'lucide-react'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 import { PendingTransactions } from '@/components/dm/pending-transactions'
 import { ItemStatsDisplay } from '@/components/shared/item-stats-display'
@@ -45,6 +46,12 @@ export default async function ShopEditorPage({
     .order('added_at', { ascending: true })
     .order('name', { ascending: true })
   const items = rawItems as Item[] | null
+
+  // Helper to calculate final price with shop markup
+  const getFinalPrice = (basePrice: number): number => {
+    const modifier = shop?.price_modifier ?? 100
+    return Math.round(basePrice * (modifier / 100))
+  }
 
   async function deleteItem(itemId: string) {
     'use server'
@@ -139,10 +146,7 @@ export default async function ShopEditorPage({
 
         <div className="flex gap-4">
           <Button asChild>
-            <Link href={`/dm/shops/${shopId}/items/add`}>
-              <Library className="w-4 h-4 mr-2" />
-              Add from Library
-            </Link>
+            <Link href={`/dm/shops/${shopId}/items/new`}>Add Item</Link>
           </Button>
           <Button asChild variant="outline">
             <Link href={`/shop/${shop.slug}`} target="_blank">Preview Shop</Link>
@@ -157,6 +161,9 @@ export default async function ShopEditorPage({
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Inventory</h2>
           
+          <div className="mb-6">
+            <AIItemGenerator shopId={shopId} />
+          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items?.map((item) => (
               <Card key={item.id}>
@@ -216,9 +223,14 @@ export default async function ShopEditorPage({
 
                   <div className="flex items-center justify-between pt-1">
                     <span className="body-sm text-on-surface-variant">Price:</span>
-                    <span className="price font-semibold">
-                      {item.base_price_gp} {item.currency_reference || 'gp'}
-                    </span>
+                    <p className="text-sm text-gold">
+                      {getFinalPrice(item.base_price_gp)} {item.currency_reference || 'gp'}
+                      {shop?.price_modifier && shop.price_modifier !== 100 && (
+                        <span className="text-xs text-on-surface-variant ml-1">
+                          ({item.base_price_gp} base)
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="body-sm text-on-surface-variant">Stock:</span>
