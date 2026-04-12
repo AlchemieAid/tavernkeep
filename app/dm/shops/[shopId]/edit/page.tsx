@@ -150,7 +150,8 @@ export default function EditShopPage({
         .eq('dm_id', user.id)
 
       if (updateError) {
-        setError('Failed to update shop')
+        console.error('[EDIT SHOP] Update error:', updateError)
+        setError(`Failed to update shop: ${updateError.message}`)
         return
       }
 
