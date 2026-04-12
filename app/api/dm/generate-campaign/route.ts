@@ -4,7 +4,6 @@ import OpenAI from 'openai'
 import { GenerateCampaignSchema } from '@/lib/validators/campaign'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
 import { checkRateLimit, recordUsage } from '@/lib/rate-limit'
-import { checkCache, storeInCache } from '@/lib/generation-cache'
 import { truncateFields, CAMPAIGN_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
 const openai = new OpenAI({
@@ -58,67 +57,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check cache first
-    const cached = await checkCache(prompt, 'campaign')
-    if (cached.found && cached.data) {
-      console.log('Cache hit! Reusing cached campaign generation')
-      
-      // Generate invite token and slug
-      const inviteToken = crypto.randomUUID()
-      const slug = cached.data.campaign.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 50)
-      
-      // Create campaign from cached data (truncate to ensure field limits)
-      const campaignData = truncateFields({
-        dm_id: user.id,
-        name: cached.data.campaign.name,
-        description: cached.data.campaign.description,
-        ruleset: cached.data.campaign.ruleset || '5e',
-        setting: cached.data.campaign.setting,
-        history: cached.data.campaign.history,
-        currency_name: cached.data.campaign.currency_name || 'gp',
-        currency_description: cached.data.campaign.currency_description,
-        pantheon: cached.data.campaign.pantheon,
-        invite_token: inviteToken,
-        slug: slug,
-      }, CAMPAIGN_FIELD_MAP)
-
-      const { data: createdCampaign, error: campaignError } = await supabase
-        .from('campaigns')
-        .insert(campaignData as any)
-        .select()
-        .single()
-
-      if (campaignError) {
-        console.error('Error creating campaign from cache:', campaignError)
-        return NextResponse.json(
-          { data: null, error: { message: 'Failed to create campaign' } },
-          { status: 500 }
-        )
-      }
-
-      return NextResponse.json({ 
-        data: {
-          campaign: createdCampaign, 
-          suggestedTowns: cached.data.suggestedTowns || [],
-          usage: {
-            tokens: cached.tokensUsed || 0,
-            inputTokens: 0,
-            outputTokens: 0,
-            estimatedCost: '0.000000',
-            model: 'cached',
-            cached: true,
-            cacheId: cached.cacheId,
-            averageRating: cached.averageRating
-          }
-        },
-        error: null
-      })
-    }
-
+    // TODO: Implement generation cache for reusing similar prompts
+    
     // Check for inappropriate content
     const moderation = await openai.moderations.create({ input: prompt })
     if (moderation.results[0].flagged) {
@@ -202,14 +142,15 @@ export async function POST(request: Request) {
       model: 'gpt-4o',
     }, supabase)
 
+    // TODO: Re-enable when cache tables are created
     // Store in cache for future reuse
-    const cacheId = await storeInCache(
-      prompt,
-      'campaign',
-      { campaign, suggestedTowns },
-      totalTokens,
-      'gpt-4o-mini'
-    )
+    // await storeInCache(
+    //   prompt,
+    //   'campaign',
+    //   { campaign, suggestedTowns },
+    //   completion.usage?.total_tokens || 0,
+    //   completion.model
+    // )
 
     return NextResponse.json({ 
       data: {
@@ -221,8 +162,7 @@ export async function POST(request: Request) {
           outputTokens,
           estimatedCost: estimatedCost.toFixed(6),
           model: 'gpt-4o-mini',
-          cached: false,
-          cacheId
+          cached: false
         }
       },
       error: null
