@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
-import type { Item } from '@/types/database'
+import type { Database } from '@/lib/supabase/database.types'
 import { DeleteMenu } from '@/components/shared/delete-menu'
+
+type Shop = Database['public']['Tables']['shops']['Row'] & {
+  campaign: Database['public']['Tables']['campaigns']['Row'] | null
+}
+type Item = Database['public']['Tables']['items']['Row']
 import { Eye, EyeOff, Plus } from 'lucide-react'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 import { PendingTransactions } from '@/components/dm/pending-transactions'
@@ -37,21 +42,21 @@ export default async function ShopEditorPage({
     notFound()
   }
 
-  const { data: rawItems } = await supabase
+  const typedShop = shop as Shop
+
+  const { data: items } = await supabase
     .from('items')
     .select('*')
     .eq('shop_id', shopId)
     .is('deleted_at', null)
     .order('added_at', { ascending: true })
     .order('name', { ascending: true })
-  const items = rawItems as Item[] | null
 
   // Helper to calculate final price with shop markup
-  const getFinalPrice = (basePrice: number | string): number => {
-    const base = typeof basePrice === 'string' ? parseFloat(basePrice) : basePrice
-    const modifier = Number((shop as any)?.price_modifier ?? 100)
+  const getFinalPrice = (basePrice: number): number => {
+    const modifier = typedShop.price_modifier ?? 100
     // modifier is stored as integer percentage (e.g., 110 = 110%)
-    return Math.round(base * (modifier / 100))
+    return Math.round(basePrice * (modifier / 100))
   }
 
   async function deleteItem(itemId: string) {
@@ -84,7 +89,7 @@ export default async function ShopEditorPage({
 
     const { error } = await supabase
       .from('items')
-      .update({ is_revealed: isRevealed } as any)
+      .update({ is_revealed: isRevealed })
       .eq('id', itemId)
 
     if (error) {
@@ -107,7 +112,7 @@ export default async function ShopEditorPage({
 
     const { error } = await supabase
       .from('shops')
-      .update({ is_revealed: isRevealed } as any)
+      .update({ is_revealed: isRevealed })
       .eq('id', shopId)
       .eq('dm_id', user.id)
 
@@ -123,17 +128,17 @@ export default async function ShopEditorPage({
     <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="headline-lg text-gold">{shop.name}</h1>
+            <h1 className="headline-lg text-gold">{typedShop.name}</h1>
             <p className="body-md text-on-surface-variant mt-2">
-              {shop.shop_type} · {shop.economic_tier}
+              {typedShop.shop_type} · {typedShop.economic_tier}
             </p>
           </div>
           <div className="flex items-center gap-4">
             <VisibilityToggle
               entityType="shop"
-              entityId={shop.id}
-              isRevealed={shop.is_revealed}
-              entityName={shop.name}
+              entityId={typedShop.id}
+              isRevealed={typedShop.is_revealed}
+              entityName={typedShop.name}
               onToggle={toggleShopVisibility}
             />
             <Button asChild>
@@ -153,7 +158,7 @@ export default async function ShopEditorPage({
             </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href={`/shop/${shop.slug}`} target="_blank">Preview Shop</Link>
+            <Link href={`/shop/${typedShop.slug}`} target="_blank">Preview Shop</Link>
           </Button>
         </div>
 
@@ -225,7 +230,7 @@ export default async function ShopEditorPage({
                     <span className="body-sm text-on-surface-variant">Price:</span>
                     <p className="text-sm text-gold">
                       {getFinalPrice(item.base_price_gp)} {item.currency_reference || 'gp'}
-                      {(shop as any)?.price_modifier && (shop as any).price_modifier !== 100 && (
+                      {typedShop.price_modifier !== 100 && (
                         <span className="text-xs text-on-surface-variant ml-1">
                           ({item.base_price_gp} base)
                         </span>
