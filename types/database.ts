@@ -133,6 +133,25 @@ export interface Item {
   deleted_at: string | null
 }
 
+export interface ItemLibrary {
+  id: string
+  dm_id: string
+  name: string
+  description: string | null
+  category: ItemCategory
+  rarity: ItemRarity
+  base_price_gp: number
+  weight_lbs: number | null
+  is_magical: boolean
+  attunement_required: boolean
+  cursed: boolean
+  shop_tags: string[]
+  properties: Record<string, unknown> | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface PartyAccess {
   id: string
   campaign_id: string
@@ -245,6 +264,11 @@ export interface Database {
         Row: Item
         Insert: Omit<Item, 'id' | 'added_at'>
         Update: Partial<Omit<Item, 'id' | 'shop_id' | 'added_at'>>
+      }
+      item_library: {
+        Row: ItemLibrary
+        Insert: Omit<ItemLibrary, 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Omit<ItemLibrary, 'id' | 'dm_id' | 'created_at' | 'updated_at'>>
       }
       party_access: {
         Row: PartyAccess

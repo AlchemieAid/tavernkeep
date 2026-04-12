@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
+import Link from 'next/link'
 import type { Campaign, Town, Shop, NotablePerson } from '@/types/database'
 
 export function NavigationDropdowns() {
@@ -29,11 +30,12 @@ export function NavigationDropdowns() {
       }
 
       // Load campaigns
-      const { data: campaignsData } = await supabase
+      const { data: rawCampaignsData } = await supabase
         .from('campaigns')
         .select('*')
         .eq('dm_id', user.id)
         .order('created_at', { ascending: false })
+      const campaignsData = rawCampaignsData as Campaign[] | null
 
       if (campaignsData) {
         setCampaigns(campaignsData)
@@ -53,12 +55,12 @@ export function NavigationDropdowns() {
           const townId = townMatch[1]
           setSelectedTown(townId)
           
-          const { data: townData } = await supabase
+          const { data: rawTownData } = await supabase
             .from('towns')
             .select('campaign_id')
             .eq('id', townId)
             .single()
-          
+          const townData = rawTownData as { campaign_id: string } | null
           if (townData) {
             campaignId = townData.campaign_id
           }
@@ -69,12 +71,12 @@ export function NavigationDropdowns() {
         // Check if we're on a shop page - fetch the campaign_id
         const shopMatch = pathname.match(/\/shops\/([^\/]+)/)
         if (shopMatch && !campaignId) {
-          const { data: shopData } = await supabase
+          const { data: rawShopData } = await supabase
             .from('shops')
             .select('campaign_id')
             .eq('id', shopMatch[1])
             .single()
-          
+          const shopData = rawShopData as { campaign_id: string } | null
           if (shopData) {
             campaignId = shopData.campaign_id
           }
@@ -162,11 +164,11 @@ export function NavigationDropdowns() {
       }
     } else {
       // If on campaign page, show all people from all towns in campaign
-      const { data: campaignTowns } = await supabase
+      const { data: rawCampaignTowns } = await supabase
         .from('towns')
         .select('id')
         .eq('campaign_id', campaignId)
-      
+      const campaignTowns = rawCampaignTowns as { id: string }[] | null
       if (campaignTowns && campaignTowns.length > 0) {
         const townIds = campaignTowns.map(t => t.id)
         
@@ -311,6 +313,12 @@ export function NavigationDropdowns() {
           </div>
         </div>
       )}
+      <Link
+        href="/dm/items"
+        className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-md hover:bg-surface-container transition-colors"
+      >
+        Item Library
+      </Link>
     </div>
   )
 }

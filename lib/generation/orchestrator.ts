@@ -690,28 +690,28 @@ export class GenerationOrchestrator {
         'gpt-4o'
       )
 
-      // Auto-generate items if configured
+      // Populate items from library → catalog (no AI item generation)
       if (this.config.shop.autoGenerateItems) {
         const targetCount = this.getRandomCount(this.config.shop.itemCount)
-        const validAIItems = (itemsData && Array.isArray(itemsData))
-          ? itemsData.filter((item: any) => this.isValidItem(item))
-          : []
 
-        if (validAIItems.length >= 3) {
-          console.log(`[ITEMS] Using ${validAIItems.length} AI-generated items for ${createdShop.name}`)
-          await this.generateItemsForShop(supabase, createdShop.id, validAIItems, contextBuilder, createdShop.name)
+        // 1. Try DM's personal item library first
+        const libraryItems = await this.getItemsFromLibrary(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
+        if (libraryItems.length > 0) {
+          console.log(`[ITEMS] Using ${libraryItems.length} library items for ${createdShop.name}`)
+          await this.generateItemsForShop(supabase, createdShop.id, libraryItems, contextBuilder, createdShop.name)
         } else {
-          console.log(`[ITEMS] AI returned ${validAIItems.length} valid items for ${createdShop.name} — querying catalog for ${createdShop.shop_type} shop...`)
+          // 2. Fall back to SRD catalog
+          console.log(`[ITEMS] No library items for ${createdShop.shop_type} — falling back to SRD catalog for ${createdShop.name}`)
           const catalogItems = await this.getItemsFromCatalog(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
           if (catalogItems.length > 0) {
             await this.generateItemsForShop(supabase, createdShop.id, catalogItems, contextBuilder, createdShop.name)
           } else {
-            console.error(`[ITEMS] Catalog returned 0 items for ${createdShop.name} (shop_type: ${createdShop.shop_type}) — shop will have no items`)
-            this.progress.errors.push(`Could not generate items for ${createdShop.name}`)
+            console.warn(`[ITEMS] No catalog items for ${createdShop.shop_type} — shop will start empty`)
+            this.progress.errors.push(`No items found for ${createdShop.name} — add items via Item Library`)
           }
         }
       } else {
-        console.log(`[ITEMS] Skipping item generation for ${createdShop.name} - autoGenerateItems is disabled`)
+        console.log(`[ITEMS] Skipping item population for ${createdShop.name} - autoGenerateItems is disabled`)
       }
     }
     
@@ -786,6 +786,51 @@ export class GenerationOrchestrator {
       }
     } else {
       console.warn(`[ITEMS] No items returned from insert for ${shopName}`)
+    }
+  }
+
+  /**
+   * Fetch items from the DM's personal item_library for a given shop type.
+   * Returns mapped items ready for generateItemsForShop.
+   */
+  private async getItemsFromLibrary(
+    supabase: any,
+    shopType: string,
+    economicTier: string,
+    count: number
+  ): Promise<any[]> {
+    try {
+      const { data: libraryItems, error } = await supabase
+        .from('item_library')
+        .select('*')
+        .eq('dm_id', this.dmId)
+        .contains('shop_tags', [shopType])
+        .limit(100)
+
+      if (error || !libraryItems || libraryItems.length === 0) return []
+
+      const shuffled = [...libraryItems].sort(() => Math.random() - 0.5)
+      const selected = shuffled.slice(0, count)
+
+      return selected.map((item: any) => ({
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        rarity: item.rarity,
+        base_price_gp: this.adjustPriceForEconomicTier(item.base_price_gp, economicTier),
+        weight_lbs: item.weight_lbs,
+        stock_quantity: this.getStockQuantityForTier(economicTier),
+        is_hidden: false,
+        hidden_condition: null,
+        attunement_required: item.attunement_required,
+        cursed: item.cursed,
+        identified: true,
+        properties: item.properties,
+        currency_reference: this.primaryCurrency,
+      }))
+    } catch (err) {
+      console.error(`[LIBRARY] Exception fetching library items:`, err)
+      return []
     }
   }
 
