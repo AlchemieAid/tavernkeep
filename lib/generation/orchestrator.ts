@@ -692,19 +692,22 @@ export class GenerationOrchestrator {
 
       // Auto-generate items if configured
       if (this.config.shop.autoGenerateItems) {
-        const hasItems = itemsData && Array.isArray(itemsData) && itemsData.length > 0
-        if (hasItems) {
-          console.log(`[ITEMS] AI returned ${itemsData.length} items for ${createdShop.name}`)
-          await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder, createdShop.name)
+        const targetCount = this.getRandomCount(this.config.shop.itemCount)
+        const validAIItems = (itemsData && Array.isArray(itemsData))
+          ? itemsData.filter((item: any) => this.isValidItem(item))
+          : []
+
+        if (validAIItems.length >= 3) {
+          console.log(`[ITEMS] Using ${validAIItems.length} AI-generated items for ${createdShop.name}`)
+          await this.generateItemsForShop(supabase, createdShop.id, validAIItems, contextBuilder, createdShop.name)
         } else {
-          console.log(`[ITEMS] AI returned no items for ${createdShop.name} (itemsData: ${typeof itemsData}, length: ${itemsData?.length}), generating fallback items...`)
-          // Generate fallback items based on shop type
-          const fallbackItems = this.generateFallbackItems(createdShop.shop_type, createdShop.economic_tier)
-          console.log(`[ITEMS] Generated ${fallbackItems.length} fallback items for ${createdShop.name} using currency: ${this.primaryCurrency}`)
-          if (fallbackItems.length > 0) {
-            await this.generateItemsForShop(supabase, createdShop.id, fallbackItems, contextBuilder, createdShop.name)
+          console.log(`[ITEMS] AI returned ${validAIItems.length} valid items for ${createdShop.name} — querying catalog for ${createdShop.shop_type} shop...`)
+          const catalogItems = await this.getItemsFromCatalog(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
+          if (catalogItems.length > 0) {
+            await this.generateItemsForShop(supabase, createdShop.id, catalogItems, contextBuilder, createdShop.name)
           } else {
-            console.warn(`[ITEMS] No fallback items generated for ${createdShop.name} (shop_type: ${createdShop.shop_type})`)
+            console.error(`[ITEMS] Catalog returned 0 items for ${createdShop.name} (shop_type: ${createdShop.shop_type}) — shop will have no items`)
+            this.progress.errors.push(`Could not generate items for ${createdShop.name}`)
           }
         }
       } else {
@@ -787,109 +790,106 @@ export class GenerationOrchestrator {
   }
 
   /**
-   * Generate fallback items when AI doesn't return any
+   * Fetch random items from the catalog for a given shop type.
+   * This is the guaranteed fallback when AI generation returns no valid items.
    */
-  private generateFallbackItems(shopType: string, economicTier: string): any[] {
-    // VALID category enum values: 'weapon', 'armor', 'potion', 'scroll', 'tool', 'magic_item', 'misc'
-    // VALID rarity enum values: 'common', 'uncommon', 'rare', 'very_rare', 'legendary'
-    // base_price_gp is INTEGER (not float) - prices in gold pieces
-    const baseItems: Record<string, any[]> = {
-      'general': [
-        { name: 'Rope (50ft)', description: 'Sturdy hemp rope', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 5 },
-        { name: 'Torch', description: 'Burns for 1 hour', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 10 },
-        { name: 'Waterskin', description: 'Holds 4 pints of liquid', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 8 },
-        { name: 'Backpack', description: 'Standard adventurer\'s pack', category: 'misc', rarity: 'common', base_price_gp: 2, stock_quantity: 4 },
-        { name: 'Bedroll', description: 'For camping in the wild', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 6 },
-      ],
-      'weapon': [
-        { name: 'Dagger', description: 'Simple but effective blade', category: 'weapon', rarity: 'common', base_price_gp: 2, stock_quantity: 5 },
-        { name: 'Shortsword', description: 'Light and versatile', category: 'weapon', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
-        { name: 'Longsword', description: 'A classic warrior\'s weapon', category: 'weapon', rarity: 'common', base_price_gp: 15, stock_quantity: 2 },
-        { name: 'Crossbow', description: 'Light crossbow with 20 bolts', category: 'weapon', rarity: 'common', base_price_gp: 25, stock_quantity: 2 },
-        { name: 'Quarterstaff', description: 'A simple wooden staff', category: 'weapon', rarity: 'common', base_price_gp: 1, stock_quantity: 8 },
-      ],
-      'armor': [
-        { name: 'Leather Armor', description: 'Flexible and quiet protection', category: 'armor', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
-        { name: 'Studded Leather', description: 'Reinforced leather armor', category: 'armor', rarity: 'common', base_price_gp: 45, stock_quantity: 2 },
-        { name: 'Shield', description: 'Wooden shield with steel rim', category: 'armor', rarity: 'common', base_price_gp: 10, stock_quantity: 4 },
-        { name: 'Chain Shirt', description: 'Light chainmail protection', category: 'armor', rarity: 'common', base_price_gp: 50, stock_quantity: 1 },
-      ],
-      'potion': [
-        { name: 'Potion of Healing', description: 'Restores 2d4+2 hit points', category: 'potion', rarity: 'common', base_price_gp: 50, stock_quantity: 3, identified: true },
-        { name: 'Potion of Greater Healing', description: 'Restores 4d4+4 hit points', category: 'potion', rarity: 'uncommon', base_price_gp: 150, stock_quantity: 1, identified: true },
-        { name: 'Antitoxin', description: 'Grants advantage on poison saves', category: 'potion', rarity: 'common', base_price_gp: 50, stock_quantity: 2 },
-        { name: 'Potion of Climbing', description: 'Grants climb speed for 1 hour', category: 'potion', rarity: 'common', base_price_gp: 50, stock_quantity: 1, identified: false },
-      ],
-      'magic': [
-        { name: 'Scroll of Cure Wounds', description: 'A weathered magical scroll', category: 'scroll', rarity: 'common', base_price_gp: 25, stock_quantity: 2, identified: false, is_hidden: true, hidden_condition: 'Detect Magic or spellcasting ability' },
-        { name: 'Scroll of Shield', description: 'Arcane writings on parchment', category: 'scroll', rarity: 'common', base_price_gp: 25, stock_quantity: 2, identified: false },
-        { name: 'Component Pouch', description: 'Contains spell components', category: 'misc', rarity: 'common', base_price_gp: 25, stock_quantity: 3 },
-        { name: 'Arcane Focus (Crystal)', description: 'A crystal for spellcasting', category: 'misc', rarity: 'common', base_price_gp: 10, stock_quantity: 2 },
-      ],
-      'tavern': [
-        { name: 'Common Wine (bottle)', description: 'Cheap local vintage', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 10 },
-        { name: 'Fine Wine (bottle)', description: 'Imported quality wine', category: 'misc', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
-        { name: 'Ale (mug)', description: 'Local brewed ale', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 20 },
-        { name: 'Bread', description: 'Fresh baked daily', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 8 },
-        { name: 'Cheese Wheel', description: 'Aged local cheese', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 4 },
-        { name: 'Stew (bowl)', description: 'Hearty meat and vegetable stew', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 12 },
-      ],
-      'blacksmith': [
-        { name: 'Iron Nails (20)', description: 'For construction or repairs', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 10 },
-        { name: 'Horseshoes', description: 'Set of 4 iron horseshoes', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 6 },
-        { name: 'Hammer', description: 'A sturdy smith\'s hammer', category: 'tool', rarity: 'common', base_price_gp: 1, stock_quantity: 4 },
-        { name: 'Piton', description: 'Iron spike for climbing', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 10 },
-        { name: 'Crowbar', description: 'Forged iron crowbar', category: 'tool', rarity: 'common', base_price_gp: 2, stock_quantity: 3 },
-      ],
-      'jewelry': [
-        { name: 'Silver Ring', description: 'Simple silver band', category: 'magic_item', rarity: 'common', base_price_gp: 10, stock_quantity: 3 },
-        { name: 'Gold Locket', description: 'Small locket on a chain', category: 'magic_item', rarity: 'common', base_price_gp: 25, stock_quantity: 2 },
-        { name: 'Brass Bracelet', description: 'Intricate brasswork', category: 'misc', rarity: 'common', base_price_gp: 5, stock_quantity: 4 },
-        { name: 'Copper Earrings', description: 'Pair of copper earrings', category: 'misc', rarity: 'common', base_price_gp: 3, stock_quantity: 3 },
-        { name: 'Signet Ring', description: 'A noble\'s signet', category: 'magic_item', rarity: 'uncommon', base_price_gp: 75, stock_quantity: 1, identified: false, is_hidden: true, hidden_condition: 'Appraisal or detect magic' },
-      ],
-      'bookstore': [
-        { name: 'Blank Journal', description: 'Leather-bound blank book', category: 'misc', rarity: 'common', base_price_gp: 10, stock_quantity: 4 },
-        { name: 'Charcoal Sticks', description: 'For writing or sketching', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 8 },
-        { name: 'Ink Bottle', description: 'Black ink for writing', category: 'misc', rarity: 'common', base_price_gp: 10, stock_quantity: 5 },
-        { name: 'Quill Pen', description: 'Goose feather quill', category: 'misc', rarity: 'common', base_price_gp: 1, stock_quantity: 10 },
-        { name: 'Common Almanac', description: 'Local history and facts', category: 'misc', rarity: 'common', base_price_gp: 15, stock_quantity: 2 },
-      ],
-    }
+  private async getItemsFromCatalog(
+    supabase: any,
+    shopType: string,
+    economicTier: string,
+    count: number
+  ): Promise<any[]> {
+    try {
+      const { data: catalogItems, error } = await supabase
+        .from('catalog_items')
+        .select('*')
+        .contains('shop_tags', [shopType])
+        .eq('ruleset', '5e')
+        .limit(100)
 
-    // Normalize shop type
-    const normalizedType = shopType.toLowerCase().replace(/\s+/g, '_')
-    
-    // Find matching category or default to general
-    let items = baseItems['general']
-    for (const [key, value] of Object.entries(baseItems)) {
-      if (normalizedType.includes(key)) {
-        items = value
-        break
+      if (error) {
+        console.error(`[CATALOG] Failed to fetch items for shop type '${shopType}':`, error.message)
+        return []
       }
-    }
 
-    // Adjust quantity and price based on economic tier
-    const tierModifier: Record<string, { priceMult: number; quantityMult: number }> = {
-      'luxury': { priceMult: 3, quantityMult: 0.5 },
-      'affluent': { priceMult: 2, quantityMult: 0.75 },
-      'comfortable': { priceMult: 1.5, quantityMult: 1 },
-      'modest': { priceMult: 1, quantityMult: 1.25 },
-      'poor': { priceMult: 0.75, quantityMult: 1.5 },
-      'squalid': { priceMult: 0.5, quantityMult: 2 },
-    }
+      if (!catalogItems || catalogItems.length === 0) {
+        console.warn(`[CATALOG] No catalog items found for shop type '${shopType}'`)
+        return []
+      }
 
-    const modifier = tierModifier[economicTier?.toLowerCase()] || tierModifier['modest']
-    
-    // Return modified items with campaign currency
-    console.log(`[ITEMS] Generating fallback items with currency: ${this.primaryCurrency}`)
-    
-    return items.map(item => ({
-      ...item,
-      base_price_gp: Math.round(item.base_price_gp * modifier.priceMult),
-      stock_quantity: Math.max(1, Math.floor(item.stock_quantity * modifier.quantityMult)),
-      currency_reference: this.primaryCurrency,
-    }))
+      // Shuffle client-side (PostgREST doesn't support ORDER BY RANDOM())
+      const shuffled = [...catalogItems].sort(() => Math.random() - 0.5)
+      const selected = shuffled.slice(0, count)
+
+      console.log(`[CATALOG] Selected ${selected.length}/${catalogItems.length} catalog items for '${shopType}' (${economicTier})`)
+
+      return selected.map((item: any) => ({
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        rarity: item.rarity,
+        base_price_gp: this.adjustPriceForEconomicTier(item.base_price, economicTier),
+        weight_lbs: item.weight,
+        stock_quantity: this.getStockQuantityForTier(economicTier),
+        is_hidden: false,
+        hidden_condition: null,
+        attunement_required: item.requires_attunement,
+        cursed: false,
+        identified: true,
+        properties: item.system_stats,
+        currency_reference: this.primaryCurrency,
+      }))
+    } catch (err) {
+      console.error(`[CATALOG] Exception fetching catalog items:`, err)
+      return []
+    }
+  }
+
+  /**
+   * Validate that an AI-generated item has all required fields with valid enum values.
+   * Prevents invalid enum inserts that silently kill the entire batch.
+   */
+  private isValidItem(item: any): boolean {
+    const validCategories = ['weapon', 'armor', 'potion', 'scroll', 'tool', 'magic_item', 'misc']
+    const validRarities = ['common', 'uncommon', 'rare', 'very_rare', 'legendary']
+    return !!(
+      item.name &&
+      typeof item.name === 'string' &&
+      item.category &&
+      validCategories.includes(item.category) &&
+      item.rarity &&
+      validRarities.includes(item.rarity) &&
+      typeof item.base_price_gp === 'number' &&
+      item.base_price_gp >= 0
+    )
+  }
+
+  /**
+   * Adjust catalog item price based on shop economic tier.
+   */
+  private adjustPriceForEconomicTier(basePrice: number, tier: string): number {
+    const multipliers: Record<string, number> = {
+      poor: 0.7,
+      modest: 0.9,
+      comfortable: 1.0,
+      wealthy: 1.2,
+      opulent: 1.5,
+    }
+    return Math.max(1, Math.round(basePrice * (multipliers[tier] || 1.0)))
+  }
+
+  /**
+   * Get appropriate stock quantity based on shop economic tier.
+   */
+  private getStockQuantityForTier(tier: string): number {
+    const quantities: Record<string, number> = {
+      poor: 1,
+      modest: 2,
+      comfortable: 3,
+      wealthy: 4,
+      opulent: 5,
+    }
+    return quantities[tier] || 2
   }
 
   /**
