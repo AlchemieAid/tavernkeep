@@ -47,9 +47,10 @@ export default async function ShopEditorPage({
   const items = rawItems as Item[] | null
 
   // Helper to calculate final price with shop markup
-  const getFinalPrice = (basePrice: number): number => {
-    const modifier = shop?.price_modifier ?? 100
-    return Math.round(basePrice * (modifier / 100))
+  const getFinalPrice = (basePrice: number | string): number => {
+    const base = typeof basePrice === 'string' ? parseFloat(basePrice) : basePrice
+    const modifier = Number((shop as any)?.price_modifier ?? 100)
+    return Math.round(base * (modifier / 100))
   }
 
   async function deleteItem(itemId: string) {
@@ -223,7 +224,7 @@ export default async function ShopEditorPage({
                     <span className="body-sm text-on-surface-variant">Price:</span>
                     <p className="text-sm text-gold">
                       {getFinalPrice(item.base_price_gp)} {item.currency_reference || 'gp'}
-                      {shop?.price_modifier && shop.price_modifier !== 100 && (
+                      {(shop as any)?.price_modifier && (shop as any).price_modifier !== 100 && (
                         <span className="text-xs text-on-surface-variant ml-1">
                           ({item.base_price_gp} base)
                         </span>
