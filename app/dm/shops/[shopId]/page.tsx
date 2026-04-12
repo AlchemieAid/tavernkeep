@@ -7,8 +7,7 @@ import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
 import type { Item } from '@/types/database'
 import { DeleteMenu } from '@/components/shared/delete-menu'
-import { AIItemGenerator } from '@/components/dm/ai-item-generator'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Plus } from 'lucide-react'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 import { PendingTransactions } from '@/components/dm/pending-transactions'
 import { ItemStatsDisplay } from '@/components/shared/item-stats-display'
@@ -146,7 +145,10 @@ export default async function ShopEditorPage({
 
         <div className="flex gap-4">
           <Button asChild>
-            <Link href={`/dm/shops/${shopId}/items/new`}>Add Item</Link>
+            <Link href={`/dm/shops/${shopId}/items/add`}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add from Library
+            </Link>
           </Button>
           <Button asChild variant="outline">
             <Link href={`/shop/${shop.slug}`} target="_blank">Preview Shop</Link>
@@ -160,10 +162,6 @@ export default async function ShopEditorPage({
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Inventory</h2>
-          
-          <div className="mb-6">
-            <AIItemGenerator shopId={shopId} />
-          </div>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {items?.map((item) => (
               <Card key={item.id}>
