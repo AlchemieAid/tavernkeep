@@ -62,7 +62,7 @@ export default async function PlayerCampaignsPage() {
             <CardHeader>
               <CardTitle>No Campaigns Yet</CardTitle>
               <CardDescription>
-                You haven't joined any campaigns yet. Ask your DM for an invite link or QR code to get started!
+                You haven&apos;t joined any campaigns yet. Ask your DM for an invite link or QR code to get started!
               </CardDescription>
             </CardHeader>
           </Card>

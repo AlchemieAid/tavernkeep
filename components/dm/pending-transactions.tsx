@@ -60,6 +60,7 @@ export function PendingTransactions({ shopId }: PendingTransactionsProps) {
     return () => {
       supabase.removeChannel(channel)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId])
 
   async function loadPendingCarts() {

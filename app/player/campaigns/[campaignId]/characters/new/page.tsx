@@ -116,7 +116,7 @@ export default function NewCharacterPage({ params }: NewCharacterPageProps) {
         <CardHeader className="text-center space-y-4">
           <CardTitle className="headline-md text-gold">Create Your Character</CardTitle>
           <CardDescription className="body-md">
-            You've joined <strong>{campaign.name}</strong>! Create your first character to get started.
+            You&apos;ve joined <strong>{campaign.name}</strong>! Create your first character to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>

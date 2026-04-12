@@ -50,7 +50,6 @@ export async function POST(
     return NextResponse.json({ data: null, error: { message: parsed.error.errors[0].message } }, { status: 400 })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await supabase
     .from('items')
     .insert(parsed.data.items as any)

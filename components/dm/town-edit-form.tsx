@@ -141,7 +141,7 @@ export function TownEditForm({ town, notablePeople }: TownEditFormProps) {
         <Card>
           <CardHeader>
             <CardTitle>Town Characteristics</CardTitle>
-            <CardDescription>Define your town's attributes</CardDescription>
+            <CardDescription>Define your town&apos;s attributes</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

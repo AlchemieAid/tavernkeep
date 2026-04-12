@@ -59,7 +59,6 @@ export async function POST(request: Request) {
       shop_tags: values.shop_tags,
       properties,
       notes: values.notes || null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     .select()
     .single()

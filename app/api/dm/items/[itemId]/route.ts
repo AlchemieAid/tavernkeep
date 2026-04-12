@@ -20,7 +20,6 @@ export async function PATCH(
   const values = parsed.data
   const properties = buildProperties(values)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase
     .from('item_library') as any)
     .update({

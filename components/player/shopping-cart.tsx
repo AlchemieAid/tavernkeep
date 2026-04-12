@@ -52,6 +52,7 @@ export function ShoppingBag({ characterId, shopId }: ShoppingCartProps) {
     return () => {
       supabase.removeChannel(channel)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [characterId])
 
   async function loadCart() {

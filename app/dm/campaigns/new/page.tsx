@@ -118,7 +118,7 @@ export default async function NewCampaignPage() {
                   maxLength={20}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Currency abbreviation used in this campaign (defaults to "gp")
+                  Currency abbreviation used in this campaign (defaults to &ldquo;gp&rdquo;)
                 </p>
               </div>
 
