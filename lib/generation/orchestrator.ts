@@ -168,6 +168,17 @@ export class GenerationOrchestrator {
     this.progress.status = 'running'
     this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
     
+    // Calculate estimated total steps upfront for accurate progress bar
+    const estimatedTowns = Math.floor((this.config.campaign.townCount.min + this.config.campaign.townCount.max) / 2)
+    const estimatedShopsPerTown = Math.floor((this.config.town.shopCount.min + this.config.town.shopCount.max) / 2)
+    const estimatedItemsPerShop = Math.floor((this.config.shop.itemCount.min + this.config.shop.itemCount.max) / 2)
+    const estimatedPeoplePerTown = Math.floor((this.config.town.notablePeopleCount.min + this.config.town.notablePeopleCount.max) / 2)
+    
+    // Total: 1 campaign + towns + (shops + items + notable_people) per town
+    this.progress.totalSteps = 1 + estimatedTowns + estimatedTowns * (estimatedShopsPerTown + estimatedPeoplePerTown + estimatedShopsPerTown * estimatedItemsPerShop)
+    
+    console.log(`[ORCHESTRATOR] Estimated total steps: ${this.progress.totalSteps} (campaign: 1, towns: ${estimatedTowns}, shops: ${estimatedTowns * estimatedShopsPerTown}, items: ${estimatedTowns * estimatedShopsPerTown * estimatedItemsPerShop}, people: ${estimatedTowns * estimatedPeoplePerTown})`)
+    
     try {
       this.emitStepStarted('init', 'Connecting to database...')
       
@@ -189,9 +200,22 @@ export class GenerationOrchestrator {
         return { success: false, error: campaignResult.error }
       }
 
-      const campaign = campaignResult.data
+      let campaign = campaignResult.data
       this.progress.results.campaign = campaign
       this.progress.completedSteps++
+      
+      // Reload campaign with full data including currencies (in case user edited it previously)
+      const { data: fullCampaign, error: reloadError } = await supabase
+        .from('campaigns')
+        .select('*, currencies')
+        .eq('id', campaign.id)
+        .single()
+      
+      if (!reloadError && fullCampaign) {
+        campaign = fullCampaign
+        this.progress.results.campaign = campaign
+        console.log(`[ORCHESTRATOR] Reloaded campaign with currencies:`, campaign.currencies || campaign.currency)
+      }
       
       // Set campaign currencies for use in child generations
       this.setCampaignCurrencies(campaign)
@@ -344,7 +368,6 @@ export class GenerationOrchestrator {
   private async generateTownsForCampaign(supabase: any, campaign: any, originalPrompt: string) {
     const townCount = this.getRandomCount(this.config.campaign.townCount)
     
-    this.progress.totalSteps += townCount
     this.progress.results.towns = []
     this.emitStepStarted('towns', `Generating ${townCount} towns...`)
 
@@ -556,7 +579,6 @@ export class GenerationOrchestrator {
     const context = contextBuilder.buildShopContext()
     
     this.emitStepStarted('shops', `Creating ${count} shops for ${townName}...`)
-    this.progress.totalSteps += count
     
     // Skip rate limit check for shops during campaign generation (campaign check is sufficient)
     const shopRateLimit = skipChildRateLimits()
@@ -670,14 +692,20 @@ export class GenerationOrchestrator {
 
       // Auto-generate items if configured
       if (this.config.shop.autoGenerateItems) {
-        if (itemsData && itemsData.length > 0) {
+        const hasItems = itemsData && Array.isArray(itemsData) && itemsData.length > 0
+        if (hasItems) {
           console.log(`[ITEMS] AI returned ${itemsData.length} items for ${createdShop.name}`)
           await this.generateItemsForShop(supabase, createdShop.id, itemsData, contextBuilder, createdShop.name)
         } else {
-          console.log(`[ITEMS] AI returned no items for ${createdShop.name}, generating fallback items...`)
+          console.log(`[ITEMS] AI returned no items for ${createdShop.name} (itemsData: ${typeof itemsData}, length: ${itemsData?.length}), generating fallback items...`)
           // Generate fallback items based on shop type
           const fallbackItems = this.generateFallbackItems(createdShop.shop_type, createdShop.economic_tier)
-          await this.generateItemsForShop(supabase, createdShop.id, fallbackItems, contextBuilder, createdShop.name)
+          console.log(`[ITEMS] Generated ${fallbackItems.length} fallback items for ${createdShop.name} using currency: ${this.primaryCurrency}`)
+          if (fallbackItems.length > 0) {
+            await this.generateItemsForShop(supabase, createdShop.id, fallbackItems, contextBuilder, createdShop.name)
+          } else {
+            console.warn(`[ITEMS] No fallback items generated for ${createdShop.name} (shop_type: ${createdShop.shop_type})`)
+          }
         }
       } else {
         console.log(`[ITEMS] Skipping item generation for ${createdShop.name} - autoGenerateItems is disabled`)
@@ -704,7 +732,6 @@ export class GenerationOrchestrator {
     const itemCount = Math.min(itemsData.length, this.getRandomCount(this.config.shop.itemCount))
     
     this.emitStepStarted('items', `Creating ${itemCount} items for ${shopName}...`)
-    this.progress.totalSteps += itemCount
     const itemsToInsert = itemsData.slice(0, itemCount).map((item: any) => ({
       shop_id: shopId,
       name: item.name,
