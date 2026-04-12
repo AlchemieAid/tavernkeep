@@ -7,7 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:security": "jest __tests__/security",
+    "test:architecture": "jest __tests__/architecture"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
