@@ -15,8 +15,11 @@ describe('Environment Variable Security', () => {
     srcFiles.forEach(file => {
       const content = fs.readFileSync(file, 'utf-8')
       
+      // Normalize path separators for cross-platform compatibility
+      const normalizedPath = file.replace(/\\/g, '/')
+      
       // Check for direct API key usage (should only be in API routes)
-      if (file.includes('/api/')) {
+      if (normalizedPath.includes('/api/')) {
         // API routes can use process.env.OPENAI_API_KEY
         return
       }

@@ -68,7 +68,6 @@ jobs:
             exit 1
           fi
 
-  # Optional: Add basic smoke tests
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -87,6 +86,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests (if they exist)
-        run: npm test --if-present
-        continue-on-error: true
+      - name: Run security tests
+        run: npm run test:security
+
+      - name: Run architecture tests
+        run: npm run test:architecture
