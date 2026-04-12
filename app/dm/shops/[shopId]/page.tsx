@@ -50,6 +50,7 @@ export default async function ShopEditorPage({
   const getFinalPrice = (basePrice: number | string): number => {
     const base = typeof basePrice === 'string' ? parseFloat(basePrice) : basePrice
     const modifier = Number((shop as any)?.price_modifier ?? 100)
+    // modifier is stored as integer percentage (e.g., 110 = 110%)
     return Math.round(base * (modifier / 100))
   }
 

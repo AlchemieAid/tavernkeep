@@ -218,19 +218,19 @@ export default async function EditShopPage({
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="price_modifier">Price Modifier</Label>
+              <Label htmlFor="price_modifier">Price Modifier (%)</Label>
               <Input
                 id="price_modifier"
                 name="price_modifier"
                 type="number"
-                step="0.1"
-                min="0.1"
-                max="10"
-                defaultValue={shop.price_modifier}
+                step="10"
+                min="50"
+                max="200"
+                defaultValue={shop.price_modifier * 100}
                 required
               />
               <p className="text-xs text-on-surface-variant">
-                Multiplier for all item prices (1.0 = normal, 1.5 = 50% markup, 0.8 = 20% discount)
+                Percentage of base price (100% = normal, 110% = 10% markup)
               </p>
             </div>
 

@@ -166,21 +166,19 @@ export default async function NewShopPage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="price_modifier">
-                  Price Modifier: <span id="price_value">{DEFAULT_PRICE_MODIFIER * 100}%</span>
-                </Label>
-                <input
-                  type="range"
+                <Label htmlFor="price_modifier">Price Modifier (%)</Label>
+                <Input
                   id="price_modifier"
                   name="price_modifier"
-                  min="0.5"
-                  max="2.0"
-                  step="0.1"
+                  type="number"
+                  step="10"
+                  min="50"
+                  max="200"
                   defaultValue={DEFAULT_PRICE_MODIFIER}
-                  className="w-full"
+                  required
                 />
-                <p className="body-sm text-muted">
-                  50% (cheap) to 200% (expensive)
+                <p className="text-xs text-on-surface-variant">
+                  Percentage of base price (100% = normal, 110% = 10% markup)
                 </p>
               </div>
 

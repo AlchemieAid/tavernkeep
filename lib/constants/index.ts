@@ -72,9 +72,9 @@ export const VOLATILITY_LABELS = {
   fast: 'Fast (~60% per restock)',
 } as const
 
-export const MIN_PRICE_MODIFIER = 0.5
-export const MAX_PRICE_MODIFIER = 2.0
-export const DEFAULT_PRICE_MODIFIER = 1.0
+export const MIN_PRICE_MODIFIER = 50
+export const MAX_PRICE_MODIFIER = 200
+export const DEFAULT_PRICE_MODIFIER = 100
 
 export const MIN_HAGGLE_DC = 5
 export const MAX_HAGGLE_DC = 30
