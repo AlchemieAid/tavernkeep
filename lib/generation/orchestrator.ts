@@ -16,7 +16,8 @@ import {
   GenerationContext,
   GenerationProgress,
   GenerationEvent,
-  GenerationOptions
+  GenerationOptions,
+  CampaignCurrency
 } from './types'
 import { ContextBuilder, createContextBuilder } from './context-builder'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
@@ -45,6 +46,8 @@ export class GenerationOrchestrator {
   private callbacks?: GenerationOptions['onProgress']
   private userId: string
   private dmId: string
+  private campaignCurrencies: CampaignCurrency[] = []
+  private primaryCurrency: string = 'gp'
 
   constructor(userId: string, dmId: string, options?: GenerationOptions) {
     this.userId = userId
@@ -59,6 +62,51 @@ export class GenerationOrchestrator {
       errors: [],
       results: {}
     }
+  }
+  
+  /**
+   * Set the campaign currencies for use during generation
+   */
+  private setCampaignCurrencies(campaign: any) {
+    // Parse currencies from campaign (could be JSONB array or legacy single currency)
+    if (campaign.currencies) {
+      if (Array.isArray(campaign.currencies)) {
+        this.campaignCurrencies = campaign.currencies
+      } else if (typeof campaign.currencies === 'object') {
+        this.campaignCurrencies = [campaign.currencies]
+      }
+    } else if (campaign.currency) {
+      // Legacy single currency - convert to array format
+      this.campaignCurrencies = [{
+        code: campaign.currency,
+        name: this.getCurrencyName(campaign.currency),
+        symbol: campaign.currency,
+        base_value: 1,
+        is_primary: true,
+        is_default: true
+      }]
+    }
+    
+    // Find primary currency
+    const primary = this.campaignCurrencies.find(c => c.is_primary) || this.campaignCurrencies[0]
+    this.primaryCurrency = primary?.code || 'gp'
+    
+    console.log(`[ORCHESTRATOR] Set campaign currencies: ${this.campaignCurrencies.length} currencies, primary: ${this.primaryCurrency}`)
+  }
+  
+  /**
+   * Get full currency name from code
+   */
+  private getCurrencyName(code: string): string {
+    const names: Record<string, string> = {
+      'gp': 'Gold Pieces',
+      'sp': 'Silver Pieces', 
+      'cp': 'Copper Pieces',
+      'pp': 'Platinum Pieces',
+      'sh': 'Shillings',
+      'ep': 'Electrum Pieces'
+    }
+    return names[code] || code.toUpperCase()
   }
 
   private emit(event: GenerationEvent) {
@@ -147,6 +195,9 @@ export class GenerationOrchestrator {
       const campaign = campaignResult.data
       this.progress.results.campaign = campaign
       this.progress.completedSteps++
+      
+      // Set campaign currencies for use in child generations
+      this.setCampaignCurrencies(campaign)
       
       this.emit({ 
         type: 'step_completed', 
@@ -685,6 +736,7 @@ export class GenerationOrchestrator {
       identified: item.identified !== false,
       properties: item.properties || null,
       source: 'generated',
+      currency_reference: item.currency_reference || this.primaryCurrency,
     }))
 
     console.log(`[ITEMS] Inserting ${itemsToInsert.length} items into database for ${shopName}...`)
@@ -816,11 +868,14 @@ export class GenerationOrchestrator {
 
     const modifier = tierModifier[economicTier?.toLowerCase()] || tierModifier['modest']
     
-    // Return modified items
+    // Return modified items with campaign currency
+    console.log(`[ITEMS] Generating fallback items with currency: ${this.primaryCurrency}`)
+    
     return items.map(item => ({
       ...item,
-      base_price_gp: Math.round(item.base_price_gp * modifier.priceMult * 100) / 100,
+      base_price_gp: Math.round(item.base_price_gp * modifier.priceMult),
       stock_quantity: Math.max(1, Math.floor(item.stock_quantity * modifier.quantityMult)),
+      currency_reference: this.primaryCurrency,
     }))
   }
 

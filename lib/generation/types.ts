@@ -38,6 +38,16 @@ export const DEFAULT_GENERATION_CONFIG: GenerationConfig = {
   }
 }
 
+export interface CampaignCurrency {
+  code: string
+  name: string
+  symbol: string
+  base_value: number
+  is_primary: boolean
+  is_default?: boolean
+  conversion_rate?: number
+}
+
 export interface GenerationContext {
   // Hierarchical identifiers
   campaignId?: string
@@ -53,6 +63,7 @@ export interface GenerationContext {
     setting?: string
     history?: string
     currency?: string
+    currencies?: CampaignCurrency[]
     pantheon?: string
   }
   
