@@ -18,7 +18,6 @@ const itemSchema = z.object({
   cursed: z.boolean().default(false),
   identified: z.boolean().default(true),
   properties: z.record(z.unknown()).nullable().optional(),
-  source: z.string().default('library'),
   currency_reference: z.string().default('gp'),
 })
 
