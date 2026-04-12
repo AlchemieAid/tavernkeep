@@ -24,11 +24,21 @@ Return a JSON object with this EXACT structure:
       "rarity": "common" | "uncommon" | "rare" | "very_rare" | "legendary",
       "base_price_gp": 0,
       "stock_quantity": 0,
+      "weight_lbs": 0,
       "is_hidden": false,
-      "hidden_condition": null
+      "hidden_condition": null,
+      "properties": null
     }
   ]
 }
+
+Item properties schema by category — populate the "properties" field accordingly:
+- weapon:    {"damage_dice":"1d8","damage_type":"slashing","weapon_category":"martial","weapon_type":"melee","properties":["versatile"],"versatile_damage":"1d10"}
+- armor:     {"armor_class":14,"max_dex_bonus":2,"armor_category":"medium","str_requirement":0,"stealth_disadvantage":false}
+- potion:    {"healing_dice":"2d4","healing_bonus":2,"effect":"Restores hit points","duration":"instantaneous"}
+- scroll:    {"spell_level":2,"save_dc":13,"attack_bonus":5}
+- magic_item:{"charges":3,"recharge":"dawn","effect":"Brief description of magical effect"}
+- tool/misc: null (omit properties or set to null)
 
 Shop type guidelines — choose the ONE best fit:
 - "general": Mixed adventuring supplies, food, tools, rope, torches, common goods
