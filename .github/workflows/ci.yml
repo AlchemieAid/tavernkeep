@@ -25,9 +25,9 @@ jobs:
         run: npm ci
 
       - name: Generate Supabase Types
-        run: |
-          npx supabase gen types typescript --project-id wncswiothhvxntpaweik --db-url "postgresql://postgres:${{ secrets.SUPABASE_DB_PASSWORD }}@db.wncswiothhvxntpaweik.supabase.co:5432/postgres" > lib/supabase/database.types.ts
-        continue-on-error: false
+        run: npx supabase gen types typescript --project-id wncswiothhvxntpaweik > lib/supabase/database.types.ts
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Run TypeScript type check
         run: npm run type-check
