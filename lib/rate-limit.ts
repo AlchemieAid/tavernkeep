@@ -5,13 +5,27 @@ interface RateLimitConfig {
 
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
   campaign: { maxRequests: 5, windowMinutes: 60 }, // 5 campaigns per hour
-  town: { maxRequests: 10, windowMinutes: 60 },    // 10 towns per hour
-  shop: { maxRequests: 20, windowMinutes: 60 },    // 20 shops per hour
-  item: { maxRequests: 50, windowMinutes: 60 },    // 50 items per hour
+  town: { maxRequests: 100, windowMinutes: 60 },    // 100 towns per hour (generous for batch generation)
+  shop: { maxRequests: 200, windowMinutes: 60 },    // 200 shops per hour
+  item: { maxRequests: 500, windowMinutes: 60 },    // 500 items per hour
 }
 
 // Simple request-level cache to avoid repeated DB queries during one generation session
 const rateLimitCache = new Map<string, { count: number; timestamp: number }>()
+
+// Track if we're in a campaign generation session - if so, skip child rate limits
+let campaignGenerationActive = false
+let campaignGenerationStartTime = 0
+
+export function setCampaignGenerationActive(active: boolean) {
+  campaignGenerationActive = active
+  if (active) {
+    campaignGenerationStartTime = Date.now()
+    // Clear cache when starting new generation
+    rateLimitCache.clear()
+  }
+  console.log(`[RATE-LIMIT] Campaign generation active: ${active}`)
+}
 
 export async function checkRateLimit(
   userId: string,
@@ -19,14 +33,30 @@ export async function checkRateLimit(
   supabase?: any // Optional: pass existing client to avoid creating new one
 ): Promise<{ allowed: boolean; remaining: number; resetAt: Date; message: string }> {
   const startTime = Date.now()
+  
+  // Skip rate limit checks for child entities during campaign generation (trust campaign-level check)
+  if (campaignGenerationActive && generationType !== 'campaign') {
+    const sessionAge = Date.now() - campaignGenerationStartTime
+    // Only skip for 10 minutes after campaign generation starts
+    if (sessionAge < 10 * 60 * 1000) {
+      console.log(`[RATE-LIMIT] Skipping ${generationType} check during campaign generation session`)
+      return {
+        allowed: true,
+        remaining: 999,
+        resetAt: new Date(Date.now() + 60 * 60 * 1000),
+        message: `Campaign generation in progress - ${generationType} allowed`
+      }
+    }
+  }
+  
   console.log(`[RATE-LIMIT] Starting check for ${generationType}...`)
   
   const cacheKey = `${userId}:${generationType}`
   const cached = rateLimitCache.get(cacheKey)
   const config = RATE_LIMITS[generationType]
   
-  // Use cached result if from last 5 seconds (within same request)
-  if (cached && (Date.now() - cached.timestamp) < 5000) {
+  // Use cached result if from last 30 seconds (within same request)
+  if (cached && (Date.now() - cached.timestamp) < 30000) {
     console.log(`[RATE-LIMIT] Using cached result for ${generationType}: ${cached.count} used`)
     const remaining = Math.max(0, config.maxRequests - cached.count)
     return {

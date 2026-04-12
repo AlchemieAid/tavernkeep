@@ -25,7 +25,7 @@ import { SHOP_GENERATION_SYSTEM_PROMPT, buildShopGenerationPrompt } from '@/lib/
 import { NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT, buildNotablePersonGenerationPrompt } from '@/lib/prompts/notable-person-generation'
 import { buildItemGenerationSystemPrompt, buildItemGenerationPrompt } from '@/lib/prompts/item-generation'
 import { truncateFields, CAMPAIGN_FIELD_MAP, TOWN_FIELD_MAP, NOTABLE_PERSON_FIELD_MAP } from '@/lib/utils/truncate-fields'
-import { checkRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, setCampaignGenerationActive } from '@/lib/rate-limit'
 import { nanoid } from 'nanoid'
 import { SLUG_LENGTH } from '@/lib/constants'
 
@@ -120,6 +120,9 @@ export class GenerationOrchestrator {
     this.progress.status = 'running'
     this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
     
+    // Mark campaign generation as active - this skips rate limit checks for child entities
+    setCampaignGenerationActive(true)
+    
     try {
       this.emitStepStarted('init', 'Connecting to database...')
       
@@ -160,6 +163,9 @@ export class GenerationOrchestrator {
       this.progress.status = 'completed'
       this.emit({ type: 'completed', results: this.progress.results })
 
+      // Clear campaign generation flag
+      setCampaignGenerationActive(false)
+
       return { success: true, data: this.progress.results }
     } catch (error) {
       const errorMsg = (error as Error).message
@@ -167,6 +173,10 @@ export class GenerationOrchestrator {
       this.progress.status = 'error'
       this.progress.errors.push(errorMsg)
       this.emit({ type: 'failed', error: errorMsg, progress: { ...this.progress } })
+      
+      // Clear campaign generation flag even on error
+      setCampaignGenerationActive(false)
+      
       return { success: false, error: errorMsg }
     }
   }
