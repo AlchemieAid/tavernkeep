@@ -85,6 +85,8 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
   const [stealthDisadvantage, setStealthDisadvantage] = useState(
     Boolean(initialProps.stealth_disadvantage)
   )
+  const [donTime, setDonTime] = useState(String(initialProps.don_time ?? ''))
+  const [doffTime, setDoffTime] = useState(String(initialProps.doff_time ?? ''))
 
   // Potion fields
   const [healingDice, setHealingDice] = useState(String(initialProps.healing_dice ?? ''))
@@ -197,6 +199,8 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
         max_dex_bonus: maxDexBonus === 'none' ? null : Number(maxDexBonus),
         str_requirement: Number(strRequirement) || 0,
         stealth_disadvantage: stealthDisadvantage,
+        ...(donTime && { don_time: donTime }),
+        ...(doffTime && { doff_time: doffTime }),
       } : undefined,
       potion_props: category === 'potion' ? {
         ...(healingDice && { healing_dice: healingDice }),
@@ -508,6 +512,14 @@ export function ItemLibraryForm({ item }: ItemLibraryFormProps) {
               <div className="space-y-1.5">
                 <Label htmlFor="str_req">STR Requirement</Label>
                 <Input id="str_req" type="number" min={0} max={30} value={strRequirement} onChange={e => setStrRequirement(e.target.value)} placeholder="0" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="don_time">Don Time</Label>
+                <Input id="don_time" value={donTime} onChange={e => setDonTime(e.target.value)} placeholder="e.g. 1 minute, 5 minutes, 1 action" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="doff_time">Doff Time</Label>
+                <Input id="doff_time" value={doffTime} onChange={e => setDoffTime(e.target.value)} placeholder="e.g. 1 minute, 5 minutes, 1 action" />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">

@@ -28,6 +28,8 @@ export const armorPropertiesSchema = z.object({
   max_dex_bonus: z.number().int().min(0).nullable(),
   str_requirement: z.number().int().min(0).default(0),
   stealth_disadvantage: z.boolean().default(false),
+  don_time: z.string().optional(),
+  doff_time: z.string().optional(),
 })
 
 export const potionPropertiesSchema = z.object({
