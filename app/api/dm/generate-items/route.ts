@@ -72,9 +72,19 @@ export async function POST(request: Request) {
       )
     }
 
+    type ShopWithCampaign = {
+      id: string
+      name: string
+      shop_type: string
+      economic_tier: string
+      campaign_id: string
+      campaigns: { name: string; description: string | null; ruleset: string; setting: string | null; currency: string } | null
+    }
+    const typedShop = shop as unknown as ShopWithCampaign
+
     // Build context
-    const shopContext = `${shop.name} (${shop.shop_type}, ${shop.economic_tier} tier)`
-    const campaign = shop.campaigns as any
+    const shopContext = `${typedShop.name} (${typedShop.shop_type}, ${typedShop.economic_tier} tier)`
+    const campaign = typedShop.campaigns
     const campaignContext = campaign ? [
       campaign.name,
       campaign.description,

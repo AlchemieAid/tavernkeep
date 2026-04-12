@@ -181,11 +181,11 @@ export async function POST(request: Request) {
         const ruler = createdPeople.find((p) => p.role === 'ruler')
         if (ruler) {
           rulerName = ruler.name
-          const updateData: { ruler: string; ruler_id: string } = {
+          const updateData = {
             ruler: rulerName,
             ruler_id: ruler.id,
           }
-          await supabase.from('towns').update(updateData as any).eq('id', createdTown.id)
+          await supabase.from('towns').update(updateData as unknown as Record<string, unknown>).eq('id', createdTown.id)
 
           console.log(`Set town ruler to: ${rulerName} (ID: ${ruler.id})`)
         }

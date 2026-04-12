@@ -75,8 +75,22 @@ export async function POST(request: Request) {
     }
 
     // Build context
-    const townContext = `${town.name}: ${town.description || ''}`
-    const campaign = town.campaigns as any
+    type TownWithCampaign = {
+      name: string
+      description: string | null
+      campaigns: { 
+        name: string
+        description: string | null
+        setting: string | null
+        ruleset: string
+        currency_name: string
+        currency_description: string | null
+        pantheon: string | null
+      } | null
+    }
+    const typedTown = town as unknown as TownWithCampaign
+    const townContext = `${typedTown.name}: ${typedTown.description || ''}`
+    const campaign = typedTown.campaigns
     const campaignContext = campaign ? [
       campaign.name,
       campaign.description,
