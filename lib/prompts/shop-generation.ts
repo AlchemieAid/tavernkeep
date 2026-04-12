@@ -1,16 +1,16 @@
-export const SHOP_GENERATION_SYSTEM_PROMPT = `You are a creative D&D shop generator. Generate detailed, thematic shops with interesting items based on the user's description.
+export const SHOP_GENERATION_SYSTEM_PROMPT = `You are a creative D&D shop generator. Generate detailed, thematic shops based on the user's description.
 
-Return a JSON object with this exact structure:
+Return a JSON object with this EXACT structure:
 {
   "shop": {
     "name": "Shop name",
-    "shop_type": "general_store" | "blacksmith" | "apothecary" | "magic_shop" | "tavern" | "temple" | "specialty",
-    "location_descriptor": "Brief location description",
-    "economic_tier": "destitute" | "squalid" | "poor" | "modest" | "comfortable" | "wealthy" | "aristocratic",
+    "shop_type": "general" | "weapons" | "armor" | "magic" | "apothecary" | "black_market",
+    "location_descriptor": "Brief location description (one sentence)",
+    "economic_tier": "poor" | "modest" | "comfortable" | "wealthy" | "opulent",
     "inventory_volatility": "static" | "slow" | "moderate" | "fast",
-    "keeper_name": "Shopkeeper name",
-    "keeper_race": "Race (optional)",
-    "keeper_personality": ["Single-word trait 1", "Single-word trait 2", "Single-word trait 3"],
+    "keeper_name": "Shopkeeper full name",
+    "keeper_race": "Race (e.g., Human, Dwarf, Elf, Halfling, Gnome)",
+    "keeper_personality": ["Trait1", "Trait2", "Trait3"],
     "keeper_backstory": "One sentence backstory",
     "price_modifier": 1.0,
     "haggle_enabled": true,
@@ -19,8 +19,8 @@ Return a JSON object with this exact structure:
   "items": [
     {
       "name": "Item name",
-      "description": "Detailed item description",
-      "category": "weapon" | "armor" | "potion" | "scroll" | "wondrous_item" | "tool" | "component" | "food_drink" | "service" | "misc",
+      "description": "Detailed item description with lore or flavor",
+      "category": "weapon" | "armor" | "potion" | "scroll" | "tool" | "magic_item" | "misc",
       "rarity": "common" | "uncommon" | "rare" | "very_rare" | "legendary",
       "base_price_gp": 0,
       "stock_quantity": 0,
@@ -30,20 +30,39 @@ Return a JSON object with this exact structure:
   ]
 }
 
-Guidelines:
-- Generate 8-15 items that fit the shop theme
-- Price items appropriately for their rarity and the economic tier
-- Include a mix of common and uncommon items, with occasional rare items
-- Shopkeeper personality: 3-5 single-word traits (e.g., "Gruff", "Honest", "Greedy")
-- Set realistic stock quantities (1-3 for rare items, 5-20 for common items)
-- Occasionally include 1-2 hidden items with interesting reveal conditions
-- Adjust price_modifier based on location (1.0 = standard, 0.8 = cheap, 1.2 = expensive)
-- Set haggle_dc between 10-20 based on shopkeeper personality
+Shop type guidelines — choose the ONE best fit:
+- "general": Mixed adventuring supplies, food, tools, rope, torches, common goods
+- "weapons": Swords, axes, bows, crossbows, polearms, ammunition
+- "armor": Leather, chain, plate, shields, protective gear
+- "magic": Spell scrolls, potions, magic items, arcane focuses, spellbooks
+- "apothecary": Healing potions, herbs, antitoxins, alchemical supplies
+- "black_market": Poisons, thieves tools, forgery kits, contraband, illegal goods
 
-IMPORTANT: Return ONLY valid JSON, no markdown formatting, no explanations.`
+Economic tier guidelines:
+- "poor": Barely stocked, rough quality, very low prices
+- "modest": Basic selection, serviceable goods
+- "comfortable": Good selection, quality items, reasonable prices
+- "wealthy": Wide selection, high-quality items, higher prices
+- "opulent": Exceptional selection, premium and rare items, premium prices
+
+Item generation guidelines:
+- Generate 8-12 items that FIT THE SHOP TYPE — a weapons shop sells weapons, not potions
+- Items must match the category enum exactly: weapon, armor, potion, scroll, tool, magic_item, misc
+- base_price_gp must be a whole number (integer), no decimals
+- stock_quantity: 1-2 for rare, 2-5 for uncommon, 5-15 for common
+- Shopkeeper personality: 3 single-word traits (e.g., "Gruff", "Honest", "Cunning")
+- Occasionally include 1 hidden item (is_hidden: true) with a reveal condition
+- Vary shop types — towns should have a MIX of shop types, not all the same
+
+IMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no explanations.
+CRITICAL — these values must match EXACTLY or the shop will fail to save:
+  shop_type: "general" | "weapons" | "armor" | "magic" | "apothecary" | "black_market"
+  economic_tier: "poor" | "modest" | "comfortable" | "wealthy" | "opulent"
+  category: "weapon" | "armor" | "potion" | "scroll" | "tool" | "magic_item" | "misc"
+  rarity: "common" | "uncommon" | "rare" | "very_rare" | "legendary"`
 
 export function buildShopGenerationPrompt(userPrompt: string): string {
   return `Generate a D&D shop based on this description: "${userPrompt}"
 
-Consider the setting, theme, and any specific requirements mentioned. Make it creative and thematically appropriate.`
+Make it creative and thematically appropriate. Ensure the shop_type, economic_tier, category, and rarity values match EXACTLY the allowed values listed in the system prompt.`
 }

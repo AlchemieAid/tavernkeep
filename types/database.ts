@@ -116,6 +116,7 @@ export interface Item {
   base_price_gp: number
   stock_quantity: number
   is_hidden: boolean
+  is_revealed: boolean
   reveal_state: boolean
   hidden_condition: string | null
   image_url: string | null
@@ -126,6 +127,7 @@ export interface Item {
   identified: boolean
   crafting_time_days: number | null
   source: ItemSource
+  currency_reference: string | null
   added_at: string
   expires_at: string | null
   deleted_at: string | null

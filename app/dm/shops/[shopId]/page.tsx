@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { RARITY_COLORS } from '@/lib/constants'
+import type { Item } from '@/types/database'
 import { DeleteMenu } from '@/components/shared/delete-menu'
 import { AIItemGenerator } from '@/components/dm/ai-item-generator'
 import { Eye, EyeOff } from 'lucide-react'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 import { PendingTransactions } from '@/components/dm/pending-transactions'
+import { ItemStatsDisplay } from '@/components/shared/item-stats-display'
 
 export default async function ShopEditorPage({
   params,
@@ -36,13 +38,14 @@ export default async function ShopEditorPage({
     notFound()
   }
 
-  const { data: items } = await supabase
+  const { data: rawItems } = await supabase
     .from('items')
     .select('*')
     .eq('shop_id', shopId)
     .is('deleted_at', null)
     .order('added_at', { ascending: true })
     .order('name', { ascending: true })
+  const items = rawItems as Item[] | null
 
   async function deleteItem(itemId: string) {
     'use server'
@@ -201,14 +204,47 @@ export default async function ShopEditorPage({
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  {item.description && (
+                    <p className="text-xs text-on-surface-variant line-clamp-2">
+                      {item.description}
+                    </p>
+                  )}
+
+                  <ItemStatsDisplay
+                    category={item.category}
+                    properties={item.properties as Record<string, unknown> | null}
+                  />
+
+                  <div className="flex items-center justify-between pt-1">
                     <span className="body-sm text-on-surface-variant">Price:</span>
-                    <span className="price">{item.base_price_gp} gp</span>
+                    <span className="price font-semibold">
+                      {item.base_price_gp} {item.currency_reference || 'gp'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="body-sm text-on-surface-variant">Stock:</span>
                     <span className="body-sm">{item.stock_quantity}</span>
                   </div>
+                  {item.weight_lbs != null && item.weight_lbs > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="body-sm text-on-surface-variant">Weight:</span>
+                      <span className="body-sm">{item.weight_lbs} lb</span>
+                    </div>
+                  )}
+                  {(item.attunement_required || item.cursed) && (
+                    <div className="flex flex-wrap gap-1 pt-0.5">
+                      {item.attunement_required && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                          Attunement
+                        </span>
+                      )}
+                      {item.cursed && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30">
+                          Cursed
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <Button asChild variant="outline" className="w-full mt-2">
                     <Link href={`/dm/shops/${shopId}/items/${item.id}`}>
                       Edit
