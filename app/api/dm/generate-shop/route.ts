@@ -115,13 +115,13 @@ export async function POST(request: Request) {
         .single()
 
       if (!personError && notablePerson) {
-        shopkeeperId = notablePerson.id
+        shopkeeperId = (notablePerson as { id: string }).id
       }
     }
 
     // Create shop
     const slug = nanoid(SLUG_LENGTH)
-    const { data: shop, error: shopError } = await supabase
+    const { data: rawShop, error: shopError } = await supabase
       .from('shops')
       .insert({
         campaign_id: campaignId,
@@ -145,11 +145,20 @@ export async function POST(request: Request) {
       .select()
       .single()
 
+    const shop = rawShop as { id: string } | null
+
     if (shopError) {
       console.error('Error creating shop:', shopError)
       console.error('Shop data:', shopData)
       return NextResponse.json(
         { error: { message: `Failed to create shop: ${shopError.message}` } },
+        { status: 500 }
+      )
+    }
+
+    if (!shop) {
+      return NextResponse.json(
+        { error: { message: 'Failed to create shop' } },
         { status: 500 }
       )
     }

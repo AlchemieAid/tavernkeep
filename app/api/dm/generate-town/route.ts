@@ -37,14 +37,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { 
           error: { 
-            message: `Rate limit exceeded. You can generate ${rateLimit.remaining} more towns. Resets at ${rateLimit.resetAt.toLocaleTimeString()}.` 
+            message: `Rate limit exceeded: ${rateLimit.message}` 
           } 
         },
         { 
           status: 429,
           headers: {
-            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-            'X-RateLimit-Reset': rateLimit.resetAt.toISOString()
+            'X-RateLimit-Remaining': rateLimit.remaining.toString()
           }
         }
       )
@@ -59,18 +58,30 @@ export async function POST(request: Request) {
     }
 
     // Verify campaign ownership and get context
-    const { data: campaign } = await supabase
+    const { data: rawCampaign } = await supabase
       .from('campaigns')
       .select('id, name, description, ruleset, setting, history, currency_name, currency_description, pantheon')
       .eq('id', campaignId)
       .eq('dm_id', user.id)
       .single()
 
-    if (!campaign) {
+    if (!rawCampaign) {
       return NextResponse.json(
         { error: { message: 'Campaign not found' } },
         { status: 404 }
       )
+    }
+
+    const campaign = rawCampaign as {
+      id: string
+      name: string
+      description: string | null
+      ruleset: string | null
+      setting: string | null
+      history: string | null
+      currency_name: string | null
+      currency_description: string | null
+      pantheon: string | null
     }
 
     // Build rich campaign context for AI
@@ -115,7 +126,7 @@ export async function POST(request: Request) {
       history: town.history,
     }, TOWN_FIELD_MAP)
 
-    const { data: createdTown, error: townError } = await supabase
+    const { data: rawCreatedTown, error: townError } = await supabase
       .from('towns')
       .insert(townData as any)
       .select()
@@ -129,14 +140,22 @@ export async function POST(request: Request) {
       )
     }
 
+    const createdTown = rawCreatedTown as { id: string } | null
+    if (!createdTown) {
+      return NextResponse.json(
+        { error: { message: 'Failed to create town' } },
+        { status: 500 }
+      )
+    }
+
     // Create notable people for the town
     let rulerName: string | null = null
     if (notablePeople && Array.isArray(notablePeople) && notablePeople.length > 0) {
       console.log(`Creating ${notablePeople.length} notable people...`)
-      
-      const notablePeopleData = notablePeople.map((person: any) => 
+
+      const notablePeopleData = notablePeople.map((person: any) =>
         truncateFields({
-          town_id: (createdTown as any).id,
+          town_id: createdTown.id,
           dm_id: user.id,
           name: person.name,
           race: person.race,
@@ -147,7 +166,7 @@ export async function POST(request: Request) {
         }, NOTABLE_PERSON_FIELD_MAP)
       )
 
-      const { data: createdPeople, error: peopleError } = await supabase
+      const { data: rawCreatedPeople, error: peopleError } = await supabase
         .from('notable_people')
         .insert(notablePeopleData as any)
         .select()
@@ -155,20 +174,21 @@ export async function POST(request: Request) {
       if (peopleError) {
         console.error('Error creating notable people:', peopleError)
       } else {
+        const createdPeople = (rawCreatedPeople ?? []) as { id: string; name: string; role: string }[]
         console.log(`Created ${createdPeople.length} notable people`)
-        
+
         // Find the ruler and update town with their name and ID
-        const ruler = createdPeople.find((p: any) => p.role === 'ruler')
+        const ruler = createdPeople.find((p) => p.role === 'ruler')
         if (ruler) {
           rulerName = ruler.name
           await supabase
             .from('towns')
-            .update({ 
+            .update({
               ruler: rulerName,
-              ruler_id: ruler.id 
+              ruler_id: ruler.id
             } as any)
-            .eq('id', (createdTown as any).id)
-          
+            .eq('id', createdTown.id)
+
           console.log(`Set town ruler to: ${rulerName} (ID: ${ruler.id})`)
         }
       }

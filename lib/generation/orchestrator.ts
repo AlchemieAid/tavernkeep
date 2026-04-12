@@ -24,7 +24,6 @@ import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from
 import { TOWN_GENERATION_SYSTEM_PROMPT, buildTownGenerationPrompt } from '@/lib/prompts/town-generation'
 import { SHOP_GENERATION_SYSTEM_PROMPT, buildShopGenerationPrompt } from '@/lib/prompts/shop-generation'
 import { NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT, buildNotablePersonGenerationPrompt } from '@/lib/prompts/notable-person-generation'
-import { buildItemGenerationSystemPrompt, buildItemGenerationPrompt } from '@/lib/prompts/item-generation'
 import { truncateFields, CAMPAIGN_FIELD_MAP, TOWN_FIELD_MAP, NOTABLE_PERSON_FIELD_MAP } from '@/lib/utils/truncate-fields'
 import { checkRateLimit, skipChildRateLimits } from '@/lib/rate-limit'
 import { nanoid } from 'nanoid'
@@ -888,25 +887,6 @@ export class GenerationOrchestrator {
       console.error(`[CATALOG] Exception fetching catalog items:`, err)
       return []
     }
-  }
-
-  /**
-   * Validate that an AI-generated item has all required fields with valid enum values.
-   * Prevents invalid enum inserts that silently kill the entire batch.
-   */
-  private isValidItem(item: any): boolean {
-    const validCategories = ['weapon', 'armor', 'potion', 'scroll', 'tool', 'magic_item', 'misc']
-    const validRarities = ['common', 'uncommon', 'rare', 'very_rare', 'legendary']
-    return !!(
-      item.name &&
-      typeof item.name === 'string' &&
-      item.category &&
-      validCategories.includes(item.category) &&
-      item.rarity &&
-      validRarities.includes(item.rarity) &&
-      typeof item.base_price_gp === 'number' &&
-      item.base_price_gp >= 0
-    )
   }
 
   /**
