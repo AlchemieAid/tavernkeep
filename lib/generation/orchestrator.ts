@@ -26,7 +26,7 @@ import { SHOP_GENERATION_SYSTEM_PROMPT, buildShopGenerationPrompt } from '@/lib/
 import { NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT, buildNotablePersonGenerationPrompt } from '@/lib/prompts/notable-person-generation'
 import { buildItemGenerationSystemPrompt, buildItemGenerationPrompt } from '@/lib/prompts/item-generation'
 import { truncateFields, CAMPAIGN_FIELD_MAP, TOWN_FIELD_MAP, NOTABLE_PERSON_FIELD_MAP } from '@/lib/utils/truncate-fields'
-import { checkRateLimit, setCampaignGenerationActive } from '@/lib/rate-limit'
+import { checkRateLimit, skipChildRateLimits } from '@/lib/rate-limit'
 import { nanoid } from 'nanoid'
 import { SLUG_LENGTH } from '@/lib/constants'
 
@@ -168,9 +168,6 @@ export class GenerationOrchestrator {
     this.progress.status = 'running'
     this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
     
-    // Mark campaign generation as active - this skips rate limit checks for child entities
-    setCampaignGenerationActive(true)
-    
     try {
       this.emitStepStarted('init', 'Connecting to database...')
       
@@ -214,9 +211,6 @@ export class GenerationOrchestrator {
       this.progress.status = 'completed'
       this.emit({ type: 'completed', results: this.progress.results })
 
-      // Clear campaign generation flag
-      setCampaignGenerationActive(false)
-
       return { success: true, data: this.progress.results }
     } catch (error) {
       const errorMsg = (error as Error).message
@@ -224,9 +218,6 @@ export class GenerationOrchestrator {
       this.progress.status = 'error'
       this.progress.errors.push(errorMsg)
       this.emit({ type: 'failed', error: errorMsg, progress: { ...this.progress } })
-      
-      // Clear campaign generation flag even on error
-      setCampaignGenerationActive(false)
       
       return { success: false, error: errorMsg }
     }
@@ -567,13 +558,8 @@ export class GenerationOrchestrator {
     this.emitStepStarted('shops', `Creating ${count} shops for ${townName}...`)
     this.progress.totalSteps += count
     
-    // Check rate limit for shops before starting
-    const shopRateLimit = await checkRateLimit(this.dmId, 'shop', supabase)
-    if (!shopRateLimit.allowed) {
-      console.warn(`Shop rate limit exceeded for ${townName}:`, shopRateLimit.message)
-      this.progress.errors.push(`Shop generation limited: ${shopRateLimit.message}`)
-      return // Skip shop generation for this town
-    }
+    // Skip rate limit check for shops during campaign generation (campaign check is sufficient)
+    const shopRateLimit = skipChildRateLimits()
     
     let shopsCreated = 0
     let shopsAttempted = 0

@@ -1,126 +1,112 @@
+/**
+ * Simplified Rate Limiting
+ * 
+ * Architecture:
+ * - Only check rate limits at campaign level during full generation
+ * - Skip all child entity checks (towns, shops, items) during campaign generation
+ * - For standalone generation, use quick checks with aggressive timeouts
+ * - Fail open (allow) on any error or timeout - never block the user
+ */
+
 interface RateLimitConfig {
   maxRequests: number
   windowMinutes: number
 }
 
+// Generous limits - prevent abuse while allowing normal use
 const RATE_LIMITS: Record<string, RateLimitConfig> = {
-  campaign: { maxRequests: 5, windowMinutes: 60 }, // 5 campaigns per hour
-  town: { maxRequests: 100, windowMinutes: 60 },    // 100 towns per hour (generous for batch generation)
-  shop: { maxRequests: 200, windowMinutes: 60 },    // 200 shops per hour
-  item: { maxRequests: 500, windowMinutes: 60 },    // 500 items per hour
+  campaign: { maxRequests: 10, windowMinutes: 60 },  // 10 campaigns/hour
+  town: { maxRequests: 50, windowMinutes: 60 },       // 50 towns/hour (standalone)
+  shop: { maxRequests: 100, windowMinutes: 60 },     // 100 shops/hour (standalone)
+  item: { maxRequests: 200, windowMinutes: 60 },     // 200 items/hour (standalone)
 }
 
-// Simple request-level cache to avoid repeated DB queries during one generation session
-const rateLimitCache = new Map<string, { count: number; timestamp: number }>()
-
-// Track if we're in a campaign generation session - if so, skip child rate limits
-let campaignGenerationActive = false
-let campaignGenerationStartTime = 0
-
-export function setCampaignGenerationActive(active: boolean) {
-  campaignGenerationActive = active
-  if (active) {
-    campaignGenerationStartTime = Date.now()
-    // Clear cache when starting new generation
-    rateLimitCache.clear()
-  }
-  console.log(`[RATE-LIMIT] Campaign generation active: ${active}`)
-}
-
+/**
+ * Quick rate limit check with 1.5s timeout
+ * Returns immediately with allowed=true if anything goes wrong (fail open)
+ */
 export async function checkRateLimit(
   userId: string,
   generationType: 'campaign' | 'town' | 'shop' | 'item',
-  supabase?: any // Optional: pass existing client to avoid creating new one
-): Promise<{ allowed: boolean; remaining: number; resetAt: Date; message: string }> {
-  const startTime = Date.now()
-  
-  // Skip rate limit checks for child entities during campaign generation (trust campaign-level check)
-  if (campaignGenerationActive && generationType !== 'campaign') {
-    const sessionAge = Date.now() - campaignGenerationStartTime
-    // Only skip for 10 minutes after campaign generation starts
-    if (sessionAge < 10 * 60 * 1000) {
-      console.log(`[RATE-LIMIT] Skipping ${generationType} check during campaign generation session`)
-      return {
-        allowed: true,
-        remaining: 999,
-        resetAt: new Date(Date.now() + 60 * 60 * 1000),
-        message: `Campaign generation in progress - ${generationType} allowed`
-      }
-    }
-  }
-  
-  console.log(`[RATE-LIMIT] Starting check for ${generationType}...`)
-  
-  const cacheKey = `${userId}:${generationType}`
-  const cached = rateLimitCache.get(cacheKey)
+  supabase?: any
+): Promise<{ allowed: boolean; remaining: number; message: string }> {
   const config = RATE_LIMITS[generationType]
   
-  // Use cached result if from last 30 seconds (within same request)
-  if (cached && (Date.now() - cached.timestamp) < 30000) {
-    console.log(`[RATE-LIMIT] Using cached result for ${generationType}: ${cached.count} used`)
-    const remaining = Math.max(0, config.maxRequests - cached.count)
+  // Create a timeout promise
+  const timeoutPromise = new Promise<{ allowed: boolean; remaining: number; message: string }>((resolve) => {
+    setTimeout(() => {
+      resolve({
+        allowed: true,
+        remaining: 999,
+        message: 'Rate limit check skipped (timeout)'
+      })
+    }, 1500) // 1.5 second max wait
+  })
+  
+  // Race between actual check and timeout
+  return Promise.race([
+    doRateLimitCheck(userId, generationType, config, supabase),
+    timeoutPromise
+  ])
+}
+
+/**
+ * Internal rate limit check - returns quickly or errors
+ */
+async function doRateLimitCheck(
+  userId: string,
+  generationType: string,
+  config: RateLimitConfig,
+  supabase?: any
+): Promise<{ allowed: boolean; remaining: number; message: string }> {
+  try {
+    // Get supabase client if not provided
+    if (!supabase) {
+      const { createClient } = await import('@/lib/supabase/server')
+      supabase = await createClient()
+    }
+    
+    // Calculate window start
+    const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000)
+    
+    // Fast count query
+    const { count, error } = await supabase
+      .from('ai_usage')
+      .select('*', { count: 'exact', head: true })
+      .eq('dm_id', userId)
+      .eq('generation_type', generationType)
+      .gte('created_at', windowStart.toISOString())
+      
+    if (error) {
+      console.warn('[RATE-LIMIT] DB error, failing open:', error.message)
+      return { allowed: true, remaining: 999, message: 'Rate limit check failed, allowing request' }
+    }
+    
+    const requestCount = count || 0
+    const remaining = Math.max(0, config.maxRequests - requestCount)
+    const allowed = requestCount < config.maxRequests
+    
     return {
-      allowed: cached.count < config.maxRequests,
+      allowed,
       remaining,
-      resetAt: new Date(Date.now() + config.windowMinutes * 60 * 1000),
-      message: remaining > 0 
-        ? `You have ${remaining} ${generationType} generations remaining.`
-        : `Rate limit exceeded for ${generationType}.`
+      message: allowed
+        ? `${remaining} ${generationType}s remaining`
+        : `Limit reached: ${config.maxRequests} ${generationType}s per ${config.windowMinutes}min`
     }
+  } catch (err) {
+    console.warn('[RATE-LIMIT] Error, failing open:', (err as Error).message)
+    return { allowed: true, remaining: 999, message: 'Rate limit check failed, allowing request' }
   }
-  
-  // Lazy import only if needed
-  if (!supabase) {
-    console.log(`[RATE-LIMIT] Creating new Supabase client...`)
-    const { createClient } = await import('@/lib/supabase/server')
-    supabase = await createClient()
-    console.log(`[RATE-LIMIT] Supabase client created in ${Date.now() - startTime}ms`)
-  }
-  
-  console.log(`[RATE-LIMIT] Querying ai_usage table...`)
-  
-  // Calculate time window
-  const windowStart = new Date()
-  windowStart.setMinutes(windowStart.getMinutes() - config.windowMinutes)
+}
 
-  // Count requests in the current window
-  const { data, error } = await supabase
-    .from('ai_usage')
-    .select('id', { count: 'exact', head: true })
-    .eq('dm_id', userId)
-    .eq('generation_type', generationType)
-    .gte('created_at', windowStart.toISOString())
-
-  if (error) {
-    console.error('[RATE-LIMIT] Database error:', error)
-    // Fail open - allow the request if we can't check
-    return {
-      allowed: true,
-      remaining: config.maxRequests,
-      resetAt: new Date(Date.now() + config.windowMinutes * 60 * 1000),
-      message: `You have ${config.maxRequests} ${generationType} generations remaining.`
-    }
-  }
-
-  const requestCount = data?.length || 0
-  console.log(`[RATE-LIMIT] Query complete: ${requestCount} requests found in ${Date.now() - startTime}ms`)
-  
-  // Cache the result
-  rateLimitCache.set(cacheKey, { count: requestCount, timestamp: Date.now() })
-  
-  const remaining = Math.max(0, config.maxRequests - requestCount)
-  const resetAt = new Date(Date.now() + config.windowMinutes * 60 * 1000)
-
-  const allowed = requestCount < config.maxRequests
-  
-  console.log(`[RATE-LIMIT] Result for ${generationType}: ${allowed ? 'ALLOWED' : 'BLOCKED'} (${remaining} remaining)`)
-  
+/**
+ * For campaign generation: Skip all child rate limit checks
+ * The campaign-level check is sufficient to prevent abuse
+ */
+export function skipChildRateLimits(): { allowed: boolean; remaining: number; message: string } {
   return {
-    allowed,
-    remaining,
-    resetAt,
-    message: allowed 
-      ? `You have ${remaining} ${generationType} generations remaining.`
-      : `Rate limit exceeded. You can generate ${remaining} more ${generationType}s. Resets at ${resetAt.toLocaleTimeString()}.`
+    allowed: true,
+    remaining: 999,
+    message: 'Campaign generation in progress'
   }
 }
