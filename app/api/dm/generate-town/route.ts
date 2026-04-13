@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 
     console.log('Generating town with prompt:', prompt)
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: TOWN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildTownGenerationPrompt(prompt, campaignContext) },

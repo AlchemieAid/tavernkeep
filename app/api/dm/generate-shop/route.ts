@@ -71,10 +71,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Generate shop with GPT-4o
+    // Generate shop with GPT-4o-mini (much cheaper than gpt-4o)
     console.log('Calling OpenAI API with prompt:', prompt)
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildShopGenerationPrompt(prompt) },
