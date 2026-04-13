@@ -951,18 +951,19 @@ export class GenerationOrchestrator {
       contextBuilder.withCampaign({
         id: campaign.id,
         name: campaign.name,
-        description: campaign.description,
-        ruleset: campaign.ruleset,
-        setting: campaign.setting,
-        history: campaign.history,
+        description: campaign.description || '',
+        ruleset: campaign.ruleset || undefined,
+        setting: campaign.setting || undefined,
+        history: campaign.history || undefined,
         currency: this.primaryCurrency,
         currencies: this.campaignCurrencies,
-        pantheon: campaign.pantheon
+        pantheon: campaign.pantheon || undefined
       })
       
       // Generate town
       this.emitStepStarted('town', 'Generating town with AI...')
-      const townResult = await this.generateTownEntity(supabase, campaignId, prompt, contextBuilder)
+      const campaignContext = contextBuilder.buildTownContext()
+      const townResult = await this.generateTownEntity(supabase, campaignId, prompt, campaignContext, contextBuilder)
       
       if (!townResult.success || !townResult.data) {
         return { success: false, error: townResult.error }
@@ -971,7 +972,11 @@ export class GenerationOrchestrator {
       const town = townResult.data.town
       const notablePeople = townResult.data.notablePeople || []
       
-      this.progress.results.town = town
+      // Store in results as towns array for consistency
+      if (!this.progress.results.towns) {
+        this.progress.results.towns = []
+      }
+      this.progress.results.towns.push(town)
       this.progress.completedSteps++
       
       // Update context with town
@@ -1051,13 +1056,13 @@ export class GenerationOrchestrator {
       contextBuilder.withCampaign({
         id: campaign.id,
         name: campaign.name,
-        description: campaign.description,
-        ruleset: campaign.ruleset,
-        setting: campaign.setting,
-        history: campaign.history,
+        description: campaign.description || '',
+        ruleset: campaign.ruleset || undefined,
+        setting: campaign.setting || undefined,
+        history: campaign.history || undefined,
         currency: this.primaryCurrency,
         currencies: this.campaignCurrencies,
-        pantheon: campaign.pantheon
+        pantheon: campaign.pantheon || undefined
       })
       
       // Get town context if provided
@@ -1158,7 +1163,11 @@ export class GenerationOrchestrator {
         return { success: false, error: shopError?.message || 'Failed to create shop' }
       }
       
-      this.progress.results.shop = createdShop
+      // Store in results as shops array for consistency
+      if (!this.progress.results.shops) {
+        this.progress.results.shops = []
+      }
+      this.progress.results.shops.push(createdShop)
       this.progress.completedSteps++
       
       // Generate items if configured

@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     // Return results in expected format
     return NextResponse.json({ 
       data: {
-        town: result.data.town,
+        town: result.data.towns?.[0] || null,
         shops: result.data.shops || [],
         notablePeople: result.data.notablePeople || [],
         items: result.data.items || []

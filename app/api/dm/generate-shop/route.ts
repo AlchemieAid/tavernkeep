@@ -79,8 +79,8 @@ export async function POST(request: Request) {
     // Return results in expected format (for backward compatibility with UI)
     return NextResponse.json({
       data: { 
-        shopId: result.data.shop?.id,
-        shop: result.data.shop,
+        shopId: result.data.shops?.[0]?.id,
+        shop: result.data.shops?.[0],
         items: result.data.items || [],
         itemsCreated: (result.data.items?.length || 0) > 0
       },
