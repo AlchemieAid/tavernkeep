@@ -12,7 +12,7 @@ Return a JSON object with this EXACT structure:
     "keeper_race": "Race (e.g., Human, Dwarf, Elf, Halfling, Gnome)",
     "keeper_personality": ["Trait1", "Trait2", "Trait3"],
     "keeper_backstory": "One sentence backstory",
-    "price_modifier": 1.0,
+    "price_modifier": 100,
     "haggle_enabled": true,
     "haggle_dc": 15
   },
@@ -49,11 +49,15 @@ Shop type guidelines — choose the ONE best fit:
 - "black_market": Poisons, thieves tools, forgery kits, contraband, illegal goods
 
 Economic tier guidelines:
-- "poor": Barely stocked, rough quality, very low prices
-- "modest": Basic selection, serviceable goods
-- "comfortable": Good selection, quality items, reasonable prices
-- "wealthy": Wide selection, high-quality items, higher prices
-- "opulent": Exceptional selection, premium and rare items, premium prices
+- "poor": Barely stocked, rough quality, very low prices (price_modifier: 60-80)
+- "modest": Basic selection, serviceable goods (price_modifier: 85-95)
+- "comfortable": Good selection, quality items, reasonable prices (price_modifier: 100)
+- "wealthy": Wide selection, high-quality items, higher prices (price_modifier: 110-130)
+- "opulent": Exceptional selection, premium and rare items, premium prices (price_modifier: 140-180)
+
+Price modifier guidelines:
+- price_modifier is an INTEGER percentage from 50 to 200 (e.g., 100 = normal prices, 150 = 50% markup, 70 = 30% discount)
+- Adjust based on economic tier and shop personality (greedy shopkeeper = higher, struggling shop = lower)
 
 Item generation guidelines:
 - Generate 8-12 items that FIT THE SHOP TYPE — a weapons shop sells weapons, not potions
