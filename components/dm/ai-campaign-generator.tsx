@@ -140,15 +140,39 @@ export function AICampaignGenerator() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-gold" />
-          AI Campaign Generator
-        </CardTitle>
-        <CardDescription>
-          Describe your campaign idea and AI will create a complete world: campaign → towns → shops → notable people → items
-        </CardDescription>
+    <Card className="border-2 border-gold/20 shadow-lg">
+      <CardHeader className="space-y-3 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gold/10 rounded-lg">
+            <Sparkles className="w-6 h-6 text-gold" />
+          </div>
+          <div>
+            <CardTitle className="text-2xl">AI World Generator</CardTitle>
+            <CardDescription className="text-base mt-1">
+              Describe your campaign idea and AI will create a complete world in seconds
+            </CardDescription>
+          </div>
+        </div>
+        
+        {/* Feature badges */}
+        <div className="flex flex-wrap gap-2 pt-2">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container rounded-full text-xs">
+            <MapPin className="w-3.5 h-3.5 text-gold" />
+            <span>2-4 Towns</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container rounded-full text-xs">
+            <Store className="w-3.5 h-3.5 text-gold" />
+            <span>3-5 Shops per Town</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container rounded-full text-xs">
+            <Users className="w-3.5 h-3.5 text-gold" />
+            <span>3-5 Notable People</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container rounded-full text-xs">
+            <Package className="w-3.5 h-3.5 text-gold" />
+            <span>5-10 Items per Shop</span>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <Textarea
@@ -230,23 +254,24 @@ export function AICampaignGenerator() {
         <Button 
           onClick={handleGenerate} 
           disabled={!prompt.trim() || isGenerating}
-          className="w-full"
+          className="w-full h-12 text-base"
+          size="lg"
         >
           {isGenerating ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Generating Campaign...
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Generating Your World...
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Campaign
+              <Sparkles className="w-5 h-5 mr-2" />
+              Generate Complete World
             </>
           )}
         </Button>
 
-        <p className="text-xs text-on-surface-variant">
-          Creates a complete hierarchy: 2-4 towns, 3-5 shops per town, 3-5 notable people per town, 5-10 items per shop. All context-aware and customizable.
+        <p className="text-xs text-center text-on-surface-variant">
+          All generated content is fully customizable after creation
         </p>
       </CardContent>
     </Card>
