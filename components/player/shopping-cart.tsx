@@ -118,7 +118,7 @@ export function ShoppingBag({ characterId, shopId }: ShoppingCartProps) {
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Shopping Bag</DialogTitle>
         </DialogHeader>
