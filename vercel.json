@@ -1,0 +1,17 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "develop": true
+    }
+  },
+  "github": {
+    "enabled": true,
+    "autoAlias": true,
+    "silent": false,
+    "autoJobCancelation": true
+  },
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
+  "ignoreCommand": "bash vercel-ignore-build.sh"
+}
