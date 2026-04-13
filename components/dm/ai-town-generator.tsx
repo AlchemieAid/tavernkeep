@@ -17,7 +17,7 @@ interface UsageInfo {
   model: string
 }
 
-type GenerationStep = 'idle' | 'consulting_maps' | 'rolling_dice' | 'placing_buildings' | 'summoning_npcs' | 'stocking_shops' | 'complete'
+type GenerationStep = 'idle' | 'generating_town' | 'creating_shops' | 'summoning_npcs' | 'stocking_items' | 'complete'
 
 export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
   const [prompt, setPrompt] = useState('')
@@ -32,14 +32,13 @@ export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
 
     setIsGenerating(true)
     setError(null)
-    setCurrentStep('consulting_maps')
+    setCurrentStep('generating_town')
 
     try {
       // Simulate progress steps
-      setTimeout(() => setCurrentStep('rolling_dice'), 800)
-      setTimeout(() => setCurrentStep('placing_buildings'), 1600)
-      setTimeout(() => setCurrentStep('summoning_npcs'), 2400)
-      setTimeout(() => setCurrentStep('stocking_shops'), 3200)
+      setTimeout(() => setCurrentStep('creating_shops'), 1000)
+      setTimeout(() => setCurrentStep('summoning_npcs'), 2000)
+      setTimeout(() => setCurrentStep('stocking_items'), 3000)
 
       const response = await fetch('/api/dm/generate-town', {
         method: 'POST',
@@ -55,15 +54,12 @@ export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
 
       setCurrentStep('complete')
 
-      // Store usage info
-      if (data.usage) {
-        setLastUsage(data.usage)
-      }
-
       // Redirect to the new town after a brief delay to show completion
       setTimeout(() => {
-        router.push(`/dm/towns/${data.town.id}`)
-        router.refresh()
+        if (data.data?.town?.id) {
+          router.push(`/dm/towns/${data.data.town.id}`)
+          router.refresh()
+        }
       }, 1500)
     } catch (err) {
       setError((err as Error).message)
@@ -101,37 +97,32 @@ export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
 
         {isGenerating && (
           <div className="bg-surface-container p-4 rounded-md space-y-2">
-            <p className="text-sm font-semibold text-on-surface">Establishing Settlement</p>
+            <p className="text-sm font-semibold text-on-surface">Building Your Town</p>
             <div className="space-y-1">
-              <div className={`flex items-center gap-2 text-sm ${currentStep === 'consulting_maps' || currentStep === 'rolling_dice' || currentStep === 'placing_buildings' || currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
-                {(currentStep === 'rolling_dice' || currentStep === 'placing_buildings' || currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete') ? <Check className="w-4 h-4" /> : <Loader2 className="w-4 h-4 animate-spin" />}
-                <span>Consulting ancient maps...</span>
+              <div className={`flex items-center gap-2 text-sm ${currentStep !== 'idle' ? 'text-gold' : 'text-on-surface-variant'}`}>
+                {currentStep !== 'idle' && currentStep !== 'generating_town' ? <Check className="w-4 h-4" /> : <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>Generating town with AI...</span>
               </div>
-              <div className={`flex items-center gap-2 text-sm ${currentStep === 'rolling_dice' || currentStep === 'placing_buildings' || currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
-                {(currentStep === 'placing_buildings' || currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete') ? <Check className="w-4 h-4" /> : currentStep === 'rolling_dice' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
-                <span>Rolling for population and size...</span>
+              <div className={`flex items-center gap-2 text-sm ${currentStep === 'creating_shops' || currentStep === 'summoning_npcs' || currentStep === 'stocking_items' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
+                {currentStep === 'summoning_npcs' || currentStep === 'stocking_items' || currentStep === 'complete' ? <Check className="w-4 h-4" /> : currentStep === 'creating_shops' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
+                <span>Creating shops...</span>
               </div>
-              <div className={`flex items-center gap-2 text-sm ${currentStep === 'placing_buildings' || currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
-                {(currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete') ? <Check className="w-4 h-4" /> : currentStep === 'placing_buildings' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
-                <span>Placing buildings and landmarks...</span>
+              <div className={`flex items-center gap-2 text-sm ${currentStep === 'summoning_npcs' || currentStep === 'stocking_items' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
+                {currentStep === 'stocking_items' || currentStep === 'complete' ? <Check className="w-4 h-4" /> : currentStep === 'summoning_npcs' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
+                <span>Summoning notable people...</span>
               </div>
-              <div className={`flex items-center gap-2 text-sm ${currentStep === 'summoning_npcs' || currentStep === 'stocking_shops' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
-                {(currentStep === 'stocking_shops' || currentStep === 'complete') ? <Check className="w-4 h-4" /> : currentStep === 'summoning_npcs' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
-                <span>Summoning notable residents...</span>
-              </div>
-              <div className={`flex items-center gap-2 text-sm ${currentStep === 'stocking_shops' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
-                {currentStep === 'complete' ? <Check className="w-4 h-4" /> : currentStep === 'stocking_shops' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
-                <span>Stocking shops and taverns...</span>
+              <div className={`flex items-center gap-2 text-sm ${currentStep === 'stocking_items' || currentStep === 'complete' ? 'text-gold' : 'text-on-surface-variant'}`}>
+                {currentStep === 'complete' ? <Check className="w-4 h-4" /> : currentStep === 'stocking_items' ? <Loader2 className="w-4 h-4 animate-spin" /> : <div className="w-4 h-4" />}
+                <span>Stocking shops with items...</span>
               </div>
             </div>
           </div>
         )}
 
-        {lastUsage && currentStep === 'complete' && (
+        {currentStep === 'complete' && (
           <div className="text-sm text-green-700 bg-green-50 p-3 rounded-md space-y-1">
-            <p className="font-semibold">Settlement Established!</p>
-            <p>Tokens: {lastUsage.tokens.toLocaleString()} | Cost: ${lastUsage.estimatedCost}</p>
-            <p className="text-xs">Model: {lastUsage.model}</p>
+            <p className="font-semibold">Town Created Successfully!</p>
+            <p className="text-xs">Complete with shops, notable people, and items</p>
           </div>
         )}
 
@@ -154,7 +145,7 @@ export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
         </Button>
 
         <p className="text-xs text-on-surface-variant">
-          This will create a new town with AI-generated details and suggested shops. You can customize everything afterwards.
+          Creates a complete town with 3-5 shops, 3-5 notable people, and 5-10 items per shop. All context-aware and customizable.
         </p>
       </CardContent>
     </Card>

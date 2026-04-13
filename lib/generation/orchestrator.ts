@@ -909,6 +909,288 @@ export class GenerationOrchestrator {
   private getRandomCount(range: { min: number; max: number }): number {
     return Math.floor(Math.random() * (range.max - range.min + 1)) + range.min
   }
+
+  /**
+   * Generate a town with cascading shops, people, and items
+   * Entry point for town-level generation
+   */
+  async generateTown(campaignId: string, prompt: string): Promise<GeneratorResult<any>> {
+    this.progress.status = 'running'
+    this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
+    
+    // Calculate estimated steps
+    const estimatedShops = Math.floor((this.config.town.shopCount.min + this.config.town.shopCount.max) / 2)
+    const estimatedItemsPerShop = Math.floor((this.config.shop.itemCount.min + this.config.shop.itemCount.max) / 2)
+    const estimatedPeople = Math.floor((this.config.town.notablePeopleCount.min + this.config.town.notablePeopleCount.max) / 2)
+    
+    // Total: 1 town + shops + people + (items per shop)
+    this.progress.totalSteps = 1 + estimatedShops + estimatedPeople + (estimatedShops * estimatedItemsPerShop)
+    
+    console.log(`[ORCHESTRATOR] Town generation - Estimated steps: ${this.progress.totalSteps}`)
+    
+    try {
+      this.emitStepStarted('init', 'Connecting to database...')
+      const supabase = await createClient()
+      
+      // Get campaign context
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .eq('dm_id', this.dmId)
+        .single()
+      
+      if (!campaign) {
+        return { success: false, error: 'Campaign not found' }
+      }
+      
+      this.setCampaignCurrencies(campaign)
+      
+      // Build context
+      const contextBuilder = new ContextBuilder(this.userId, this.dmId)
+      contextBuilder.withCampaign({
+        id: campaign.id,
+        name: campaign.name,
+        description: campaign.description,
+        ruleset: campaign.ruleset,
+        setting: campaign.setting,
+        history: campaign.history,
+        currency: this.primaryCurrency,
+        currencies: this.campaignCurrencies,
+        pantheon: campaign.pantheon
+      })
+      
+      // Generate town
+      this.emitStepStarted('town', 'Generating town with AI...')
+      const townResult = await this.generateTownEntity(supabase, campaignId, prompt, contextBuilder)
+      
+      if (!townResult.success || !townResult.data) {
+        return { success: false, error: townResult.error }
+      }
+      
+      const town = townResult.data.town
+      const notablePeople = townResult.data.notablePeople || []
+      
+      this.progress.results.town = town
+      this.progress.completedSteps++
+      
+      // Update context with town
+      contextBuilder.withTown({
+        id: town.id,
+        name: town.name,
+        description: town.description,
+        population: town.population,
+        size: town.size,
+        location: town.location,
+        political_system: town.political_system,
+        history: town.history
+      })
+      
+      // Generate notable people
+      if (this.config.town.autoGenerateNotablePeople && notablePeople.length > 0) {
+        await this.generateNotablePeopleForTown(supabase, town.id, notablePeople, contextBuilder, town.name)
+      }
+      
+      // Generate shops with items
+      if (this.config.town.autoGenerateShops) {
+        const shopCount = this.getRandomCount(this.config.town.shopCount)
+        await this.generateShopsForTown(supabase, campaignId, town.id, shopCount, contextBuilder, town.name)
+      }
+      
+      this.progress.status = 'completed'
+      this.emit({ type: 'completed', results: this.progress.results })
+      
+      return { success: true, data: this.progress.results }
+    } catch (error) {
+      const errorMsg = (error as Error).message
+      console.error('Town generation error:', error)
+      this.progress.status = 'error'
+      this.progress.errors.push(errorMsg)
+      this.emit({ type: 'failed', error: errorMsg, progress: { ...this.progress } })
+      
+      return { success: false, error: errorMsg }
+    }
+  }
+
+  /**
+   * Generate a shop with cascading items
+   * Entry point for shop-level generation
+   */
+  async generateShop(campaignId: string, townId: string | null, prompt: string, createNotablePerson: boolean = true, notablePersonId?: string): Promise<GeneratorResult<any>> {
+    this.progress.status = 'running'
+    this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
+    
+    // Calculate estimated steps
+    const estimatedItems = Math.floor((this.config.shop.itemCount.min + this.config.shop.itemCount.max) / 2)
+    
+    // Total: 1 shop + items
+    this.progress.totalSteps = 1 + estimatedItems
+    
+    console.log(`[ORCHESTRATOR] Shop generation - Estimated steps: ${this.progress.totalSteps}`)
+    
+    try {
+      this.emitStepStarted('init', 'Connecting to database...')
+      const supabase = await createClient()
+      
+      // Get campaign context
+      const { data: campaign } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .eq('dm_id', this.dmId)
+        .single()
+      
+      if (!campaign) {
+        return { success: false, error: 'Campaign not found' }
+      }
+      
+      this.setCampaignCurrencies(campaign)
+      
+      // Build context
+      const contextBuilder = new ContextBuilder(this.userId, this.dmId)
+      contextBuilder.withCampaign({
+        id: campaign.id,
+        name: campaign.name,
+        description: campaign.description,
+        ruleset: campaign.ruleset,
+        setting: campaign.setting,
+        history: campaign.history,
+        currency: this.primaryCurrency,
+        currencies: this.campaignCurrencies,
+        pantheon: campaign.pantheon
+      })
+      
+      // Get town context if provided
+      if (townId) {
+        const { data: town } = await supabase
+          .from('towns')
+          .select('*')
+          .eq('id', townId)
+          .eq('dm_id', this.dmId)
+          .single()
+        
+        if (town) {
+          contextBuilder.withTown({
+            id: town.id,
+            name: town.name,
+            description: town.description || '',
+            population: town.population || undefined,
+            size: town.size || undefined,
+            location: town.location || undefined,
+            political_system: town.political_system || undefined,
+            history: town.history || undefined
+          })
+        }
+      }
+      
+      // Generate shop
+      this.emitStepStarted('shop', 'Generating shop with AI...')
+      
+      const context = contextBuilder.buildShopContext()
+      const shopPrompt = `Generate a shop that fits in this setting. ${prompt}`
+      
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
+          { role: 'user', content: buildShopGenerationPrompt(shopPrompt) },
+        ],
+        temperature: 0.8,
+        response_format: { type: 'json_object' },
+      })
+      
+      const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+      const { shop: shopData, items: itemsData } = generatedData
+      
+      if (!shopData) {
+        return { success: false, error: 'Failed to generate shop data' }
+      }
+      
+      // Create shopkeeper as notable person if requested
+      let shopkeeperId = notablePersonId
+      if (createNotablePerson && !notablePersonId && townId) {
+        const { data: shopkeeper } = await supabase
+          .from('notable_people')
+          .insert({
+            town_id: townId,
+            dm_id: this.dmId,
+            name: shopData.keeper_name,
+            race: shopData.keeper_race,
+            role: 'shopkeeper',
+            backstory: shopData.keeper_backstory,
+            personality_traits: shopData.keeper_personality || [],
+          } as any)
+          .select()
+          .single()
+        
+        if (shopkeeper) {
+          shopkeeperId = shopkeeper.id
+        }
+      }
+      
+      // Create shop
+      const slug = nanoid(SLUG_LENGTH)
+      const { data: createdShop, error: shopError } = await supabase
+        .from('shops')
+        .insert({
+          campaign_id: campaignId,
+          town_id: townId || null,
+          dm_id: this.dmId,
+          name: shopData.name,
+          slug,
+          shop_type: shopData.shop_type,
+          location_descriptor: shopData.location_descriptor,
+          economic_tier: shopData.economic_tier,
+          inventory_volatility: shopData.inventory_volatility,
+          notable_person_id: shopkeeperId || null,
+          keeper_name: shopData.keeper_name,
+          keeper_race: shopData.keeper_race,
+          keeper_backstory: shopData.keeper_backstory,
+          price_modifier: shopData.price_modifier,
+          haggle_enabled: shopData.haggle_enabled,
+          haggle_dc: shopData.haggle_dc,
+          is_active: true,
+        } as any)
+        .select()
+        .single()
+      
+      if (shopError || !createdShop) {
+        return { success: false, error: shopError?.message || 'Failed to create shop' }
+      }
+      
+      this.progress.results.shop = createdShop
+      this.progress.completedSteps++
+      
+      // Generate items if configured
+      if (this.config.shop.autoGenerateItems) {
+        const targetCount = this.getRandomCount(this.config.shop.itemCount)
+        
+        // Try library first, then catalog
+        const libraryItems = await this.getItemsFromLibrary(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
+        if (libraryItems.length > 0) {
+          await this.generateItemsForShop(supabase, createdShop.id, libraryItems, contextBuilder, createdShop.name)
+        } else {
+          const catalogItems = await this.getItemsFromCatalog(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
+          if (catalogItems.length > 0) {
+            await this.generateItemsForShop(supabase, createdShop.id, catalogItems, contextBuilder, createdShop.name)
+          }
+        }
+      }
+      
+      this.progress.status = 'completed'
+      this.emit({ type: 'completed', results: this.progress.results })
+      
+      return { success: true, data: this.progress.results }
+    } catch (error) {
+      const errorMsg = (error as Error).message
+      console.error('Shop generation error:', error)
+      this.progress.status = 'error'
+      this.progress.errors.push(errorMsg)
+      this.emit({ type: 'failed', error: errorMsg, progress: { ...this.progress } })
+      
+      return { success: false, error: errorMsg }
+    }
+  }
 }
 
 export function createOrchestrator(userId: string, dmId: string, options?: GenerationOptions) {
