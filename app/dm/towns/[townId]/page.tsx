@@ -161,7 +161,7 @@ export default async function TownPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex-1">
           <h1 className="headline-lg text-gold">{town.name}</h1>
           {town.description && (
@@ -170,7 +170,7 @@ export default async function TownPage({
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:flex-shrink-0">
           <VisibilityToggle
             entityType="town"
             entityId={town.id}

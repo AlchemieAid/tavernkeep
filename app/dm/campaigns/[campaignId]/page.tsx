@@ -87,7 +87,7 @@ export default async function CampaignPage({
 
   return (
     <div className="space-y-8">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1">
             <h1 className="headline-lg text-gold">{campaign.name}</h1>
             {campaign.description && (
@@ -96,7 +96,7 @@ export default async function CampaignPage({
               </p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 sm:flex-shrink-0">
             <CampaignInviteModal
               campaignId={campaignId}
               campaignName={campaign.name}
