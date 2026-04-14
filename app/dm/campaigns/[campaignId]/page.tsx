@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import Link from 'next/link'
 import { AITownGenerator } from '@/components/dm/ai-town-generator'
 import { ActionMenu } from '@/components/shared/delete-menu'
-import { Pencil } from 'lucide-react'
-import { CreationCardPair } from '@/components/shared/creation-card-pair'
+import { Pencil, Plus } from 'lucide-react'
 import { CampaignInviteModal } from '@/components/dm/campaign-invite-modal'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 
@@ -171,16 +170,22 @@ export default async function CampaignPage({
           )}
         </div>
 
-        <CreationCardPair
-          aiGenerator={<AITownGenerator campaignId={campaignId} />}
-          manualTitle="Create Town Manually"
-          manualDescription="Create a town manually with full control over all settings"
-          manualButtonText="Create Town"
-          manualButtonHref={`/dm/campaigns/${campaignId}/towns/new`}
-        />
+        {/* Town Creation Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="headline-sm text-on-surface">Create Town</h2>
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/dm/campaigns/${campaignId}/towns/new`}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Manually
+              </Link>
+            </Button>
+          </div>
+          <AITownGenerator campaignId={campaignId} />
+        </div>
 
         <div>
-          <h2 className="headline-sm text-on-surface mb-4">Towns</h2>
+          <h2 className="headline-sm text-on-surface mb-4">Your Towns</h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {towns?.map((town) => (
               <Card key={town.id}>

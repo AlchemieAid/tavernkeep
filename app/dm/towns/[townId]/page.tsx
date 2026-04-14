@@ -6,10 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { ActionMenu } from '@/components/shared/delete-menu'
-import { Pencil } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
 import { AINotablePersonGenerator } from '@/components/dm/ai-notable-person-generator'
 import { AIShopGenerator } from '@/components/dm/ai-shop-generator'
-import { CreationCardPair } from '@/components/shared/creation-card-pair'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 
 export default async function TownPage({
@@ -262,13 +261,18 @@ export default async function TownPage({
         </TabsList>
 
         <TabsContent value="notable-people" className="space-y-6">
-          <CreationCardPair
-            aiGenerator={<AINotablePersonGenerator townId={townId} />}
-            manualTitle="Create Notable Person Manually"
-            manualDescription="Add a custom character with full control over details"
-            manualButtonText="Create Notable Person"
-            manualButtonHref={`/dm/towns/${townId}/notable-people/new`}
-          />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="headline-sm text-on-surface">Create Notable Person</h3>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/dm/towns/${townId}/notable-people/new`}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Manually
+                </Link>
+              </Button>
+            </div>
+            <AINotablePersonGenerator townId={townId} />
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {notablePeople?.map((person) => (
@@ -338,13 +342,18 @@ export default async function TownPage({
         </TabsContent>
 
         <TabsContent value="shops" className="space-y-6">
-          <CreationCardPair
-            aiGenerator={<AIShopGenerator campaignId={town.campaign_id} townId={townId} />}
-            manualTitle="Create Shop Manually"
-            manualDescription="Build a custom shop with your own details"
-            manualButtonText="Create Shop"
-            manualButtonHref={`/dm/towns/${townId}/shops/new`}
-          />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="headline-sm text-on-surface">Create Shop</h3>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/dm/towns/${townId}/shops/new`}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Manually
+                </Link>
+              </Button>
+            </div>
+            <AIShopGenerator campaignId={town.campaign_id} townId={townId} />
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {shops?.map((shop) => (
