@@ -1,6 +1,7 @@
 /**
  * @jest-environment jsdom
  */
+import '@testing-library/jest-dom'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AICampaignGenerator } from '@/components/dm/ai-campaign-generator'
 import { useRouter } from 'next/navigation'
