@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 import { DeleteMenu } from '@/components/shared/delete-menu'
-import { AIWorldGenerator } from '@/components/dm/ai-world-generator'
+import { AICampaignGenerator } from '@/components/dm/ai-campaign-generator'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -50,23 +50,8 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <AIWorldGenerator />
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Campaign Creation</CardTitle>
-              <CardDescription>
-                Create a campaign manually with full control over all settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link href="/dm/campaigns/new">Create Campaign Manually</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        {/* AI Campaign Generator - Full Width */}
+        <AICampaignGenerator />
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Your Campaigns</h2>
