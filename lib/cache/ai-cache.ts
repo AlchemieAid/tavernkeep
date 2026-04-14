@@ -58,7 +58,7 @@ export async function getCachedOrGenerate<T>(
       const age = Date.now() - new Date(cached.created_at).getTime()
       if (age < ttlSeconds * 1000) {
         console.log(`[Cache] Hit for key: ${cacheKey.substring(0, 8)}...`)
-        return JSON.parse(cached.response) as T
+        return JSON.parse(JSON.stringify(cached.response)) as T
       } else {
         console.log(`[Cache] Expired for key: ${cacheKey.substring(0, 8)}...`)
         // Delete expired entry
