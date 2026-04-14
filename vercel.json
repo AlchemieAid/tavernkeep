@@ -1,0 +1,19 @@
+{
+  "functions": {
+    "app/api/dm/generate-world/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/dm/generate-hierarchy/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/dm/generate-campaign/route.ts": {
+      "maxDuration": 180
+    },
+    "app/api/dm/generate-town/route.ts": {
+      "maxDuration": 120
+    },
+    "app/api/dm/generate-shop/route.ts": {
+      "maxDuration": 120
+    }
+  }
+}
