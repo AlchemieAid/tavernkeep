@@ -1,15 +1,80 @@
 /**
- * Serverless-Optimized Rate Limiting
+ * Serverless-Optimized Rate Limiting System
  *
- * Architecture for Vercel serverless:
- * - In-memory cache with 30s TTL per user/type (no cold start penalty on cache hit)
- * - Lazy DB writes (log usage async after successful generation)
- * - Optimistic allowance with catch-up enforcement
- * - Fail open on any error
+ * @fileoverview
+ * Implements a two-tier rate limiting system optimized for Vercel's serverless
+ * environment. Uses in-memory caching for fast checks and async database writes
+ * for persistence. Designed to fail open to prevent blocking legitimate users.
+ *
+ * @architecture
+ * **Two-Tier Strategy:**
+ * ```
+ * Fast Path (1ms):
+ *   ├─ Check in-memory cache
+ *   ├─ If hit → return immediately
+ *   └─ If miss → fall through to slow path
+ *
+ * Slow Path (500ms max):
+ *   ├─ Query database for usage count
+ *   ├─ Cache result for 30s
+ *   ├─ Timeout after 500ms (fail open)
+ *   └─ Return result
+ * ```
+ *
+ * **Key Features:**
+ * - **In-memory cache** with 30s TTL (survives warm starts)
+ * - **Async DB writes** (fire-and-forget after generation)
+ * - **Fail-open policy** (allow on errors to prevent blocking)
+ * - **500ms timeout** on DB queries (prevents slow responses)
+ * - **Hierarchical limits** (campaign > town > shop > item)
+ *
+ * **Rate Limits:**
+ * - Campaigns: 10/hour (most expensive)
+ * - Towns: 50/hour
+ * - Shops: 100/hour
+ * - Items: 200/hour (least expensive)
+ *
+ * **Serverless Optimizations:**
+ * - Cache persists across warm invocations
+ * - No cold start penalty on cache hit
+ * - Lazy DB writes don't block responses
+ * - Graceful degradation on DB failures
+ *
+ * @example
+ * ```typescript
+ * // Check rate limit before generation
+ * const { allowed, remaining, message } = await checkRateLimit(
+ *   userId,
+ *   'campaign',
+ *   supabase
+ * )
+ *
+ * if (!allowed) {
+ *   return { error: message }
+ * }
+ *
+ * // Generate content...
+ *
+ * // Record usage after successful generation
+ * await recordUsage(userId, 'campaign', {
+ *   prompt: 'A dark fantasy world',
+ *   tokensUsed: 1500,
+ *   estimatedCost: 0.003,
+ *   model: 'gpt-4o'
+ * })
+ * ```
+ *
+ * @see {@link checkRateLimit} for usage checking
+ * @see {@link recordUsage} for usage tracking
  */
 
+/**
+ * Rate limit configuration for a generation type
+ */
 interface RateLimitConfig {
+  /** Maximum requests allowed in the time window */
   maxRequests: number
+  /** Time window in minutes */
   windowMinutes: number
 }
 
@@ -21,18 +86,49 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
   item: { maxRequests: 200, windowMinutes: 60 },
 }
 
-// In-memory cache with TTL (survives across warm invocations in same region)
+/**
+ * In-memory cache entry with expiration
+ * 
+ * @description
+ * Stores request count and expiration timestamp. Cache survives across
+ * warm serverless invocations in the same region, providing sub-millisecond
+ * lookups for frequently accessed users.
+ */
 interface CacheEntry {
+  /** Current request count in the window */
   count: number
+  /** Unix timestamp when this entry expires */
   expiresAt: number
 }
-const rateLimitCache = new Map<string, CacheEntry>()
-const CACHE_TTL_MS = 30000 // 30 seconds
 
+/** In-memory cache (persists across warm invocations) */
+const rateLimitCache = new Map<string, CacheEntry>()
+
+/** Cache TTL: 30 seconds (balances freshness vs performance) */
+const CACHE_TTL_MS = 30000
+
+/**
+ * Generate cache key from user ID and generation type
+ * 
+ * @param userId - User ID
+ * @param type - Generation type (campaign, town, shop, item)
+ * @returns Cache key in format "userId:type"
+ */
 function getCacheKey(userId: string, type: string): string {
   return `${userId}:${type}`
 }
 
+/**
+ * Get cached request count for a user/type combination
+ * 
+ * @param userId - User ID to check
+ * @param type - Generation type
+ * @returns Request count if cached and not expired, null otherwise
+ * 
+ * @description
+ * Checks in-memory cache for existing count. Automatically cleans up
+ * expired entries. Returns null if not found or expired.
+ */
 function getCachedCount(userId: string, type: string): number | null {
   const key = getCacheKey(userId, type)
   const entry = rateLimitCache.get(key)
@@ -44,19 +140,68 @@ function getCachedCount(userId: string, type: string): number | null {
   return entry.count
 }
 
+/**
+ * Store request count in cache with TTL
+ * 
+ * @param userId - User ID
+ * @param type - Generation type
+ * @param count - Request count to cache
+ */
 function setCachedCount(userId: string, type: string, count: number): void {
   const key = getCacheKey(userId, type)
   rateLimitCache.set(key, { count, expiresAt: Date.now() + CACHE_TTL_MS })
 }
 
+/**
+ * Increment cached request count
+ * 
+ * @param userId - User ID
+ * @param type - Generation type
+ * 
+ * @description
+ * Increments the cached count by 1. If no cache entry exists, starts at 1.
+ * Called after successful generation to update the cache immediately.
+ */
 function incrementCachedCount(userId: string, type: string): void {
   const current = getCachedCount(userId, type) || 0
   setCachedCount(userId, type, current + 1)
 }
 
 /**
- * Quick rate limit check - uses in-memory cache first
- * Fast path: ~1ms cache hit. Slow path: 500ms DB query.
+ * Check if user is within rate limits
+ * 
+ * @param userId - User ID to check
+ * @param generationType - Type of generation being requested
+ * @param supabase - Optional Supabase client (created if not provided)
+ * @returns Promise resolving to rate limit status
+ * 
+ * @description
+ * **Two-tier checking strategy:**
+ * 
+ * 1. **Fast path (~1ms):** Check in-memory cache
+ *    - If hit and within limits → allow immediately
+ *    - If hit and over limits → deny immediately
+ * 
+ * 2. **Slow path (max 500ms):** Query database
+ *    - Count requests in time window
+ *    - Cache result for future checks
+ *    - Timeout after 500ms (fail open)
+ * 
+ * **Fail-open policy:**
+ * - DB errors → allow request
+ * - Timeouts → allow request
+ * - Missing Supabase client → allow request
+ * 
+ * This prevents legitimate users from being blocked by infrastructure issues.
+ * 
+ * @example
+ * ```typescript
+ * const result = await checkRateLimit(userId, 'campaign', supabase)
+ * if (!result.allowed) {
+ *   return res.status(429).json({ error: result.message })
+ * }
+ * console.log(`${result.remaining} requests remaining`)
+ * ```
  */
 export async function checkRateLimit(
   userId: string,
@@ -135,18 +280,59 @@ async function doRateLimitCheck(
   }
 }
 
+/**
+ * Metadata about AI usage for tracking and billing
+ */
 interface UsageMetadata {
+  /** The prompt that was sent to the AI */
   prompt: string
+  /** Total tokens used (input + output) */
   tokensUsed: number
+  /** Input tokens (prompt) */
   inputTokens?: number
+  /** Output tokens (completion) */
   outputTokens?: number
+  /** Estimated cost in USD */
   estimatedCost?: number
+  /** AI model used (e.g., 'gpt-4o') */
   model?: string
 }
 
 /**
- * Record usage - call this AFTER successful generation
- * Updates cache immediately, writes to DB async (fire-and-forget)
+ * Record AI usage after successful generation
+ * 
+ * @param userId - User ID who made the request
+ * @param generationType - Type of generation performed
+ * @param metadata - Usage details (tokens, cost, model)
+ * @param supabase - Optional Supabase client
+ * 
+ * @description
+ * **Two-phase recording:**
+ * 
+ * 1. **Immediate:** Update in-memory cache
+ *    - Increments cached count by 1
+ *    - Ensures next check sees updated count
+ * 
+ * 2. **Async:** Write to database (fire-and-forget)
+ *    - Logs usage for analytics and billing
+ *    - Does not block response
+ *    - Failures are logged but don't affect user
+ * 
+ * **Important:** Always call this AFTER successful generation, not before.
+ * This ensures we only count successful requests, not failed attempts.
+ * 
+ * @example
+ * ```typescript
+ * // After successful generation
+ * await recordUsage(userId, 'town', {
+ *   prompt: 'A coastal trading port',
+ *   tokensUsed: 1200,
+ *   inputTokens: 500,
+ *   outputTokens: 700,
+ *   estimatedCost: 0.0024,
+ *   model: 'gpt-4o'
+ * })
+ * ```
  */
 export async function recordUsage(
   userId: string,
@@ -181,8 +367,34 @@ export async function recordUsage(
 }
 
 /**
- * For campaign generation: Skip all child rate limit checks
- * The campaign-level check is sufficient to prevent abuse
+ * Skip rate limit checks for child entities during campaign generation
+ * 
+ * @returns Always returns allowed=true with placeholder values
+ * 
+ * @description
+ * When generating a full campaign hierarchy (campaign → towns → shops → items),
+ * we only check the rate limit at the campaign level. This function is used
+ * to bypass rate limit checks for child entities (towns, shops, items) since
+ * the parent campaign check is sufficient to prevent abuse.
+ * 
+ * **Why skip child checks?**
+ * - Campaign generation is already rate-limited (10/hour)
+ * - Checking each child would be redundant
+ * - Reduces database queries during generation
+ * - Prevents false positives from cascading checks
+ * 
+ * **Usage:**
+ * Only call this during hierarchical generation initiated from a campaign.
+ * For standalone town/shop/item generation, use normal rate limit checks.
+ * 
+ * @example
+ * ```typescript
+ * // In campaign generation flow
+ * const townLimit = skipChildRateLimits() // Skip check
+ * 
+ * // In standalone town generation
+ * const townLimit = await checkRateLimit(userId, 'town') // Normal check
+ * ```
  */
 export function skipChildRateLimits(): { allowed: boolean; remaining: number; message: string } {
   return {
