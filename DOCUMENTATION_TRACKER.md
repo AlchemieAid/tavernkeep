@@ -25,14 +25,14 @@
 |------|--------|-------|
 | `lib/cache/ai-cache.ts` | ✅ | Cache-aside pattern documented |
 | `lib/openai/retry.ts` | ✅ | Exponential backoff documented |
-| `lib/rate-limit.ts` | ❌ | Rate limiting logic needs docs |
+| `lib/rate-limit.ts` | ✅ | Two-tier rate limiting documented |
 
 ### Database & Auth
 | File | Status | Notes |
 |------|--------|-------|
-| `lib/supabase/server.ts` | ❌ | Server client creation |
-| `lib/supabase/client.ts` | ❌ | Browser client creation |
-| `lib/supabase/middleware.ts` | ❌ | Auth middleware |
+| `lib/supabase/server.ts` | ✅ | Server client creation |
+| `lib/supabase/client.ts` | ✅ | Browser client creation |
+| `middleware.ts` | ✅ | Auth middleware (root level) |
 
 ### Utilities
 | File | Status | Notes |
@@ -214,14 +214,14 @@
 
 ### Overall Statistics
 - **Total Files:** ~150+
-- **Fully Documented:** 10 (7%)
+- **Fully Documented:** 17 (11%)
 - **Partially Documented:** 0 (0%)
-- **Not Documented:** ~140 (93%)
+- **Not Documented:** ~133 (89%)
 
 ### By Category
 | Category | Total | Documented | Percentage |
 |----------|-------|------------|------------|
-| Core Systems | 12 | 3 | 25% |
+| Core Systems | 12 | 9 | **75%** ✨ |
 | Components | 30+ | 6 | 20% |
 | API Routes | 20+ | 0 | 0% |
 | Pages | 40+ | 0 | 0% |
