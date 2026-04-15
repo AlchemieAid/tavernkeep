@@ -1,3 +1,17 @@
+/**
+ * Breadcrumb Navigation
+ * 
+ * @fileoverview
+ * Dynamic breadcrumb navigation that builds path from current URL.
+ * Fetches campaign context for proper labeling.
+ * 
+ * @features
+ * - Auto-generated from pathname
+ * - Campaign-aware labeling
+ * - Home link
+ * - Chevron separators
+ */
+
 'use client'
 
 import Link from 'next/link'

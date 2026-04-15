@@ -1,3 +1,14 @@
+/**
+ * Version Badge
+ * 
+ * @fileoverview
+ * Displays application version and last updated timestamp in header.
+ * \n * @features
+ * - Version number display
+ * - Last updated timestamp
+ * - Hidden on mobile
+ */
+
 import { getVersionInfo } from '@/lib/version'
 
 export function VersionBadge() {

@@ -1,3 +1,17 @@
+/**
+ * Navigation Dropdowns
+ * 
+ * @fileoverview
+ * Desktop navigation with hierarchical dropdowns for campaigns, towns, shops, and NPCs.
+ * Fetches user's entities and displays them in organized dropdown menus.
+ * 
+ * @features
+ * - Hierarchical dropdown navigation
+ * - Context-aware active states
+ * - Real-time entity fetching
+ * - Desktop-optimized layout
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'

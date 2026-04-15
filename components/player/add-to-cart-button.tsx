@@ -1,3 +1,17 @@
+/**
+ * Add to Cart Button
+ * 
+ * @fileoverview
+ * Player-facing button for adding shop items to their character's cart.
+ * Handles locked items and provides loading states.
+ * 
+ * @features
+ * - Optimistic UI with loading state
+ * - Locked item detection
+ * - Success callback for UI updates
+ * - Error handling with toast
+ */
+
 'use client'
 
 import { useState } from 'react'

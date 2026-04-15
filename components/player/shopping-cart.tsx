@@ -1,3 +1,18 @@
+/**
+ * Shopping Cart (Shopping Bag)
+ * 
+ * @fileoverview
+ * Player's shopping cart modal showing pending purchases for a specific shop.
+ * Uses real-time subscriptions to sync cart state across sessions.
+ * 
+ * @features
+ * - Real-time cart updates via Supabase Realtime
+ * - Remove items from cart
+ * - Total price calculation
+ * - Modal dialog interface
+ * - Automatic cleanup on unmount
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'

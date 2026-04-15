@@ -1,3 +1,17 @@
+/**
+ * Item Stats Display
+ * 
+ * @fileoverview
+ * Renders item properties based on category (weapon, armor, potion, scroll, magic_item).
+ * Displays category-specific stats in a formatted layout.
+ * 
+ * @features
+ * - Category-specific property rendering
+ * - Weapon stats (damage, type, properties)
+ * - Armor stats (AC, dex bonus, stealth)
+ * - Potion/scroll/magic item stats
+ */
+
 import type { ReactNode } from 'react'
 
 interface ItemStatsDisplayProps {

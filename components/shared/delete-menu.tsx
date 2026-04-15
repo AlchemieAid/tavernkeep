@@ -1,3 +1,16 @@
+/**
+ * Delete Menu (Actions Menu)
+ * 
+ * @fileoverview
+ * Dropdown menu with edit/delete actions for entities.
+ * Provides confirmation dialog for destructive actions.
+ * 
+ * @features
+ * - Edit and delete options
+ * - Confirmation dialog
+ * - Optimistic UI updates
+ */
+
 'use client'
 
 import { MoreVertical, Trash2, Pencil } from 'lucide-react'

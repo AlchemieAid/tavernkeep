@@ -1,3 +1,15 @@
+/**
+ * Profile Menu
+ * 
+ * @fileoverview
+ * User profile dropdown with email display and logout functionality.
+ * 
+ * @features
+ * - User email display
+ * - Logout action
+ * - Dropdown menu
+ */
+
 'use client'
 
 import { useState } from 'react'

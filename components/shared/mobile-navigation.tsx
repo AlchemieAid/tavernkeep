@@ -1,3 +1,17 @@
+/**
+ * Mobile Navigation
+ * 
+ * @fileoverview
+ * Mobile-responsive slide-out navigation menu with hierarchical campaign/town/shop/NPC navigation.
+ * Uses Sheet component for slide-out drawer.
+ * 
+ * @features
+ * - Hierarchical navigation (campaigns → towns → shops/NPCs)
+ * - Mobile-optimized drawer
+ * - Context-aware active states
+ * - Icon-based navigation
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'

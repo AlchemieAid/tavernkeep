@@ -1,3 +1,18 @@
+/**
+ * Navigation Header
+ * 
+ * @fileoverview
+ * Main application header with logo, navigation dropdowns, profile menu, and mobile navigation.
+ * Server Component that fetches user authentication state.
+ * 
+ * @features
+ * - Logo and branding
+ * - Desktop navigation dropdowns
+ * - Mobile navigation drawer
+ * - Profile menu
+ * - Version badge
+ */
+
 import { createClient } from '@/lib/supabase/server'
 import { ProfileMenu } from './profile-menu'
 import { VersionBadge } from './version-badge'

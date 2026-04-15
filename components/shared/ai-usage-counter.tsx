@@ -1,3 +1,17 @@
+/**
+ * AI Usage Counter
+ * 
+ * @fileoverview
+ * Displays total AI token usage and estimated cost for the current user.
+ * Fetches aggregated usage data from ai_usage table.
+ * 
+ * @features
+ * - Real-time token count
+ * - Cost estimation
+ * - Loading states
+ * - User-specific data
+ */
+
 'use client'
 
 import { useEffect, useState } from 'react'

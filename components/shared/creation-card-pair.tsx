@@ -1,3 +1,16 @@
+/**
+ * Creation Card Pair
+ * 
+ * @fileoverview
+ * Layout component that displays AI generator and manual creation options side-by-side.
+ * Used throughout DM interface for entity creation.
+ * 
+ * @features
+ * - Side-by-side AI vs manual options
+ * - Consistent layout pattern
+ * - Reusable across entity types
+ */
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
