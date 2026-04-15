@@ -625,7 +625,7 @@ export class GenerationOrchestrator {
       }
 
       // Create shopkeeper as notable person
-      const { data: shopkeeper } = await supabase
+      const { data: shopkeeper, error: shopkeeperError } = await supabase
         .from('notable_people')
         .insert({
           town_id: townId,
@@ -638,6 +638,11 @@ export class GenerationOrchestrator {
         } as any)
         .select()
         .single()
+
+      if (shopkeeperError) {
+        console.error(`Shopkeeper creation failed for shop ${i + 1} in ${townName}:`, shopkeeperError)
+        // Continue anyway - shop can exist without a linked shopkeeper
+      }
 
       // Create shop
       const slug = nanoid(SLUG_LENGTH)
