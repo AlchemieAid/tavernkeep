@@ -1,3 +1,18 @@
+/**
+ * Campaign Edit Form
+ * 
+ * @fileoverview
+ * Form for editing campaign details (name, description, ruleset, setting, history, currency, pantheon).
+ * Includes field validation, character limits, and optimistic UI updates.
+ * 
+ * @features
+ * - Controlled form inputs with react-hook-form
+ * - Character limit enforcement
+ * - Optimistic updates
+ * - Error handling
+ * - Cancel navigation
+ */
+
 'use client'
 
 import { useState } from 'react'

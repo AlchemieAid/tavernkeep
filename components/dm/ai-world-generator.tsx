@@ -1,3 +1,19 @@
+/**
+ * AI World Generator
+ * 
+ * @fileoverview
+ * Alias/alternative interface for full hierarchy generation (campaign → towns → shops → items → NPCs).
+ * Similar to AICampaignGenerator but with different branding/messaging.
+ * Uses Server-Sent Events for real-time progress updates.
+ * 
+ * @features
+ * - Full world generation in one operation
+ * - Real-time progress via SSE
+ * - Entity tracking
+ * - Progress visualization
+ * - Automatic redirect
+ */
+
 'use client'
 
 import { useState, useCallback } from 'react'

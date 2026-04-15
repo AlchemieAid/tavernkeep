@@ -1,3 +1,19 @@
+/**
+ * Item Library Form
+ * 
+ * @fileoverview
+ * Comprehensive form for creating/editing items in DM's personal library.
+ * Handles all item types (weapons, armor, potions, scrolls, magic items) with type-specific properties.
+ * 
+ * @features
+ * - Multi-category support (weapon, armor, potion, scroll, magic_item, misc)
+ * - Dynamic property fields based on category
+ * - Shop tag filtering
+ * - Ruleset compatibility
+ * - Weight, price, rarity management
+ * - Hidden item conditions
+ */
+
 'use client'
 
 import { useState } from 'react'

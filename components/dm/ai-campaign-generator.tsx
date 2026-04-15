@@ -1,3 +1,34 @@
+/**
+ * AI Campaign Generator Component
+ * 
+ * @fileoverview
+ * Full hierarchy generator that creates campaign → towns → shops → items → NPCs
+ * in one operation. Uses Server-Sent Events (SSE) for real-time progress updates.
+ * 
+ * @component
+ * **Generation Flow:**
+ * ```
+ * 1. User enters campaign idea
+ * 2. Connecting → Establishes SSE stream
+ * 3. Generating → Creates full hierarchy
+ *    ├─ Campaign
+ *    ├─ Towns (2-4)
+ *    ├─ Shops (3-5 per town)
+ *    ├─ Items (5-10 per shop)
+ *    └─ Notable People (3-5 per town)
+ * 4. Complete → Redirects to campaign
+ * ```
+ * 
+ * @features
+ * - Real-time progress via SSE
+ * - Entity tracking (shows created items)
+ * - Progress bar (current/total steps)
+ * - Automatic redirect on completion
+ * - Error recovery
+ * 
+ * @see {@link /api/dm/generate-hierarchy}
+ */
+
 'use client'
 
 import { useState, useCallback } from 'react'
@@ -7,6 +38,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Sparkles, MapPin, Store, Users, Package, Globe, TreePine, Crown } from 'lucide-react'
 
+/** Entity created during generation */
 interface CreatedEntity {
   id: string
   name: string

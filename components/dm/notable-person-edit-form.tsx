@@ -1,3 +1,17 @@
+/**
+ * Notable Person Edit Form
+ * 
+ * @fileoverview
+ * Form for editing NPC details including name, race, role, backstory, motivation, and personality traits.
+ * Includes role dropdown and character limit enforcement.
+ * 
+ * @features
+ * - NPC role selection
+ * - Personality traits management
+ * - Character limits
+ * - Optimistic updates
+ */
+
 'use client'
 
 import { useState } from 'react'

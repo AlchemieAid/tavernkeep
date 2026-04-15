@@ -1,3 +1,17 @@
+/**
+ * AI Notable Person Generator
+ * 
+ * @fileoverview
+ * Generates NPCs for towns with configurable roles and quantities.
+ * Creates memorable characters with backstories, motivations, and personality traits.
+ * 
+ * @features
+ * - Role selection (ruler, merchant, priest, etc.)
+ * - Quantity control (1-10 NPCs)
+ * - Natural language prompts
+ * - Automatic page refresh
+ */
+
 'use client'
 
 import { useState } from 'react'

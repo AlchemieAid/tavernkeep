@@ -1,3 +1,18 @@
+/**
+ * Shop Item Picker
+ * 
+ * @fileoverview
+ * Interface for adding existing items from DM's library to a shop.
+ * Includes search, filtering by category/rarity, and stock quantity management.
+ * 
+ * @features
+ * - Search by item name
+ * - Filter by category and rarity
+ * - Stock quantity input
+ * - Real-time filtering with useMemo
+ * - Adds items to shop inventory
+ */
+
 'use client'
 
 import { useState, useMemo } from 'react'

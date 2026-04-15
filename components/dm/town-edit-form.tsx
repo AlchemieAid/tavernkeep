@@ -1,3 +1,17 @@
+/**
+ * Town Edit Form
+ * 
+ * @fileoverview
+ * Form for editing town details including name, description, population, size, location, political system, and history.
+ * Includes dropdowns for size/location/political system and character limit enforcement.
+ * 
+ * @features
+ * - Controlled inputs with validation
+ * - Size/location/political system dropdowns
+ * - Character limits from FIELD_LIMITS
+ * - Optimistic UI updates
+ */
+
 'use client'
 
 import { useState } from 'react'
