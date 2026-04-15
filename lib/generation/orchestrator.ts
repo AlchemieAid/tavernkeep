@@ -487,18 +487,25 @@ export class GenerationOrchestrator {
     )
 
     // Update context builder with this town
+    const parentContext = parentContextBuilder.build()
     const townContextBuilder = createContextBuilder(this.userId, this.dmId)
-      .withCampaign(parentContextBuilder.build().campaignContext)
-      .withTown({
-        id: createdTown.id,
-        name: town.name,
-        description: town.description,
-        population: town.population,
-        size: town.size,
-        location: town.location,
-        political_system: town.political_system,
-        history: town.history,
-      })
+    
+    // Add campaign context if it exists
+    if (parentContext.campaignContext) {
+      townContextBuilder.withCampaign(parentContext.campaignContext)
+    }
+    
+    // Add town context
+    townContextBuilder.withTown({
+      id: createdTown.id,
+      name: town.name,
+      description: town.description,
+      population: town.population,
+      size: town.size,
+      location: town.location,
+      political_system: town.political_system,
+      history: town.history,
+    })
 
     // Auto-generate Notable People
     if (this.config.town.autoGenerateNotablePeople && notablePeople?.length > 0) {
