@@ -1,3 +1,36 @@
+/**
+ * Shop Generation Prompts
+ * 
+ * @fileoverview
+ * AI prompt templates for generating D&D shops with shopkeepers and inventory.
+ * Includes detailed item properties schemas for weapons, armor, potions, scrolls, and magic items.
+ * 
+ * @architecture
+ * **Output Structure:**
+ * ```json
+ * {
+ *   "shop": { name, shop_type, economic_tier, shopkeeper details, pricing },
+ *   "items": [{ name, description, category, rarity, price, properties }]
+ * }
+ * ```
+ * 
+ * **Item Categories:**
+ * - weapon (damage, type, properties)
+ * - armor (AC, dex bonus, stealth)
+ * - potion (healing, effects)
+ * - scroll (spell level, DC)
+ * - magic_item (charges, effects)
+ * 
+ * @see {@link GenerationOrchestrator.generateShopsForTown}
+ */
+
+/**
+ * System prompt for shop generation
+ * 
+ * @description
+ * Instructs AI to create shops with shopkeepers and themed inventory.
+ * Includes detailed schemas for item properties by category.
+ */
 export const SHOP_GENERATION_SYSTEM_PROMPT = `You are a creative D&D shop generator. Generate detailed, thematic shops based on the user's description.
 
 Return a JSON object with this EXACT structure:

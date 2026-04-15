@@ -1,5 +1,38 @@
+/**
+ * Town Generation Prompts
+ * 
+ * @fileoverview
+ * AI prompt templates for generating D&D towns with notable people and shops.
+ * Ensures towns have rulers, diverse NPCs, and suggested shops for hierarchy generation.
+ * 
+ * @architecture
+ * **Output Structure:**
+ * ```json
+ * {
+ *   "town": { name, description, population, size, location, political_system, history },
+ *   "notablePeople": [{ name, race, role, backstory, motivation, personality_traits }],
+ *   "suggestedShops": [{ name, shop_type, description }]
+ * }
+ * ```
+ * 
+ * **Key Requirements:**
+ * - MUST include a ruler/leader NPC
+ * - 2-4 additional diverse NPCs
+ * - 3-6 suggested shops
+ * - Cohesive world-building
+ * 
+ * @see {@link GenerationOrchestrator.generateTownEntity}
+ */
+
 import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 
+/**
+ * System prompt for town generation
+ * 
+ * @description
+ * Instructs AI to create towns with rulers, NPCs, and shops.
+ * Critical requirement: Always include at least one ruler.
+ */
 export const TOWN_GENERATION_SYSTEM_PROMPT = `Expert D&D world builder. Create vivid, memorable towns with rich detail.
 
 Output JSON:
@@ -35,6 +68,20 @@ CRITICAL:
 - Generate 2-4 additional notable people with diverse roles (priest, merchant, innkeeper, etc.)
 - Ensure all elements feel cohesive and support the town's character.`
 
+/**
+ * Build user prompt for town generation
+ * 
+ * @param userPrompt - User's town idea
+ * @param campaignContext - Campaign context for cohesion
+ * @param population - Optional population constraint
+ * @param size - Optional size (hamlet, village, town, city, metropolis)
+ * @param location - Optional location type (desert, forest, coastal, etc.)
+ * @returns Formatted prompt with requirements
+ * 
+ * @description
+ * Constructs prompt with campaign context and constraints.
+ * Emphasizes ruler requirement and NPC diversity.
+ */
 export function buildTownGenerationPrompt(
   userPrompt: string, 
   campaignContext?: string,

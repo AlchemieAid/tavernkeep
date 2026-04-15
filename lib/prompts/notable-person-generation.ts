@@ -1,5 +1,38 @@
+/**
+ * Notable Person Generation Prompts
+ * 
+ * @fileoverview
+ * AI prompt templates for generating D&D NPCs with depth and personality.
+ * Emphasizes creating memorable, distinctive characters with clear motivations.
+ * 
+ * @architecture
+ * **Output Structure:**
+ * ```json
+ * {
+ *   "notablePeople": [
+ *     { name, race, role, backstory, motivation, personality_traits }
+ *   ]
+ * }
+ * ```
+ * 
+ * **Key Features:**
+ * - Distinctive personalities
+ * - Clear motivations
+ * - Roleplay-ready traits
+ * - Depth and realism
+ * 
+ * @see {@link GenerationOrchestrator.generateNotablePeopleForTown}
+ */
+
 import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 
+/**
+ * System prompt for notable person generation
+ * 
+ * @description
+ * Instructs AI to create memorable NPCs with depth.
+ * Emphasizes avoiding generic characters.
+ */
 export const NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT = `Expert D&D NPC creator. Create memorable, distinctive notable people with depth.
 
 Output JSON:
