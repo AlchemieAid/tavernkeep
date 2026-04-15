@@ -1,11 +1,45 @@
 /**
  * Generation Orchestrator
- * Coordinates hierarchical AI content generation with cascading context
  * 
- * Architecture: Strategy Pattern + Builder Pattern
- * - Each generator is a strategy
- * - ContextBuilder accumulates context down the hierarchy
- * - Orchestrator coordinates the flow
+ * @fileoverview
+ * Coordinates hierarchical AI content generation for D&D campaigns using OpenAI.
+ * Implements a database-first architecture where each generation level independently
+ * fetches its required context from Supabase, ensuring consistency and reliability.
+ * 
+ * @architecture
+ * **Database as Single Source of Truth Pattern**
+ * - Each generation method fetches its own context from the database
+ * - No context passing between methods (eliminates undefined errors)
+ * - Same code path whether starting from campaign, town, or shop level
+ * 
+ * **Hierarchical Generation Flow**
+ * ```
+ * Campaign → Towns → Shops → Items
+ *                 ↓
+ *           Notable People
+ * ```
+ * 
+ * **Key Design Patterns**
+ * - Strategy Pattern: Each generator (campaign, town, shop) is a strategy
+ * - Builder Pattern: ContextBuilder constructs AI prompts from DB data
+ * - Observer Pattern: Event emission for real-time progress updates
+ * 
+ * @example
+ * ```typescript
+ * const orchestrator = createOrchestrator(userId, dmId)
+ * 
+ * // Generate entire campaign hierarchy
+ * const result = await orchestrator.generateCampaign('A dark fantasy world')
+ * 
+ * // Generate just a town (fetches campaign context from DB)
+ * const townResult = await orchestrator.generateTown(campaignId, 'A coastal trading port')
+ * 
+ * // Generate just a shop (fetches campaign + town context from DB)
+ * const shopResult = await orchestrator.generateShop(campaignId, townId, 'A mysterious apothecary')
+ * ```
+ * 
+ * @see {@link ContextBuilder} for prompt construction
+ * @see {@link GenerationConfig} for configuration options
  */
 
 import OpenAI from 'openai'
@@ -33,21 +67,86 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
 })
 
+/**
+ * Result wrapper for generator methods
+ * @template T The type of data returned on success
+ */
 interface GeneratorResult<T> {
+  /** Whether the generation succeeded */
   success: boolean
+  /** The generated data (only present if success is true) */
   data?: T
+  /** Error message (only present if success is false) */
   error?: string
 }
 
+/**
+ * Main orchestrator class for AI content generation
+ * 
+ * @class GenerationOrchestrator
+ * @description
+ * Manages the entire lifecycle of hierarchical content generation for D&D campaigns.
+ * Each instance maintains its own progress state and can generate content at any level
+ * of the hierarchy (campaign, town, shop, items).
+ * 
+ * **State Management:**
+ * - Tracks generation progress for real-time UI updates
+ * - Maintains campaign currency configuration
+ * - Prevents duplicate names across generated entities
+ * - Logs AI usage for cost tracking
+ * 
+ * **Thread Safety:**
+ * Not thread-safe. Each generation request should use a new orchestrator instance.
+ */
 export class GenerationOrchestrator {
+  /** Generation configuration (counts, auto-generation flags, etc.) */
   private config: GenerationConfig
+  
+  /** Current generation progress state */
   private progress: GenerationProgress
+  
+  /** Optional callback for progress updates */
   private callbacks?: GenerationOptions['onProgress']
+  
+  /** Authenticated user ID */
   private userId: string
+  
+  /** DM user ID (owner of generated content) */
   private dmId: string
+  
+  /** Campaign currency system (parsed from campaign data) */
   private campaignCurrencies: CampaignCurrency[] = []
+  
+  /** Primary currency code (e.g., 'gp', 'credits') */
   private primaryCurrency: string = 'gp'
+  
+  /** Set of generated names to prevent duplicates */
+  private generatedNames = {
+    campaigns: new Set<string>(),
+    towns: new Set<string>(),
+    shops: new Set<string>(),
+    people: new Set<string>(),
+  }
 
+  /**
+   * Creates a new generation orchestrator instance
+   * 
+   * @param userId - The authenticated user's ID
+   * @param dmId - The DM's user ID (content owner)
+   * @param options - Optional configuration and callbacks
+   * 
+   * @example
+   * ```typescript
+   * const orchestrator = new GenerationOrchestrator(
+   *   session.user.id,
+   *   session.user.id,
+   *   {
+   *     config: { campaign: { townCount: [3, 5] } },
+   *     onProgress: (event) => console.log(event)
+   *   }
+   * )
+   * ```
+   */
   constructor(userId: string, dmId: string, options?: GenerationOptions) {
     this.userId = userId
     this.dmId = dmId
@@ -156,16 +255,30 @@ export class GenerationOrchestrator {
 
   /**
    * Main entry point: Generate a complete campaign hierarchy
+   * 
+   * @param prompt - Natural language description of the campaign world
+   * @param ruleset - Optional RPG system (e.g., '5e', 'pathfinder')
+   * @param setting - Optional campaign setting (e.g., 'forgotten realms', 'eberron')
+   * @returns Promise resolving to campaign data with all generated entities
+   * 
+   * @description
+   * Generates a complete campaign hierarchy in a single operation:
+   * 1. Creates the campaign entity with metadata
+   * 2. Generates multiple towns based on configuration
+   * 3. For each town, generates shops and notable people
+   * 4. For each shop, populates items from library or catalog
+   * 
+   * **Database Operations:**
+   * - Inserts campaign into `campaigns` table
+   * - Cascades to create towns, shops, notable_people, and items
+   * - All entities are linked via foreign keys
+   * 
+   * **Progress Tracking:**
+   * Emits real-time events for UI updates as each entity is created
    */
-  private generatedNames: {
-    towns: Set<string>
-    shops: Set<string>
-    people: Set<string>
-  } = { towns: new Set(), shops: new Set(), people: new Set() }
-
   async generateCampaign(prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
-    this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
+    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
     
     // Calculate estimated total steps upfront for accurate progress bar
     const estimatedTowns = Math.floor((this.config.campaign.townCount.min + this.config.campaign.townCount.max) / 2)
@@ -973,7 +1086,7 @@ export class GenerationOrchestrator {
    */
   async generateTown(campaignId: string, prompt: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
-    this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
+    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
     
     // Calculate estimated steps
     const estimatedShops = Math.floor((this.config.town.shopCount.min + this.config.town.shopCount.max) / 2)
@@ -1053,7 +1166,7 @@ export class GenerationOrchestrator {
    */
   async generateShop(campaignId: string, townId: string | null, prompt: string, createNotablePerson: boolean = true, notablePersonId?: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
-    this.generatedNames = { towns: new Set(), shops: new Set(), people: new Set() }
+    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
     
     // Calculate estimated steps
     const estimatedItems = Math.floor((this.config.shop.itemCount.min + this.config.shop.itemCount.max) / 2)
