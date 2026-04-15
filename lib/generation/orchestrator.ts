@@ -394,9 +394,7 @@ export class GenerationOrchestrator {
       const townResult = await this.generateTownEntity(
         supabase, 
         campaign.id, 
-        townPrompt, 
-        campaignContext,
-        contextBuilder
+        townPrompt
       )
 
       if (townResult.success && townResult.data) {
@@ -414,10 +412,38 @@ export class GenerationOrchestrator {
   private async generateTownEntity(
     supabase: any, 
     campaignId: string, 
-    prompt: string,
-    campaignContext: string,
-    parentContextBuilder: any
+    prompt: string
   ): Promise<GeneratorResult<any>> {
+    
+    // Fetch campaign context from database (single source of truth)
+    const { data: campaign } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .single()
+    
+    if (!campaign) {
+      return { success: false, error: 'Campaign not found' }
+    }
+    
+    // Set campaign currencies for this generation
+    this.setCampaignCurrencies(campaign)
+    
+    // Build context from database data
+    const contextBuilder = new ContextBuilder(this.userId, this.dmId)
+    contextBuilder.withCampaign({
+      id: campaign.id,
+      name: campaign.name,
+      description: campaign.description || '',
+      ruleset: campaign.ruleset || undefined,
+      setting: campaign.setting || undefined,
+      history: campaign.history || undefined,
+      currency: this.primaryCurrency,
+      currencies: this.campaignCurrencies,
+      pantheon: campaign.pantheon || undefined
+    })
+    
+    const campaignContext = contextBuilder.buildTownContext()
     
     // OpenAI call with timeout
     const openaiPromise = openai.chat.completions.create({
@@ -486,39 +512,18 @@ export class GenerationOrchestrator {
       'gpt-4o'
     )
 
-    // Update context builder with this town
-    const parentContext = parentContextBuilder.build()
-    const townContextBuilder = createContextBuilder(this.userId, this.dmId)
-    
-    // Add campaign context if it exists
-    if (parentContext.campaignContext) {
-      townContextBuilder.withCampaign(parentContext.campaignContext)
-    }
-    
-    // Add town context
-    townContextBuilder.withTown({
-      id: createdTown.id,
-      name: town.name,
-      description: town.description,
-      population: town.population,
-      size: town.size,
-      location: town.location,
-      political_system: town.political_system,
-      history: town.history,
-    })
-
     // Auto-generate Notable People
     if (this.config.town.autoGenerateNotablePeople && notablePeople?.length > 0) {
-      await this.generateNotablePeopleForTown(supabase, createdTown.id, notablePeople, townContextBuilder, createdTown.name)
+      await this.generateNotablePeopleForTown(supabase, createdTown.id, notablePeople, createdTown.name)
     }
 
-    // Auto-generate Shops
+    // Auto-generate Shops (they will fetch their own context from DB)
     if (this.config.town.autoGenerateShops) {
       const shopCount = this.getRandomCount(this.config.town.shopCount)
-      await this.generateShopsForTown(supabase, campaignId, createdTown.id, shopCount, townContextBuilder, createdTown.name)
+      await this.generateShopsForTown(supabase, campaignId, createdTown.id, shopCount, createdTown.name)
     }
 
-    return { success: true, data: createdTown }
+    return { success: true, data: { town: createdTown, notablePeople } }
   }
 
   /**
@@ -528,10 +533,8 @@ export class GenerationOrchestrator {
     supabase: any,
     townId: string,
     peopleData: any[],
-    contextBuilder: any,
     townName: string
   ) {
-    const context = contextBuilder.buildNotablePersonContext()
     const peopleCount = this.getRandomCount(this.config.town.notablePeopleCount)
     
     this.emitStepStarted('people', `Creating ${peopleCount} notable people for ${townName}...`)
@@ -579,9 +582,52 @@ export class GenerationOrchestrator {
     campaignId: string,
     townId: string,
     count: number,
-    contextBuilder: any,
     townName: string
   ) {
+    // Fetch campaign and town context from database
+    const { data: campaign } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .single()
+    
+    const { data: town } = await supabase
+      .from('towns')
+      .select('*')
+      .eq('id', townId)
+      .single()
+    
+    if (!campaign || !town) {
+      console.error('Campaign or town not found for shop generation')
+      return
+    }
+    
+    // Set campaign currencies
+    this.setCampaignCurrencies(campaign)
+    
+    // Build context from database
+    const contextBuilder = new ContextBuilder(this.userId, this.dmId)
+    contextBuilder.withCampaign({
+      id: campaign.id,
+      name: campaign.name,
+      description: campaign.description || '',
+      ruleset: campaign.ruleset || undefined,
+      setting: campaign.setting || undefined,
+      history: campaign.history || undefined,
+      currency: this.primaryCurrency,
+      currencies: this.campaignCurrencies,
+      pantheon: campaign.pantheon || undefined
+    }).withTown({
+      id: town.id,
+      name: town.name,
+      description: town.description,
+      population: town.population,
+      size: town.size,
+      location: town.location,
+      political_system: town.political_system,
+      history: town.history
+    })
+    
     const context = contextBuilder.buildShopContext()
     
     this.emitStepStarted('shops', `Creating ${count} shops for ${townName}...`)
@@ -709,13 +755,13 @@ export class GenerationOrchestrator {
         const libraryItems = await this.getItemsFromLibrary(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
         if (libraryItems.length > 0) {
           console.log(`[ITEMS] Using ${libraryItems.length} library items for ${createdShop.name}`)
-          await this.generateItemsForShop(supabase, createdShop.id, libraryItems, contextBuilder, createdShop.name)
+          await this.generateItemsForShop(supabase, createdShop.id, libraryItems, createdShop.name)
         } else {
           // 2. Fall back to SRD catalog
           console.log(`[ITEMS] No library items for ${createdShop.shop_type} — falling back to SRD catalog for ${createdShop.name}`)
           const catalogItems = await this.getItemsFromCatalog(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
           if (catalogItems.length > 0) {
-            await this.generateItemsForShop(supabase, createdShop.id, catalogItems, contextBuilder, createdShop.name)
+            await this.generateItemsForShop(supabase, createdShop.id, catalogItems, createdShop.name)
           } else {
             console.warn(`[ITEMS] No catalog items for ${createdShop.shop_type} — shop will start empty`)
             this.progress.errors.push(`No items found for ${createdShop.name} — add items via Item Library`)
@@ -740,7 +786,6 @@ export class GenerationOrchestrator {
     supabase: any,
     shopId: string,
     itemsData: any[],
-    contextBuilder: any,
     shopName: string
   ) {
     const itemCount = Math.min(itemsData.length, this.getRandomCount(this.config.shop.itemCount))
@@ -958,24 +1003,9 @@ export class GenerationOrchestrator {
       
       this.setCampaignCurrencies(campaign)
       
-      // Build context
-      const contextBuilder = new ContextBuilder(this.userId, this.dmId)
-      contextBuilder.withCampaign({
-        id: campaign.id,
-        name: campaign.name,
-        description: campaign.description || '',
-        ruleset: campaign.ruleset || undefined,
-        setting: campaign.setting || undefined,
-        history: campaign.history || undefined,
-        currency: this.primaryCurrency,
-        currencies: this.campaignCurrencies,
-        pantheon: campaign.pantheon || undefined
-      })
-      
-      // Generate town
+      // Generate town (it will fetch campaign context from DB)
       this.emitStepStarted('town', 'Generating town with AI...')
-      const campaignContext = contextBuilder.buildTownContext()
-      const townResult = await this.generateTownEntity(supabase, campaignId, prompt, campaignContext, contextBuilder)
+      const townResult = await this.generateTownEntity(supabase, campaignId, prompt)
       
       if (!townResult.success || !townResult.data) {
         return { success: false, error: townResult.error }
@@ -991,27 +1021,15 @@ export class GenerationOrchestrator {
       this.progress.results.towns.push(town)
       this.progress.completedSteps++
       
-      // Update context with town
-      contextBuilder.withTown({
-        id: town.id,
-        name: town.name,
-        description: town.description,
-        population: town.population,
-        size: town.size,
-        location: town.location,
-        political_system: town.political_system,
-        history: town.history
-      })
-      
       // Generate notable people
       if (this.config.town.autoGenerateNotablePeople && notablePeople.length > 0) {
-        await this.generateNotablePeopleForTown(supabase, town.id, notablePeople, contextBuilder, town.name)
+        await this.generateNotablePeopleForTown(supabase, town.id, notablePeople, town.name)
       }
       
-      // Generate shops with items
+      // Generate shops with items (they will fetch their own context from DB)
       if (this.config.town.autoGenerateShops) {
         const shopCount = this.getRandomCount(this.config.town.shopCount)
-        await this.generateShopsForTown(supabase, campaignId, town.id, shopCount, contextBuilder, town.name)
+        await this.generateShopsForTown(supabase, campaignId, town.id, shopCount, town.name)
       }
       
       this.progress.status = 'completed'
@@ -1189,11 +1207,11 @@ export class GenerationOrchestrator {
         // Try library first, then catalog
         const libraryItems = await this.getItemsFromLibrary(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
         if (libraryItems.length > 0) {
-          await this.generateItemsForShop(supabase, createdShop.id, libraryItems, contextBuilder, createdShop.name)
+          await this.generateItemsForShop(supabase, createdShop.id, libraryItems, createdShop.name)
         } else {
           const catalogItems = await this.getItemsFromCatalog(supabase, createdShop.shop_type, createdShop.economic_tier, targetCount)
           if (catalogItems.length > 0) {
-            await this.generateItemsForShop(supabase, createdShop.id, catalogItems, contextBuilder, createdShop.name)
+            await this.generateItemsForShop(supabase, createdShop.id, catalogItems, createdShop.name)
           }
         }
       }
