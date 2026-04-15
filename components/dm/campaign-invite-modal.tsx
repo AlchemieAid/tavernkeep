@@ -1,3 +1,41 @@
+/**
+ * Campaign Invite Modal Component
+ * 
+ * @fileoverview
+ * Provides a modal dialog for DMs to invite players to their campaign.
+ * Displays multiple sharing options: QR code, invite link, and invite code.
+ * Includes one-click copy functionality for easy sharing.
+ * 
+ * @component
+ * **Sharing Methods:**
+ * 1. **QR Code**: Scannable code for in-person invites
+ * 2. **Invite Link**: Full URL for Discord/Slack/email
+ * 3. **Invite Code**: Short code for manual entry at /join
+ * 
+ * **Features:**
+ * - QR code generation with high error correction (Level H)
+ * - One-click copy to clipboard
+ * - Visual feedback on copy success
+ * - Multiple sharing options for different use cases
+ * - Responsive design for mobile and desktop
+ * 
+ * **Security:**
+ * - Uses unique invite tokens per campaign
+ * - Tokens are generated server-side
+ * - No sensitive data exposed in the UI
+ * 
+ * @example
+ * ```tsx
+ * <CampaignInviteModal
+ *   campaignId={campaign.id}
+ *   campaignName={campaign.name}
+ *   inviteToken={campaign.invite_token}
+ * />
+ * ```
+ * 
+ * @see {@link /app/join/[token]/page.tsx} for invite redemption
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -8,12 +46,46 @@ import { Label } from '@/components/ui/label'
 import { Copy, QrCode, Users } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 
+/**
+ * Props for the CampaignInviteModal component
+ */
 interface CampaignInviteModalProps {
+  /** Campaign ID (for future analytics/tracking) */
   campaignId: string
+  /** Display name of the campaign */
   campaignName: string
+  /** Unique invite token for this campaign */
   inviteToken: string
 }
 
+/**
+ * Modal dialog for sharing campaign invites
+ * 
+ * @description
+ * Renders a dialog with three sharing methods: QR code, full invite URL,
+ * and short invite code. Each method is optimized for different sharing
+ * contexts (in-person, digital, manual entry).
+ * 
+ * **State Management:**
+ * - `copied`: Temporary state for copy success feedback
+ * - Auto-resets after 2 seconds
+ * 
+ * **URL Construction:**
+ * - Uses window.location.origin for dynamic base URL
+ * - Falls back to empty string during SSR
+ * - Constructs full URL: `{origin}/join/{token}`
+ * 
+ * **User Experience:**
+ * - Trigger button shows "Invite Players" with icon
+ * - Modal displays all sharing options at once
+ * - Copy buttons provide instant feedback
+ * - Instructions guide DMs on best practices
+ * 
+ * **Accessibility:**
+ * - Labeled inputs for screen readers
+ * - Keyboard navigation supported
+ * - High contrast QR code for scanning reliability
+ */
 export function CampaignInviteModal({ campaignId, campaignName, inviteToken }: CampaignInviteModalProps) {
   const [copied, setCopied] = useState(false)
   const inviteUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${inviteToken}`

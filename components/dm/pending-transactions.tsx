@@ -1,3 +1,46 @@
+/**
+ * Pending Transactions Component
+ * 
+ * @fileoverview
+ * Displays real-time pending cart items for a shop, allowing DMs to monitor
+ * player purchases and detect inventory conflicts. Uses Supabase Realtime
+ * for live updates as players add/remove items from their carts.
+ * 
+ * @component
+ * **Features:**
+ * - Real-time cart monitoring via Supabase Realtime
+ * - Inventory conflict detection (multiple players want same item)
+ * - Player and character name display
+ * - Item details with rarity and pricing
+ * - Visual conflict warnings
+ * 
+ * **Conflict Detection:**
+ * ```
+ * If total requested quantity > available stock:
+ *   → Show warning badge
+ *   → Highlight affected items
+ *   → DM can intervene before checkout
+ * ```
+ * 
+ * **Real-time Updates:**
+ * - Subscribes to cart_items table changes
+ * - Automatically refreshes on any cart modification
+ * - Cleans up subscription on unmount
+ * 
+ * **Use Cases:**
+ * - Monitor player shopping activity
+ * - Prevent inventory overselling
+ * - See who's interested in what items
+ * - Intervene in conflicts before checkout
+ * 
+ * @example
+ * ```tsx
+ * <PendingTransactions shopId={shop.id} />
+ * ```
+ * 
+ * @see {@link /app/api/shop/[shopId]/cart} for cart API
+ */
+
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -7,31 +50,89 @@ import { Badge } from '@/components/ui/badge'
 import { ShoppingCart, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
+/**
+ * Cart item with full relationship data
+ * 
+ * @description
+ * Represents a cart item with joined data from characters, players, and items tables.
+ * Used for displaying comprehensive transaction information to the DM.
+ */
 interface CartItemWithDetails {
+  /** Cart item ID */
   id: string
+  /** Quantity requested by player */
   quantity: number
+  /** Character making the purchase */
   character_id: string
+  /** Item being purchased */
   item_id: string
+  /** When the item was added to cart (for conflict resolution) */
   locked_at: string
+  /** Character details */
   characters: {
+    /** Character name */
     name: string
+    /** Player ID who owns this character */
     player_id: string
+    /** Player details */
     players: {
+      /** Player's display name */
       display_name: string
     }
   }
+  /** Item details */
   items: {
+    /** Item name */
     name: string
+    /** Item price */
     price: number
+    /** Item rarity (common, uncommon, rare, etc.) */
     rarity: string
+    /** Available stock (null = unlimited) */
     stock_quantity: number | null
   }
 }
 
+/**
+ * Props for the PendingTransactions component
+ */
 interface PendingTransactionsProps {
+  /** Shop ID to monitor transactions for */
   shopId: string
 }
 
+/**
+ * Real-time pending transactions monitor for shop management
+ * 
+ * @description
+ * Displays all pending cart items for a shop with real-time updates.
+ * Detects and highlights inventory conflicts when multiple players
+ * request the same item. Helps DMs manage shop inventory and prevent
+ * overselling.
+ * 
+ * **State Management:**
+ * - `cartItems`: All pending cart items with full details
+ * - `conflicts`: Map of item_id → total requested quantity
+ * 
+ * **Real-time Subscription:**
+ * - Listens to postgres_changes on cart_items table
+ * - Filters by shop_id for efficiency
+ * - Reloads data on any change (insert, update, delete)
+ * - Automatically unsubscribes on component unmount
+ * 
+ * **Conflict Detection Logic:**
+ * ```typescript
+ * for each item in cart:
+ *   total_requested = sum(quantity for all carts with this item)
+ *   if total_requested > stock_quantity:
+ *     mark as conflict
+ * ```
+ * 
+ * **Performance:**
+ * - Uses Supabase Realtime for efficient updates
+ * - Only fetches data for current shop
+ * - Joins are done server-side for efficiency
+ */
 export function PendingTransactions({ shopId }: PendingTransactionsProps) {
   const [cartItems, setCartItems] = useState<CartItemWithDetails[]>([])
   const [conflicts, setConflicts] = useState<Map<string, number>>(new Map())

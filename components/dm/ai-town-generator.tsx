@@ -1,3 +1,41 @@
+/**
+ * AI Town Generator Component
+ * 
+ * @fileoverview
+ * Provides a UI for DMs to generate complete towns using AI. Takes a natural
+ * language prompt and creates a town with shops, notable people, and items
+ * in a single operation. Shows real-time progress through generation stages.
+ * 
+ * @component
+ * **Generation Flow:**
+ * ```
+ * 1. User enters town description
+ * 2. Generating town → Creates town entity
+ * 3. Creating shops → Generates shops for the town
+ * 4. Summoning NPCs → Creates notable people
+ * 5. Stocking items → Populates shop inventories
+ * 6. Complete → Redirects to town detail page
+ * ```
+ * 
+ * **Features:**
+ * - Natural language input (e.g., "A coastal trading port")
+ * - Real-time progress indicators
+ * - Automatic redirect on completion
+ * - Error handling with user-friendly messages
+ * - Usage tracking (tokens, cost, model)
+ * 
+ * **API Integration:**
+ * Calls `/api/dm/generate-town` which uses the GenerationOrchestrator
+ * to create the entire town hierarchy in one request.
+ * 
+ * @example
+ * ```tsx
+ * <AITownGenerator campaignId={campaign.id} />
+ * ```
+ * 
+ * @see {@link GenerationOrchestrator.generateTown} for backend logic
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -7,18 +45,61 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Sparkles, Check } from 'lucide-react'
 
+/**
+ * Props for the AITownGenerator component
+ */
 interface AITownGeneratorProps {
+  /** Campaign ID to generate the town for */
   campaignId: string
 }
 
+/**
+ * AI usage information returned from the API
+ */
 interface UsageInfo {
+  /** Total tokens used in the generation */
   tokens: number
+  /** Estimated cost in USD */
   estimatedCost: string
+  /** AI model used (e.g., 'gpt-4o') */
   model: string
 }
 
+/**
+ * Generation progress stages
+ * 
+ * @description
+ * Tracks the current step in the town generation process.
+ * Used to show progress indicators to the user.
+ */
 type GenerationStep = 'idle' | 'generating_town' | 'creating_shops' | 'summoning_npcs' | 'stocking_items' | 'complete'
 
+/**
+ * AI-powered town generator with cascading entity creation
+ * 
+ * @description
+ * Renders a form that allows DMs to generate entire towns using natural
+ * language descriptions. The component handles the full generation lifecycle:
+ * prompt input, API communication, progress tracking, and navigation.
+ * 
+ * **State Management:**
+ * - `prompt`: User's town description
+ * - `isGenerating`: Loading state for UI feedback
+ * - `currentStep`: Progress through generation stages
+ * - `error`: Error message display
+ * - `lastUsage`: Token usage tracking
+ * 
+ * **User Experience:**
+ * - Simulated progress steps for perceived performance
+ * - Automatic redirect to town page on completion
+ * - Clear error messages on failure
+ * - Disabled state during generation
+ * 
+ * **Error Handling:**
+ * - Network errors caught and displayed
+ * - API errors extracted from response
+ * - State reset on error for retry
+ */
 export function AITownGenerator({ campaignId }: AITownGeneratorProps) {
   const [prompt, setPrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
