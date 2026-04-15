@@ -1,3 +1,34 @@
+/**
+ * AI Item Generator Component
+ * 
+ * @fileoverview
+ * Provides a UI for DMs to generate custom items for a shop using AI.
+ * Takes a natural language description and quantity, then creates items
+ * that match the shop's theme and economic tier.
+ * 
+ * @component
+ * **Features:**
+ * - Natural language item descriptions
+ * - Configurable quantity (1-20 items)
+ * - Automatic pricing based on shop tier
+ * - Rarity assignment
+ * - Stock quantity management
+ * - Immediate inventory refresh
+ * 
+ * **Use Cases:**
+ * - Add themed items to a shop
+ * - Generate quest-specific items
+ * - Create unique magical items
+ * - Populate specialty shops
+ * 
+ * @example
+ * ```tsx
+ * <AIItemGenerator shopId={shop.id} />
+ * ```
+ * 
+ * @see {@link /api/dm/generate-items} for API endpoint
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -8,10 +39,34 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Sparkles } from 'lucide-react'
 
+/**
+ * Props for the AIItemGenerator component
+ */
 interface AIItemGeneratorProps {
+  /** Shop ID to add generated items to */
   shopId: string
 }
 
+/**
+ * AI-powered item generator for shop inventory
+ * 
+ * @description
+ * Renders a form for generating custom items via AI. Items are automatically
+ * priced and assigned rarity based on the shop's economic tier. Refreshes
+ * the page after generation to show new items.
+ * 
+ * **State Management:**
+ * - `prompt`: Item description from user
+ * - `count`: Number of items to generate (1-20)
+ * - `isGenerating`: Loading state
+ * - `error`: Error display
+ * 
+ * **AI Generation:**
+ * - Uses shop context for appropriate pricing
+ * - Assigns rarity based on description
+ * - Sets stock quantities
+ * - Adds items directly to shop inventory
+ */
 export function AIItemGenerator({ shopId }: AIItemGeneratorProps) {
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)

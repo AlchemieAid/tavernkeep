@@ -1,3 +1,39 @@
+/**
+ * AI Shop Generator Component
+ * 
+ * @fileoverview
+ * Provides a UI for DMs to generate shops using AI. Takes a natural language
+ * prompt and creates a shop with a shopkeeper and stocked items. Can be used
+ * standalone or within a town context.
+ * 
+ * @component
+ * **Generation Flow:**
+ * ```
+ * 1. User enters shop description
+ * 2. Generating shop → Creates shop entity + shopkeeper
+ * 3. Stocking items → Populates inventory from library/catalog
+ * 4. Complete → Redirects to shop detail page
+ * ```
+ * 
+ * @features
+ * - Natural language input (e.g., "A mysterious apothecary")
+ * - Automatic shopkeeper creation
+ * - Item population from DM's library or SRD catalog
+ * - Progress indicators
+ * - Works with or without town context
+ * 
+ * @example
+ * ```tsx
+ * // Shop within a town
+ * <AIShopGenerator campaignId={campaign.id} townId={town.id} />
+ * 
+ * // Standalone shop
+ * <AIShopGenerator campaignId={campaign.id} townId={null} />
+ * ```
+ * 
+ * @see {@link GenerationOrchestrator.generateShop} for backend logic
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -8,13 +44,40 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Check, Sparkles } from 'lucide-react'
 
+/**
+ * Props for the AIShopGenerator component
+ */
 interface AIShopGeneratorProps {
+  /** Campaign ID to generate the shop for */
   campaignId: string
+  /** Optional town ID (null for standalone shops) */
   townId?: string
 }
 
+/**
+ * Generation progress stages for shop creation
+ */
 type GenerationStep = 'idle' | 'generating_shop' | 'creating_shopkeeper' | 'stocking_items' | 'complete'
 
+/**
+ * AI-powered shop generator with automatic inventory
+ * 
+ * @description
+ * Renders a form for generating shops via AI. Handles both town-based
+ * and standalone shops. Automatically creates a shopkeeper and populates
+ * inventory from the DM's item library or SRD catalog.
+ * 
+ * **State Management:**
+ * - `prompt`: Shop description from user
+ * - `isGenerating`: Loading state
+ * - `currentStep`: Progress tracking
+ * - `error`: Error display
+ * 
+ * **Item Population:**
+ * 1. Tries DM's personal item library first
+ * 2. Falls back to SRD catalog if library is empty
+ * 3. Matches items to shop type and economic tier
+ */
 export function AIShopGenerator({ campaignId, townId }: AIShopGeneratorProps) {
   const router = useRouter()
   const [prompt, setPrompt] = useState('A mysterious apothecary in a dark alley, run by a suspicious halfling')
