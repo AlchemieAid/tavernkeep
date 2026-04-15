@@ -44,10 +44,10 @@
 ### Prompts
 | File | Status | Notes |
 |------|--------|-------|
-| `lib/prompts/campaign-generation.ts` | ❌ | Campaign AI prompts |
-| `lib/prompts/town-generation.ts` | ❌ | Town AI prompts |
-| `lib/prompts/shop-generation.ts` | ❌ | Shop AI prompts |
-| `lib/prompts/notable-person-generation.ts` | ❌ | NPC AI prompts |
+| `lib/prompts/campaign-generation.ts` | ✅ | Campaign AI prompts |
+| `lib/prompts/town-generation.ts` | ✅ | Town AI prompts with ruler requirement |
+| `lib/prompts/shop-generation.ts` | ✅ | Shop AI prompts with item schemas |
+| `lib/prompts/notable-person-generation.ts` | ✅ | NPC AI prompts with depth |
 
 ---
 
@@ -214,14 +214,14 @@
 
 ### Overall Statistics
 - **Total Files:** ~150+
-- **Fully Documented:** 17 (11%)
+- **Fully Documented:** 21 (14%)
 - **Partially Documented:** 0 (0%)
-- **Not Documented:** ~133 (89%)
+- **Not Documented:** ~129 (86%)
 
 ### By Category
 | Category | Total | Documented | Percentage |
 |----------|-------|------------|------------|
-| Core Systems | 12 | 9 | **75%** ✨ |
+| Core Systems | 16 | 13 | **81%** ✨ |
 | Components | 30+ | 6 | 20% |
 | API Routes | 20+ | 0 | 0% |
 | Pages | 40+ | 0 | 0% |

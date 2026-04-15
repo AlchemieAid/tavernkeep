@@ -1,9 +1,36 @@
 /**
  * Generation Orchestrator Types
- * Modern architecture for hierarchical AI content generation
- * Campaign → Towns → (Shops + Notable People) → Items
+ * 
+ * @fileoverview
+ * Type definitions for the hierarchical AI content generation system.
+ * Defines configuration, context, progress tracking, and event types.
+ * 
+ * @architecture
+ * **Generation Hierarchy:**
+ * ```
+ * Campaign
+ *   ├─ Towns (2-4)
+ *   │   ├─ Shops (3-5 per town)
+ *   │   │   └─ Items (5-10 per shop)
+ *   │   └─ Notable People (3-5 per town)
+ * ```
+ * 
+ * **Key Concepts:**
+ * - **GenerationConfig**: Controls auto-generation and entity counts
+ * - **GenerationContext**: Hierarchical context for AI prompts
+ * - **GenerationProgress**: Real-time progress tracking
+ * - **GenerationEvent**: Event-driven progress updates
+ * 
+ * @see {@link GenerationOrchestrator}
  */
 
+/**
+ * Configuration for hierarchical generation
+ * 
+ * @description
+ * Controls which child entities are auto-generated and how many.
+ * Each level can be configured independently.
+ */
 export interface GenerationConfig {
   campaign: {
     autoGenerateTowns: boolean

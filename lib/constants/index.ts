@@ -1,3 +1,41 @@
+/**
+ * Application Constants
+ * 
+ * @fileoverview
+ * Centralized constants for shops, items, and game mechanics. Defines enums,
+ * labels, and configuration values used throughout the application.
+ * 
+ * @architecture
+ * **Constant Categories:**
+ * - Shop types and economic tiers
+ * - Item categories and rarities
+ * - Inventory volatility
+ * - Price and haggle mechanics
+ * - UI labels and colors
+ * 
+ * **Type Safety:**
+ * All arrays use `as const` for literal type inference, enabling
+ * TypeScript to validate values at compile time.
+ * 
+ * @example
+ * ```typescript
+ * import { SHOP_TYPES, ECONOMIC_TIERS, RARITY_COLORS } from '@/lib/constants'
+ * 
+ * // Type-safe shop type
+ * const shopType: typeof SHOP_TYPES[number] = 'magic'
+ * 
+ * // Get rarity color class
+ * const color = RARITY_COLORS['legendary'] // 'text-rarity-legendary'
+ * ```
+ */
+
+/**
+ * Available shop types
+ * 
+ * @description
+ * Defines the categories of shops that can be created. Each type
+ * determines default inventory and pricing strategies.
+ */
 export const SHOP_TYPES = [
   'general',
   'weapons',

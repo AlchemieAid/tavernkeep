@@ -1,8 +1,67 @@
+/**
+ * Field Truncation Utilities
+ * 
+ * @fileoverview
+ * Utilities for truncating AI-generated content to match database field limits.
+ * Prevents PostgreSQL errors from oversized strings and ensures data integrity.
+ * 
+ * @architecture
+ * **Truncation Strategy:**
+ * ```
+ * AI generates content → Truncate to DB limits → Insert safely
+ * ```
+ * 
+ * **Why Truncation?**
+ * - AI doesn't always respect character limits
+ * - Database has VARCHAR constraints
+ * - Prevents insertion errors
+ * - Maintains data integrity
+ * 
+ * **Field Maps:**
+ * Pre-defined mappings for each entity type (campaign, town, shop, etc.)
+ * ensure consistent truncation across the application.
+ * 
+ * @example
+ * ```typescript
+ * import { truncateFields, CAMPAIGN_FIELD_MAP } from './truncate-fields'
+ * 
+ * const aiData = {
+ *   name: 'A'.repeat(300), // Too long!
+ *   description: 'B'.repeat(2000) // Too long!
+ * }
+ * 
+ * const safe = truncateFields(aiData, CAMPAIGN_FIELD_MAP)
+ * // safe.name is now 255 chars max
+ * // safe.description is now 1000 chars max
+ * ```
+ * 
+ * @see {@link FIELD_LIMITS} for limit definitions
+ */
+
 import { FIELD_LIMITS, FieldLimitKey } from '@/lib/constants/field-limits'
 
 /**
- * Truncates a string to a maximum length, ensuring it doesn't exceed field limits.
- * Used to sanitize AI-generated content before database insertion.
+ * Truncate a single string field to a maximum length
+ * 
+ * @param value - String to truncate (or null/undefined)
+ * @param limit - Maximum character length
+ * @returns Truncated string or null
+ * 
+ * @description
+ * Safely truncates a string to fit database field limits. Returns null
+ * for null/undefined inputs. Uses substring() for clean truncation.
+ * 
+ * **Behavior:**
+ * - null/undefined → null
+ * - Length ≤ limit → unchanged
+ * - Length > limit → truncated to limit
+ * 
+ * @example
+ * ```typescript
+ * truncateField('Hello World', 5) // 'Hello'
+ * truncateField('Hi', 10) // 'Hi'
+ * truncateField(null, 10) // null
+ * ```
  */
 export function truncateField(value: string | null | undefined, limit: number): string | null {
   if (!value) return null
@@ -11,8 +70,36 @@ export function truncateField(value: string | null | undefined, limit: number): 
 }
 
 /**
- * Truncates multiple fields in an object based on a field mapping.
- * Returns a new object with truncated values.
+ * Truncate multiple fields in an object using a field map
+ * 
+ * @param data - Object with fields to truncate
+ * @param fieldMap - Mapping of field names to character limits
+ * @returns New object with truncated string fields
+ * 
+ * @description
+ * Applies truncation to multiple fields at once using a predefined mapping.
+ * Only truncates string fields; other types are left unchanged. Returns a
+ * new object (does not mutate input).
+ * 
+ * **Process:**
+ * 1. Clone input object
+ * 2. For each field in mapping
+ * 3. If field exists and is string → truncate
+ * 4. Return new object
+ * 
+ * @example
+ * ```typescript
+ * const campaign = {
+ *   name: 'A'.repeat(300),
+ *   description: 'B'.repeat(2000),
+ *   ruleset: '5e'
+ * }
+ * 
+ * const safe = truncateFields(campaign, CAMPAIGN_FIELD_MAP)
+ * // safe.name: 255 chars
+ * // safe.description: 1000 chars
+ * // safe.ruleset: '5e' (unchanged, within limit)
+ * ```
  */
 export function truncateFields<T extends Record<string, any>>(
   data: T,
