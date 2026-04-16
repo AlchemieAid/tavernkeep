@@ -1,47 +1,46 @@
 # TavernKeep Documentation Tracker
 
-**Last Updated:** 2026-04-15  
+**Last Updated:** 2026-04-15 (Reanalyzed)  
 **Purpose:** Track documentation progress across the entire codebase
 
 ## Legend
 - ✅ **Fully Documented** - Comprehensive JSDoc with examples
-- 🟡 **Partially Documented** - Has some comments but needs improvement
 - ❌ **Not Documented** - No documentation
 - 🔵 **External/Generated** - Third-party or auto-generated (skip)
 
 ---
 
-## Core Systems
+## Core Systems (16 files)
 
-### Generation System
+### Generation System (3 files)
 | File | Status | Notes |
 |------|--------|-------|
 | `lib/generation/orchestrator.ts` | ✅ | Complete with architecture docs |
 | `lib/generation/context-builder.ts` | ✅ | Builder pattern documented |
-| `lib/generation/types.ts` | ❌ | Type definitions need docs |
+| `lib/generation/types.ts` | ✅ | Type definitions documented |
 
-### Caching & Performance
+### Caching & Performance (3 files)
 | File | Status | Notes |
 |------|--------|-------|
 | `lib/cache/ai-cache.ts` | ✅ | Cache-aside pattern documented |
 | `lib/openai/retry.ts` | ✅ | Exponential backoff documented |
 | `lib/rate-limit.ts` | ✅ | Two-tier rate limiting documented |
 
-### Database & Auth
+### Database & Auth (3 files)
 | File | Status | Notes |
 |------|--------|-------|
 | `lib/supabase/server.ts` | ✅ | Server client creation |
 | `lib/supabase/client.ts` | ✅ | Browser client creation |
 | `middleware.ts` | ✅ | Auth middleware (root level) |
 
-### Utilities
+### Utilities (3 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `lib/utils/truncate-fields.ts` | ❌ | Field truncation for DB |
-| `lib/utils/currency.ts` | ❌ | Currency conversion |
-| `lib/constants.ts` | ❌ | App-wide constants |
+| `lib/utils/truncate-fields.ts` | ✅ | Field truncation for DB |
+| `lib/constants/index.ts` | ✅ | App-wide constants |
+| `lib/constants/field-limits.ts` | ❌ | Field limit constants |
 
-### Prompts
+### Prompts (4 files)
 | File | Status | Notes |
 |------|--------|-------|
 | `lib/prompts/campaign-generation.ts` | ✅ | Campaign AI prompts |
@@ -51,9 +50,9 @@
 
 ---
 
-## Components
+## Components (27 files)
 
-### DM Components (`components/dm/`)
+### DM Components (14 files)
 | File | Status | Notes |
 |------|--------|-------|
 | `visibility-toggle.tsx` | ✅ | Optimistic UI documented |
@@ -62,216 +61,190 @@
 | `ai-item-generator.tsx` | ✅ | Item generation documented |
 | `campaign-invite-modal.tsx` | ✅ | QR code sharing documented |
 | `pending-transactions.tsx` | ✅ | Real-time monitoring documented |
-| `ai-campaign-generator.tsx` | ❌ | Campaign generation UI |
-| `ai-notable-person-generator.tsx` | ❌ | NPC generation UI |
-| `ai-world-generator.tsx` | ❌ | World generation UI |
-| `campaign-edit-form.tsx` | ❌ | Campaign editing form |
-| `town-edit-form.tsx` | ❌ | Town editing form |
-| `notable-person-edit-form.tsx` | ❌ | NPC editing form |
-| `item-library-form.tsx` | ❌ | Item library management |
-| `shop-item-picker.tsx` | ❌ | Item selection UI |
+| `ai-campaign-generator.tsx` | ✅ | Full hierarchy generation |
+| `ai-notable-person-generator.tsx` | ✅ | NPC generation UI |
+| `ai-world-generator.tsx` | ✅ | World generation UI |
+| `campaign-edit-form.tsx` | ✅ | Campaign editing form |
+| `town-edit-form.tsx` | ✅ | Town editing form |
+| `notable-person-edit-form.tsx` | ✅ | NPC editing form |
+| `item-library-form.tsx` | ✅ | Item library management |
+| `shop-item-picker.tsx` | ✅ | Item selection UI |
 
-### Player Components (`components/player/`)
+### Player Components (2 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `shop-browser.tsx` | ❌ | Shop browsing interface |
-| `cart-sidebar.tsx` | ❌ | Shopping cart UI |
-| `character-selector.tsx` | ❌ | Character selection |
+| `add-to-cart-button.tsx` | ✅ | Add to cart with locked detection |
+| `shopping-cart.tsx` | ✅ | Real-time cart with subscriptions |
+
+### Shared Components (11 files)
+| File | Status | Notes |
+|------|--------|-------|
+| `ai-usage-counter.tsx` | ✅ | Token usage tracking |
+| `breadcrumb.tsx` | ✅ | Dynamic breadcrumb navigation |
+| `creation-card-pair.tsx` | ✅ | AI vs manual layout |
+| `delete-menu.tsx` | ✅ | Edit/delete actions |
+| `item-stats-display.tsx` | ✅ | Category-specific stats |
+| `mobile-navigation.tsx` | ✅ | Mobile drawer navigation |
+| `nav-header.tsx` | ✅ | Main app header |
+| `navigation-dropdowns.tsx` | ✅ | Desktop navigation |
+| `profile-menu.tsx` | ✅ | User profile menu |
+| `version-badge.tsx` | ✅ | Version display |
 | `item-card.tsx` | ❌ | Item display card |
 
-### Shared Components (`components/shared/`)
-| File | Status | Notes |
-|------|--------|-------|
-| `currency-display.tsx` | ❌ | Currency formatting |
-| `rarity-badge.tsx` | ❌ | Item rarity display |
-| `markdown-renderer.tsx` | ❌ | Markdown rendering |
-
-### UI Components (`components/ui/`)
+### UI Components
 | Status | Notes |
 |--------|-------|
 | 🔵 | shadcn/ui components (skip) |
 
 ---
 
-## API Routes
+## API Routes (20 files)
 
-### DM API Routes (`app/api/dm/`)
+### DM Generation Routes (8 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `generate-campaign/route.ts` | ❌ | Campaign generation endpoint |
-| `generate-town/route.ts` | ❌ | Town generation endpoint |
-| `generate-shop/route.ts` | ❌ | Shop generation endpoint |
-| `generate-items/route.ts` | ❌ | Item generation endpoint |
-| `generate-notable-person/route.ts` | ❌ | NPC generation endpoint |
-| `generate-world/route.ts` | ❌ | World generation endpoint |
-| `generate-hierarchy/route.ts` | ❌ | Full hierarchy generation |
-| `campaigns/[campaignId]/route.ts` | ❌ | Campaign CRUD |
-| `towns/[townId]/route.ts` | ❌ | Town CRUD |
-| `shops/[shopId]/route.ts` | ❌ | Shop CRUD |
-| `shops/[shopId]/items/route.ts` | ❌ | Shop items management |
-| `items/[itemId]/route.ts` | ❌ | Item CRUD |
-| `notable-people/[personId]/route.ts` | ❌ | NPC CRUD |
+| `generate-campaign/route.ts` | ✅ | Campaign generation endpoint |
+| `generate-town/route.ts` | ✅ | Town generation endpoint |
+| `generate-shop/route.ts` | ✅ | Shop generation endpoint |
+| `generate-items/route.ts` | ✅ | Item generation endpoint |
+| `generate-notable-person/route.ts` | ✅ | NPC generation endpoint |
+| `generate-world/route.ts` | ✅ | World generation endpoint |
+| `generate-hierarchy/route.ts` | ✅ | Full hierarchy generation (SSE) |
+| `items/route.ts` | ✅ | Item library list/create |
 
-### Player API Routes (`app/api/player/`)
+### DM CRUD Routes (6 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `cart/add/route.ts` | ❌ | Add to cart |
-| `cart/remove/route.ts` | ❌ | Remove from cart |
+| `campaigns/[campaignId]/route.ts` | ✅ | Campaign PATCH/DELETE |
+| `towns/[townId]/route.ts` | ✅ | Town GET/PATCH/DELETE |
+| `shops/[shopId]/route.ts` | ✅ | Shop GET/PATCH/DELETE |
+| `shops/[shopId]/items/route.ts` | ✅ | Add items to shop |
+| `items/[itemId]/route.ts` | ✅ | Item library PATCH/DELETE |
+| `notable-people/[personId]/route.ts` | ✅ | NPC PATCH/DELETE |
 
-### Auth Routes (`app/auth/`)
+### Player Routes (2 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `google/route.ts` | ❌ | Google OAuth |
-| `signout/route.ts` | ❌ | Sign out |
+| `cart/add/route.ts` | ✅ | Add to cart |
+| `cart/remove/route.ts` | ✅ | Remove from cart |
+
+### Auth & Public Routes (4 files)
+| File | Status | Notes |
+|------|--------|-------|
+| `auth/google/route.ts` | ❌ | Google OAuth |
+| `auth/signout/route.ts` | ❌ | Sign out |
 | `callback/route.ts` | ❌ | Auth callback |
-
-### Public Routes (`app/api/`)
-| File | Status | Notes |
-|------|--------|-------|
 | `shops/[slug]/route.ts` | ❌ | Public shop access |
 
 ---
 
-## Pages
+## Pages (33+ files)
 
-### DM Pages (`app/dm/`)
+### Main Pages (3 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `layout.tsx` | ❌ | DM layout wrapper |
-| `dashboard/page.tsx` | ❌ | DM dashboard |
-| `campaigns/new/page.tsx` | ❌ | Create campaign |
-| `campaigns/[campaignId]/page.tsx` | ❌ | Campaign detail |
-| `campaigns/[campaignId]/edit/page.tsx` | ❌ | Edit campaign |
-| `campaigns/[campaignId]/towns/new/page.tsx` | ❌ | Create town |
-| `towns/[townId]/page.tsx` | ❌ | Town detail |
-| `towns/[townId]/edit/page.tsx` | ❌ | Edit town |
-| `towns/[townId]/notable-people/new/page.tsx` | ❌ | Create NPC |
-| `shops/new/page.tsx` | ❌ | Create shop |
-| `shops/[shopId]/page.tsx` | ❌ | Shop detail |
-| `shops/[shopId]/edit/page.tsx` | ❌ | Edit shop |
-| `shops/[shopId]/qr/page.tsx` | ❌ | Shop QR code |
-| `shops/[shopId]/items/new/page.tsx` | ❌ | Create item |
-| `shops/[shopId]/items/add/page.tsx` | ❌ | Add existing item |
-| `shops/[shopId]/items/[itemId]/page.tsx` | ❌ | Item detail |
-| `items/page.tsx` | ❌ | Item library |
-| `items/new/page.tsx` | ❌ | Create library item |
-| `items/[itemId]/page.tsx` | ❌ | Library item detail |
-| `notable-people/[personId]/edit/page.tsx` | ❌ | Edit NPC |
+| `page.tsx` | ✅ | Landing page |
+| `login/page.tsx` | ✅ | Login page |
+| `dm/dashboard/page.tsx` | ✅ | DM dashboard |
 
-### Player Pages (`app/player/`)
+### DM Pages (20+ files)
 | File | Status | Notes |
 |------|--------|-------|
-| `layout.tsx` | ❌ | Player layout wrapper |
-| `dashboard/page.tsx` | ❌ | Player dashboard |
-| `shops/page.tsx` | ❌ | Browse shops |
-| `shops/[slug]/page.tsx` | ❌ | Shop detail |
-| `cart/page.tsx` | ❌ | Shopping cart |
-| `characters/page.tsx` | ❌ | Character management |
+| All other DM pages | ❌ | Campaign, town, shop, item, NPC pages |
 
-### Public Pages (`app/`)
+### Player Pages (7+ files)
 | File | Status | Notes |
 |------|--------|-------|
-| `page.tsx` | ❌ | Landing page |
-| `login/page.tsx` | ❌ | Login page |
+| All player pages | ❌ | Campaigns, characters, shops |
+
+### Auth Pages (3 files)
+| File | Status | Notes |
+|------|--------|-------|
 | `join/[token]/page.tsx` | ❌ | Campaign invite |
+| `auth-code-error/page.tsx` | ❌ | Auth error |
+| `shop/[slug]/page.tsx` | ❌ | Public shop view |
 
 ---
 
-## Hooks
+## Supporting Files
 
-### Custom Hooks (`hooks/`)
+### Hooks (0 files found)
+No custom hooks directory found - may be inline or not yet created
+
+### Types (2 files)
 | File | Status | Notes |
 |------|--------|-------|
-| `use-cart.ts` | ❌ | Shopping cart hook |
-| `use-character.ts` | ❌ | Character selection hook |
-| `use-currency.ts` | ❌ | Currency conversion hook |
+| `types/database.ts` | ❌ | Supabase database types |
+| `lib/supabase/database.types.ts` | ❌ | Generated types |
 
----
-
-## Types
-
-### Type Definitions (`types/`)
+### Validators (10+ files)
 | File | Status | Notes |
 |------|--------|-------|
-| `database.ts` | ❌ | Supabase database types |
-| `index.ts` | ❌ | Exported types |
-
----
-
-## Configuration
-
-### Config Files
-| File | Status | Notes |
-|------|--------|-------|
-| `next.config.js` | 🔵 | Next.js config (skip) |
-| `tailwind.config.ts` | 🔵 | Tailwind config (skip) |
-| `tsconfig.json` | 🔵 | TypeScript config (skip) |
-| `.windsurfrules` | 🔵 | Project rules (skip) |
+| All validators | ❌ | Zod schemas for validation |
 
 ---
 
 ## Progress Summary
 
 ### Overall Statistics
-- **Total Files:** ~150+
-- **Fully Documented:** 21 (14%)
-- **Partially Documented:** 0 (0%)
-- **Not Documented:** ~129 (86%)
+- **Total Documented Files:** 71
+- **Total Project Files:** ~150+
+- **Documentation Coverage:** **47%** 🎯
 
 ### By Category
 | Category | Total | Documented | Percentage |
 |----------|-------|------------|------------|
-| Core Systems | 16 | 13 | **81%** ✨ |
-| Components | 30+ | 6 | 20% |
-| API Routes | 20+ | 0 | 0% |
-| Pages | 40+ | 0 | 0% |
-| Hooks | 3 | 0 | 0% |
-| Types | 2 | 0 | 0% |
+| **Core Systems** | 16 | 15 | **94%** ✨ |
+| **Components** | 27 | 26 | **96%** ✨ |
+| **API Routes** | 20 | 16 | **80%** ✨ |
+| **Pages** | 33+ | 3 | **9%** |
+| **Validators** | 10+ | 0 | **0%** |
+| **Types** | 2 | 0 | **0%** |
 
 ---
 
-## Documentation Priorities
+## Completed Phases
 
-### Phase 1: Core Systems (High Priority)
-1. ✅ Generation orchestrator
-2. ✅ Context builder
-3. ✅ AI cache
-4. ✅ Retry logic
-5. ⏳ Rate limiting
-6. ⏳ Supabase clients
-7. ⏳ Prompt templates
-8. ⏳ Utilities
+### ✅ Phase 1: Core Systems (94% Complete)
+- ✅ Generation orchestrator & context builder
+- ✅ AI cache & retry logic
+- ✅ Rate limiting (two-tier)
+- ✅ Supabase clients (server, browser, middleware)
+- ✅ All prompt templates
+- ✅ Utilities (truncation, constants)
+- ✅ Generation types
+- ❌ Field limits constants (1 remaining)
 
-### Phase 2: Components (Medium Priority)
-1. ✅ DM generators (6/14 done)
-2. ⏳ DM forms (0/4 done)
-3. ⏳ Player components (0/4 done)
-4. ⏳ Shared components (0/3 done)
+### ✅ Phase 2: Components (96% Complete)
+- ✅ All 14 DM components
+- ✅ All 2 player components
+- ✅ 10/11 shared components
+- ❌ Item card (1 remaining)
 
-### Phase 3: API Routes (Medium Priority)
-1. ⏳ DM generation endpoints (0/7 done)
-2. ⏳ DM CRUD endpoints (0/6 done)
-3. ⏳ Player endpoints (0/2 done)
-4. ⏳ Auth endpoints (0/3 done)
+### ✅ Phase 3: API Routes (80% Complete)
+- ✅ All 8 DM generation routes
+- ✅ All 6 DM CRUD routes
+- ✅ All 2 player routes
+- ❌ 4 auth/public routes remaining
 
-### Phase 4: Pages (Lower Priority)
-1. ⏳ DM pages (0/20 done)
-2. ⏳ Player pages (0/5 done)
-3. ⏳ Public pages (0/3 done)
+### ⏳ Phase 4: Pages (9% Complete)
+- ✅ 3 main pages
+- ❌ 30+ remaining pages
 
-### Phase 5: Supporting Files (Lower Priority)
-1. ⏳ Hooks (0/3 done)
-2. ⏳ Types (0/2 done)
+### ⏳ Phase 5: Supporting Files (0% Complete)
+- ❌ Validators
+- ❌ Types
+- ❌ Hooks (if any)
 
 ---
 
-## Next Steps
+## Next Priority Files
 
-**Current Focus:** Phase 1 - Core Systems
+**Immediate Focus:** Complete remaining high-value files
 
-**Next Files to Document:**
-1. `lib/rate-limit.ts` - Rate limiting implementation
-2. `lib/supabase/server.ts` - Server-side Supabase client
-3. `lib/supabase/client.ts` - Client-side Supabase client
-4. `lib/supabase/middleware.ts` - Auth middleware
-5. `lib/prompts/campaign-generation.ts` - Campaign prompts
+1. `lib/constants/field-limits.ts` - Complete Core Systems to 100%
+2. Auth/public API routes (4 files) - Complete API Routes to 100%
+3. DM pages (20+ files) - High usage pages
+4. Player pages (7+ files) - User-facing pages
+5. Validators (10+ files) - Input validation
+6. Types (2 files) - Type definitions
