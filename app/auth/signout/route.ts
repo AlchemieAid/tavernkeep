@@ -1,3 +1,9 @@
+/**
+ * Sign Out Route
+ * @route POST /auth/signout
+ * @description Signs out user and redirects to /login
+ */
+
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 

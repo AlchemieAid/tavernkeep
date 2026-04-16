@@ -1,3 +1,9 @@
+/**
+ * OAuth Callback Route
+ * @route GET /callback
+ * @description Exchanges OAuth code for session, redirects to dashboard or error page
+ */
+
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 

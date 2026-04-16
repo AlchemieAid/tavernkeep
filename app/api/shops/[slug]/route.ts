@@ -1,3 +1,10 @@
+/**
+ * Public Shop API Route
+ * @route GET /api/shops/[slug]
+ * @auth Not required - Public access
+ * @description Fetches shop and visible items for player browsing. Filters hidden items and out-of-stock.
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

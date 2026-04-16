@@ -1,3 +1,9 @@
+/**
+ * Google OAuth Route
+ * @route GET/POST /auth/google
+ * @description Initiates Google OAuth flow, redirects to /callback on success
+ */
+
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
