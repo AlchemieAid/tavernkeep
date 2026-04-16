@@ -1,3 +1,10 @@
+/**
+ * Create Library Item Page
+ * @page /dm/items/new
+ * @auth Required - DM
+ * @description Form for creating new item in personal library
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ItemLibraryForm } from '@/components/dm/item-library-form'

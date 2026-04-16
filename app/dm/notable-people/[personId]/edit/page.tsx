@@ -1,3 +1,10 @@
+/**
+ * Edit Notable Person Page
+ * @page /dm/notable-people/[personId]/edit
+ * @auth Required - DM
+ * @description Form for editing NPC details
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { NotablePersonEditForm } from '@/components/dm/notable-person-edit-form'

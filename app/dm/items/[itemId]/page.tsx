@@ -1,3 +1,10 @@
+/**
+ * Edit Library Item Page
+ * @page /dm/items/[itemId]
+ * @auth Required - DM
+ * @description Edit item from personal library
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ItemLibraryForm } from '@/components/dm/item-library-form'

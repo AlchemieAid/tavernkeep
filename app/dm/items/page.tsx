@@ -1,3 +1,10 @@
+/**
+ * Item Library Page
+ * @page /dm/items
+ * @auth Required - DM
+ * @description Browse and manage DM's personal item library
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
