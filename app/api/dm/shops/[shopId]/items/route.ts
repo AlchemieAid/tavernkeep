@@ -1,3 +1,11 @@
+/**
+ * Shop Items API Route
+ * 
+ * @route POST /api/dm/shops/[shopId]/items
+ * @auth Required - DM only
+ * @description Add items from library to shop inventory
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'

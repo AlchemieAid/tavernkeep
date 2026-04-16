@@ -1,3 +1,10 @@
+/**
+ * Home Page
+ * 
+ * @page /
+ * @description Landing page with hero section and feature highlights
+ */
+
 import Link from "next/link"
 import { Sparkles, Store, Users, Zap } from "lucide-react"
 

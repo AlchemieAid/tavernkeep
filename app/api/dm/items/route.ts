@@ -1,3 +1,12 @@
+/**
+ * Item Library List API Route
+ * 
+ * @route GET /api/dm/items
+ * @route POST /api/dm/items
+ * @auth Required - DM only
+ * @description List all DM's library items or create new item
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { itemLibrarySchema, buildProperties } from '@/lib/validators/item-library'

@@ -1,3 +1,10 @@
+/**
+ * DM Dashboard Page
+ * @page /dm/dashboard
+ * @auth Required - DM
+ * @description Main DM dashboard showing all campaigns with create/manage options
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'

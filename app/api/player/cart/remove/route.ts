@@ -1,3 +1,11 @@
+/**
+ * Player Cart Remove API Route
+ * 
+ * @route POST /api/player/cart/remove
+ * @auth Required - Player
+ * @description Remove item from player's cart
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { RemoveFromCartSchema } from '@/lib/validators/cart'

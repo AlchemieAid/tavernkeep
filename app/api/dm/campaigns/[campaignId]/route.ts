@@ -1,3 +1,13 @@
+/**
+ * Campaign CRUD API Route
+ * 
+ * @route PATCH /api/dm/campaigns/[campaignId]
+ * @route DELETE /api/dm/campaigns/[campaignId]
+ * @auth Required - DM only (must own campaign)
+ * 
+ * @description Update or delete campaign. Validates ownership before mutation.
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { UpdateCampaignSchema } from '@/lib/validators'

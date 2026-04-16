@@ -1,3 +1,9 @@
+/**
+ * Login Page
+ * @page /login
+ * @description OAuth login with Google. Redirects to /dm/dashboard if authenticated.
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'

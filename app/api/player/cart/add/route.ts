@@ -1,3 +1,11 @@
+/**
+ * Player Cart Add API Route
+ * 
+ * @route POST /api/player/cart/add
+ * @auth Required - Player
+ * @description Add item to player's cart for a specific shop
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { AddToCartSchema } from '@/lib/validators/cart'

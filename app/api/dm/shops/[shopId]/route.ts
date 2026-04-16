@@ -1,3 +1,12 @@
+/**
+ * Shop CRUD API Route
+ * 
+ * @route GET /api/dm/shops/[shopId]
+ * @route PATCH /api/dm/shops/[shopId]
+ * @route DELETE /api/dm/shops/[shopId]
+ * @auth Required - DM only
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 

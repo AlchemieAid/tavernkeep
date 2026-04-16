@@ -1,3 +1,11 @@
+/**
+ * Notable Person CRUD API Route
+ * 
+ * @route PATCH /api/dm/notable-people/[personId]
+ * @route DELETE /api/dm/notable-people/[personId]
+ * @auth Required - DM only
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { UpdateNotablePersonSchema } from '@/lib/validators/notable-person'

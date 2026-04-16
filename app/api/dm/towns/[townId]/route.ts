@@ -1,3 +1,12 @@
+/**
+ * Town CRUD API Route
+ * 
+ * @route GET /api/dm/towns/[townId]
+ * @route PATCH /api/dm/towns/[townId]
+ * @route DELETE /api/dm/towns/[townId]
+ * @auth Required - DM only (must own town's campaign)
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { UpdateTownSchema } from '@/lib/validators/town'

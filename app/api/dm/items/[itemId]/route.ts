@@ -1,3 +1,11 @@
+/**
+ * Item Library CRUD API Route
+ * 
+ * @route PATCH /api/dm/items/[itemId]
+ * @route DELETE /api/dm/items/[itemId]
+ * @auth Required - DM only
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { itemLibrarySchema, buildProperties } from '@/lib/validators/item-library'
