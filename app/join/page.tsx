@@ -1,3 +1,9 @@
+/**
+ * Join Landing Page
+ * @page /join
+ * @description Landing page explaining campaign invitations
+ */
+
 'use client'
 
 import { useState } from 'react'

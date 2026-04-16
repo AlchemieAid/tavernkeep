@@ -1,3 +1,8 @@
+/**
+ * Root Layout
+ * @description Global app layout with fonts, metadata, and styling
+ */
+
 import type { Metadata } from "next"
 import { Noto_Serif, Manrope, Courier_Prime } from "next/font/google"
 import "./globals.css"

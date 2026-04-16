@@ -1,3 +1,8 @@
+/**
+ * DM Layout
+ * @description Layout wrapper for all DM pages with navigation and breadcrumbs
+ */
+
 import { NavHeader } from '@/components/shared/nav-header'
 import { Breadcrumb } from '@/components/shared/breadcrumb'
 

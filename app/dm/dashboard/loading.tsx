@@ -1,3 +1,8 @@
+/**
+ * Dashboard Loading State
+ * @description Skeleton loading UI for DM dashboard
+ */
+
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 
 export default function Loading() {
