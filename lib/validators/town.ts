@@ -1,3 +1,8 @@
+/**
+ * Town Validators
+ * @description Zod schemas for town creation and updates
+ */
+
 import { z } from 'zod'
 import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 

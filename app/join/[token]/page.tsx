@@ -1,3 +1,10 @@
+/**
+ * Campaign Join Page
+ * @page /join/[token]
+ * @auth Required
+ * @description Accept campaign invitation via token
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

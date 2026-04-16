@@ -1,3 +1,10 @@
+/**
+ * Public Shop Page
+ * @page /shop/[slug]
+ * @auth Not required - Public access
+ * @description Public shop view for QR code access. Shows only visible, in-stock items.
+ */
+
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

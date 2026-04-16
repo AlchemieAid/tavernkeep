@@ -1,3 +1,9 @@
+/**
+ * Auth Code Error Page
+ * @page /auth-code-error
+ * @description Displays OAuth authentication errors with troubleshooting info
+ */
+
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
