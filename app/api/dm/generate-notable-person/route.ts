@@ -1,3 +1,14 @@
+/**
+ * Generate Notable Person API Route
+ * 
+ * @route POST /api/dm/generate-notable-person
+ * @auth Required - DM only
+ * @ratelimit 50 NPCs/hour
+ * 
+ * @body { townId: string, prompt: string, role?: string, count?: number }
+ * @returns { data: NotablePerson[], error: null } | { data: null, error: { message } }
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'

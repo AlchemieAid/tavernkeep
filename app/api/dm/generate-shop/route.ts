@@ -1,3 +1,14 @@
+/**
+ * Generate Shop API Route
+ * 
+ * @route POST /api/dm/generate-shop
+ * @auth Required - DM only
+ * @ratelimit 30 shops/hour
+ * 
+ * @body { townId: string, campaignId: string, prompt: string, itemCount?: number }
+ * @returns { data: Shop, error: null } | { data: null, error: { message } }
+ */
+
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { createOrchestrator } from '@/lib/generation/orchestrator'

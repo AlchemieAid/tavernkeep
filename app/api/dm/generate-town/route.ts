@@ -1,3 +1,16 @@
+/**
+ * Generate Town API Route
+ * 
+ * @route POST /api/dm/generate-town
+ * @auth Required - DM only
+ * @ratelimit 20 towns/hour
+ * 
+ * @body { campaignId: string, prompt: string }
+ * @returns { data: Town, error: null } | { data: null, error: { message } }
+ * 
+ * @flow Auth → Validate → Rate limit → Orchestrator.generateTown → Return
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createOrchestrator } from '@/lib/generation/orchestrator'

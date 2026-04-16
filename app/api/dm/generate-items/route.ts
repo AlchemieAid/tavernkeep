@@ -1,3 +1,14 @@
+/**
+ * Generate Items API Route
+ * 
+ * @route POST /api/dm/generate-items
+ * @auth Required - DM only
+ * @ratelimit 50 item batches/hour
+ * 
+ * @body { shopId: string, prompt: string, quantity: number }
+ * @returns { data: Item[], error: null } | { data: null, error: { message } }
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'

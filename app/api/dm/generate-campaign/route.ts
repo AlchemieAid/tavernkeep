@@ -1,3 +1,35 @@
+/**
+ * Generate Campaign API Route
+ * 
+ * @fileoverview
+ * POST endpoint for AI-powered campaign generation.
+ * Creates campaign with world-building elements (setting, history, currency, pantheon).
+ * 
+ * @route POST /api/dm/generate-campaign
+ * @auth Required - DM only
+ * @ratelimit 10 campaigns/hour
+ * 
+ * @body
+ * - prompt: string - Campaign idea
+ * - ruleset?: string - RPG system (default: '5e')
+ * - setting?: string - Campaign setting
+ * 
+ * @returns
+ * - success: { data: Campaign, error: null }
+ * - error: { data: null, error: { message: string } }
+ * 
+ * @flow
+ * 1. Authenticate user
+ * 2. Validate input with Zod
+ * 3. Check rate limit
+ * 4. Call OpenAI with campaign prompt
+ * 5. Parse JSON response
+ * 6. Truncate fields to DB limits
+ * 7. Insert campaign
+ * 8. Record AI usage
+ * 9. Return created campaign
+ */
+
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import OpenAI from 'openai'
