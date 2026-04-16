@@ -1,3 +1,10 @@
+/**
+ * Edit Shop Page
+ * @page /dm/shops/[shopId]/edit
+ * @auth Required - DM
+ * @description Form for editing shop details and shopkeeper info
+ */
+
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'

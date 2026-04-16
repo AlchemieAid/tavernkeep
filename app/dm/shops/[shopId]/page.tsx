@@ -1,3 +1,10 @@
+/**
+ * Shop Detail Page
+ * @page /dm/shops/[shopId]
+ * @auth Required - DM
+ * @description Shop overview with inventory management and AI item generation
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'

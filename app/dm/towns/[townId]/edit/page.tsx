@@ -1,3 +1,10 @@
+/**
+ * Edit Town Page
+ * @page /dm/towns/[townId]/edit
+ * @auth Required - DM
+ * @description Form for editing town details
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { TownEditForm } from '@/components/dm/town-edit-form'

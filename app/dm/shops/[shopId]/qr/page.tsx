@@ -1,3 +1,10 @@
+/**
+ * Shop QR Code Page
+ * @page /dm/shops/[shopId]/qr
+ * @auth Required - DM
+ * @description Displays QR code for player shop access
+ */
+
 'use client'
 
 import { useEffect, useState } from 'react'

@@ -1,3 +1,10 @@
+/**
+ * Town Detail Page
+ * @page /dm/towns/[townId]
+ * @auth Required - DM
+ * @description Town overview with shops and notable people lists
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
