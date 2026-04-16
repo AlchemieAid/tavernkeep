@@ -1,3 +1,10 @@
+/**
+ * Campaign Detail Page
+ * @page /dm/campaigns/[campaignId]
+ * @auth Required - DM (must own campaign)
+ * @description Campaign overview with towns list and management options
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'

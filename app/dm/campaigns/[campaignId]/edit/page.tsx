@@ -1,3 +1,10 @@
+/**
+ * Edit Campaign Page
+ * @page /dm/campaigns/[campaignId]/edit
+ * @auth Required - DM (must own campaign)
+ * @description Form for editing campaign details
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CampaignEditForm } from '@/components/dm/campaign-edit-form'

@@ -1,3 +1,10 @@
+/**
+ * Create Campaign Page
+ * @page /dm/campaigns/new
+ * @auth Required - DM
+ * @description AI generator + manual form for creating campaigns
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
