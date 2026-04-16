@@ -1,3 +1,10 @@
+/**
+ * Player Shop Page
+ * @page /player/campaigns/[campaignId]/shops/[shopId]
+ * @auth Required - Player
+ * @description Shop browsing with cart functionality. Only shows visible, in-stock items.
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

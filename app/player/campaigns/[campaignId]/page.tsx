@@ -1,3 +1,10 @@
+/**
+ * Player Campaign Detail Page
+ * @page /player/campaigns/[campaignId]
+ * @auth Required - Player (must be campaign member)
+ * @description Campaign overview with towns list for player exploration
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

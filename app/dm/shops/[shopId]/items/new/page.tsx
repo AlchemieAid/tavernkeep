@@ -1,3 +1,10 @@
+/**
+ * Create Shop Item Page
+ * @page /dm/shops/[shopId]/items/new
+ * @auth Required - DM
+ * @description AI generator for creating new items directly in shop
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'

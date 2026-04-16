@@ -1,3 +1,10 @@
+/**
+ * Player Campaigns Page
+ * @page /player/campaigns
+ * @auth Required - Player
+ * @description Browse campaigns player has joined
+ */
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

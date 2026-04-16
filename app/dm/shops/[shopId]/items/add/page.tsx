@@ -1,3 +1,10 @@
+/**
+ * Add Items to Shop Page
+ * @page /dm/shops/[shopId]/items/add
+ * @auth Required - DM
+ * @description Add existing items from library to shop inventory
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ShopItemPicker } from '@/components/dm/shop-item-picker'

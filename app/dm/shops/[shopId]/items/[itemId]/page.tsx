@@ -1,3 +1,10 @@
+/**
+ * Shop Item Detail Page
+ * @page /dm/shops/[shopId]/items/[itemId]
+ * @auth Required - DM
+ * @description View and manage individual shop item (stock, visibility, pricing)
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'

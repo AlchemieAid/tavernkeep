@@ -1,3 +1,9 @@
+/**
+ * Player Login Page
+ * @page /player/login
+ * @description Player-specific login (magic link or OAuth)
+ */
+
 'use client'
 
 import { useState } from 'react'

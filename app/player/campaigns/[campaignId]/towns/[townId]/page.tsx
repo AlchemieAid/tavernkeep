@@ -1,3 +1,10 @@
+/**
+ * Player Town Detail Page
+ * @page /player/campaigns/[campaignId]/towns/[townId]
+ * @auth Required - Player
+ * @description Town overview with shops and notable people for player exploration
+ */
+
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
