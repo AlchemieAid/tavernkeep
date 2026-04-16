@@ -1,3 +1,9 @@
+/**
+ * Database Types
+ * @description Type definitions for all database tables and operations
+ * @note Re-exports Supabase generated types with convenience aliases
+ */
+
 // Re-export generated Supabase types for backward compatibility
 export type { Database } from '@/lib/supabase/database.types'
 import type { Database } from '@/lib/supabase/database.types'

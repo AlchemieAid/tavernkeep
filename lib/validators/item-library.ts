@@ -1,3 +1,8 @@
+/**
+ * Item Library Validators
+ * @description Zod schemas for DM's personal item library
+ */
+
 import { z } from 'zod'
 
 export const WEAPON_PROPERTIES = [

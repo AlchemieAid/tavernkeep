@@ -1,3 +1,8 @@
+/**
+ * Character Validators
+ * @description Zod schemas for player character data
+ */
+
 import { z } from 'zod'
 
 export const characterSchema = z.object({

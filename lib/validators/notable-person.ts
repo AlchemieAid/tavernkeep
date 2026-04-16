@@ -1,3 +1,8 @@
+/**
+ * Notable Person Validators
+ * @description Zod schemas for NPC creation and updates
+ */
+
 import { z } from 'zod'
 import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 

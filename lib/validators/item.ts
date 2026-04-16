@@ -1,3 +1,8 @@
+/**
+ * Item Validators
+ * @description Zod schemas for item creation and updates
+ */
+
 import { z } from 'zod'
 
 const itemCategoryEnum = z.enum(['weapon', 'armor', 'potion', 'scroll', 'tool', 'magic_item', 'misc'])

@@ -1,3 +1,8 @@
+/**
+ * Shop Validators
+ * @description Zod schemas for shop creation and updates
+ */
+
 import { z } from 'zod'
 
 const shopTypeEnum = z.enum(['general', 'weapons', 'armor', 'magic', 'apothecary', 'black_market'])
