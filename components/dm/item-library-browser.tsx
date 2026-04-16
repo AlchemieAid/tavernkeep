@@ -24,6 +24,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Search, BookOpen, Plus } from 'lucide-react'
 import { RARITY_COLORS } from '@/lib/constants'
+import { ItemStatsDisplay } from '@/components/shared/item-stats-display'
+import type { Json } from '@/lib/supabase/database.types'
 
 interface LibraryItem {
   id: string
@@ -39,6 +41,8 @@ interface LibraryItem {
   attunement_required?: boolean
   requires_attunement?: boolean
   shop_tags: string[]
+  properties?: Json
+  system_stats?: Json
   source: 'custom' | 'srd'
 }
 
@@ -215,55 +219,93 @@ export function ItemLibraryBrowser({ customItems, catalogItems }: ItemLibraryBro
                     key={`${item.source}-${item.id}`} 
                     className="hover:border-gold transition-colors"
                   >
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-base leading-tight">{item.name}</CardTitle>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className={`text-xs font-medium ${RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] ?? 'text-on-surface'}`}>
-                            {item.rarity.replace('_', ' ')}
-                          </span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                            item.source === 'custom'
-                              ? 'bg-primary/20 text-primary'
-                              : 'bg-surface-variant text-on-surface-variant'
-                          }`}>
-                            {item.source === 'custom' ? 'Custom' : 'SRD'}
+                        <div className="flex-1">
+                          <CardTitle className="text-base leading-tight">{item.name}</CardTitle>
+                          <CardDescription className="text-xs mt-0.5">
+                            <span className={RARITY_COLORS[item.rarity as keyof typeof RARITY_COLORS] ?? 'text-on-surface'}>
+                              {item.rarity.replace('_', ' ')}
+                            </span>
+                            {' · '}
+                            {CATEGORY_LABELS[item.category] ?? item.category}
+                          </CardDescription>
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${
+                          item.source === 'custom'
+                            ? 'bg-primary/20 text-primary'
+                            : 'bg-surface-variant text-on-surface-variant'
+                        }`}>
+                          {item.source === 'custom' ? 'Custom' : 'SRD'}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {item.description && (
+                        <p className="text-xs text-on-surface-variant line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+
+                      {/* Item Stats Display - category-specific mechanical stats */}
+                      <ItemStatsDisplay
+                        category={item.category}
+                        properties={(item.properties ?? item.system_stats) as Record<string, unknown> | null}
+                      />
+
+                      {/* Price */}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="body-sm text-on-surface-variant">Price:</span>
+                        <span className="text-sm text-gold">
+                          {item.price} {item.price_currency ?? 'gp'}
+                        </span>
+                      </div>
+
+                      {/* Weight */}
+                      {item.weight != null && item.weight > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="body-sm text-on-surface-variant">Weight:</span>
+                          <span className="body-sm">{item.weight} lb</span>
+                        </div>
+                      )}
+
+                      {/* Attunement badge */}
+                      {item.attunement && (
+                        <div className="flex flex-wrap gap-1 pt-0.5">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                            Attunement Required
                           </span>
                         </div>
-                      </div>
-                      <CardDescription className="text-xs">
-                        {item.price} {item.price_currency ?? 'gp'}
-                        {item.weight ? ` · ${item.weight} lb` : ''}
-                        {item.attunement ? ' · Attunement' : ''}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0 space-y-3">
-                      {item.description && (
-                        <p className="text-xs text-on-surface-variant line-clamp-2">{item.description}</p>
                       )}
+
+                      {/* Shop Tags */}
                       {item.shop_tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {item.shop_tags.slice(0, 3).map(tag => (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {item.shop_tags.slice(0, 4).map(tag => (
                             <span key={tag} className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-surface-variant text-on-surface-variant capitalize">
                               {tag.replace('_', ' ')}
                             </span>
                           ))}
-                          {item.shop_tags.length > 3 && (
+                          {item.shop_tags.length > 4 && (
                             <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-surface-variant text-on-surface-variant">
-                              +{item.shop_tags.length - 3}
+                              +{item.shop_tags.length - 4}
                             </span>
                           )}
                         </div>
                       )}
-                      {item.source === 'custom' ? (
-                        <Button asChild variant="outline" size="sm" className="w-full">
-                          <Link href={`/dm/items/${item.id}`}>Edit</Link>
-                        </Button>
-                      ) : (
-                        <Button variant="ghost" size="sm" className="w-full" disabled>
-                          SRD Reference
-                        </Button>
-                      )}
+
+                      {/* Action Button */}
+                      <div className="pt-1">
+                        {item.source === 'custom' ? (
+                          <Button asChild variant="outline" size="sm" className="w-full">
+                            <Link href={`/dm/items/${item.id}`}>Edit Item</Link>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" className="w-full" disabled>
+                            SRD Reference
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

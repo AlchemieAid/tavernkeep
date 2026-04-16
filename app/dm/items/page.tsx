@@ -41,6 +41,7 @@ export default async function ItemLibraryPage() {
     weight_lbs: item.weight_lbs,
     attunement_required: item.attunement_required,
     shop_tags: item.shop_tags,
+    properties: item.properties,
     source: 'custom' as const,
   }))
 
@@ -56,6 +57,7 @@ export default async function ItemLibraryPage() {
     weight: item.weight,
     requires_attunement: item.requires_attunement,
     shop_tags: item.shop_tags,
+    system_stats: item.system_stats,
     source: 'srd' as const,
   }))
 
