@@ -66,15 +66,15 @@ export function DataBrowser({ tables }: DataBrowserProps) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <Card className="lg:col-span-1">
-        <CardHeader>
+      <Card className="bg-white border-slate-200 shadow-sm lg:col-span-1">
+        <CardHeader className="bg-white border-slate-200 shadow-sm">
           <CardTitle className="flex items-center gap-2">
             <Database className="h-5 w-5" />
             Tables
           </CardTitle>
           <CardDescription>Select a table to browse</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="bg-white border-slate-200 shadow-sm">
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -115,8 +115,8 @@ export function DataBrowser({ tables }: DataBrowserProps) {
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-2">
-        <CardHeader>
+      <Card className="bg-white border-slate-200 shadow-sm lg:col-span-2">
+        <CardHeader className="bg-white border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export function DataBrowser({ tables }: DataBrowserProps) {
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="bg-white border-slate-200 shadow-sm">
           {!selectedTable ? (
             <div className="text-center py-12 text-gray-500">
               <Database className="h-12 w-12 mx-auto mb-4 text-gray-300" />

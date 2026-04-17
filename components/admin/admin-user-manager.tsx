@@ -137,7 +137,7 @@ export function AdminUserManager({ initialUsers, currentUserId }: AdminUserManag
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>

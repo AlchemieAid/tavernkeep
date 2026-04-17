@@ -20,8 +20,8 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin User Management</h1>
-        <p className="text-gray-600 mt-2">
+        <h1 className="text-3xl font-bold text-slate-900">Admin User Management</h1>
+        <p className="text-slate-600 mt-2">
           Grant and revoke administrative privileges
         </p>
       </div>

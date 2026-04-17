@@ -102,7 +102,7 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Filter className="h-5 w-5" />
@@ -156,7 +156,7 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
 
       <div className="space-y-3">
         {filteredLogs.length === 0 ? (
-          <Card>
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardContent className="py-12 text-center text-gray-500">
               No audit log entries found matching your filters
             </CardContent>

@@ -97,7 +97,7 @@ export function ConfigEditor({ configs }: ConfigEditorProps) {
         const colorClass = categoryColors[category] || 'text-gray-600 bg-gray-100'
 
         return (
-          <Card key={category}>
+          <Card key={category} className="bg-white border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${colorClass}`}>
