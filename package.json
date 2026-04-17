@@ -16,7 +16,16 @@
     "test:architecture": "jest __tests__/architecture",
     "test:admin": "jest __tests__/admin",
     "test:admin:security": "jest __tests__/admin/security.test.ts",
-    "test:admin:integration": "jest __tests__/admin/integration.test.ts"
+    "test:admin:integration": "jest __tests__/admin/integration.test.ts",
+    "validate": "npm run lint && npm run type-check && npm test",
+    "validate:quick": "npm run lint && npm run type-check",
+    "prepare": "husky install || true"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "bash -c 'tsc --noEmit'"
+    ]
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
