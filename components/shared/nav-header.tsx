@@ -35,6 +35,16 @@ export async function NavHeader() {
     .eq('id', user.id)
     .single()
 
+  // Check if user is admin
+  const { data: adminUser } = await supabase
+    .from('admin_users')
+    .select('is_active')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  const isAdmin = !!adminUser
+
   return (
     <header className="sticky top-0 z-50 bg-surface-container border-b border-outline">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
@@ -58,6 +68,7 @@ export async function NavHeader() {
             <ProfileMenu 
               userEmail={user.email || null}
               displayName={(profile as { display_name: string | null } | null)?.display_name || null}
+              isAdmin={isAdmin}
             />
           </div>
         </div>

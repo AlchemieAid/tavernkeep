@@ -6,6 +6,7 @@
  * 
  * @features
  * - User email display
+ * - Admin panel access (if admin)
  * - Logout action
  * - Dropdown menu
  */
@@ -13,15 +14,17 @@
 'use client'
 
 import { useState } from 'react'
-import { User, LogOut } from 'lucide-react'
+import { User, LogOut, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 
 interface ProfileMenuProps {
   userEmail: string | null
   displayName?: string | null
+  isAdmin?: boolean
 }
 
-export function ProfileMenu({ userEmail, displayName }: ProfileMenuProps) {
+export function ProfileMenu({ userEmail, displayName, isAdmin }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const handleSignOut = async () => {
@@ -66,6 +69,17 @@ export function ProfileMenu({ userEmail, displayName }: ProfileMenuProps) {
               </div>
             </div>
             <div className="p-2">
+              {isAdmin && (
+                <Link href="/admin" onClick={() => setIsOpen(false)}>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-left"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    Admin Panel
+                  </Button>
+                </Link>
+              )}
               <Button
                 onClick={handleSignOut}
                 variant="ghost"
