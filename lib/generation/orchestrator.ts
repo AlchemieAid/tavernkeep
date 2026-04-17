@@ -63,8 +63,13 @@ import { checkRateLimit, skipChildRateLimits } from '@/lib/rate-limit'
 import { nanoid } from 'nanoid'
 import { SLUG_LENGTH } from '@/lib/constants'
 
+// Validate API key exists before creating client
+if (!process.env.OPENAI_API_KEY) {
+  throw new Error('OPENAI_API_KEY environment variable is not configured')
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || '',
+  apiKey: process.env.OPENAI_API_KEY,
 })
 
 /**
@@ -349,7 +354,22 @@ export class GenerationOrchestrator {
 
       return { success: true, data: this.progress.results }
     } catch (error) {
-      const errorMsg = (error as Error).message
+      const err = error as Error
+      let errorMsg = err.message
+      
+      // Provide user-friendly error messages
+      if (errorMsg.includes('OPENAI_API_KEY')) {
+        errorMsg = 'AI service not configured. Please contact support.'
+      } else if (errorMsg.includes('timeout') || errorMsg.includes('ETIMEDOUT')) {
+        errorMsg = 'Request timed out. Please try again. If this persists, try a shorter prompt.'
+      } else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ENOTFOUND')) {
+        errorMsg = 'Network connection failed. Please check your internet connection and try again.'
+      } else if (errorMsg.includes('rate limit') || errorMsg.includes('429')) {
+        errorMsg = 'Rate limit exceeded. Please wait a few minutes and try again.'
+      } else if (errorMsg.includes('401') || errorMsg.includes('invalid_api_key')) {
+        errorMsg = 'AI service authentication failed. Please contact support.'
+      }
+      
       console.error('Generation error:', error)
       this.progress.status = 'error'
       this.progress.errors.push(errorMsg)

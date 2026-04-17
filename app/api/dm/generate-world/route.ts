@@ -30,6 +30,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  // Verify OpenAI API key is configured
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('OPENAI_API_KEY is not configured')
+    return new Response(
+      JSON.stringify({ error: 'AI service not configured. Please contact support.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
   // Parse request
   const body = await request.json()
   const validation = GenerateCampaignSchema.safeParse(body)
