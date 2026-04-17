@@ -72,7 +72,7 @@ export default async function AdminDashboard() {
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={stat.title} className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-slate-600">
                   {stat.title}
@@ -91,7 +91,7 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-900">
               <Activity className="h-5 w-5 text-blue-600" />
@@ -116,7 +116,7 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 shadow-sm">
+        <Card className="bg-white border-slate-200 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-slate-900">
               <Database className="h-5 w-5 text-green-600" />
@@ -170,7 +170,7 @@ export default async function AdminDashboard() {
         </Card>
       </div>
 
-      <Card className="border-slate-200 shadow-sm">
+      <Card className="bg-white border-slate-200 shadow-sm">
         <CardHeader>
           <CardTitle className="text-slate-900">Quick Actions</CardTitle>
           <CardDescription className="text-slate-600">Common administrative tasks</CardDescription>
