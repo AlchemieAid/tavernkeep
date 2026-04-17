@@ -184,7 +184,7 @@ export async function getAuditLog(
     entityId: entry.entity_id,
     oldValue: entry.old_value,
     newValue: entry.new_value,
-    ipAddress: entry.ip_address,
+    ipAddress: entry.ip_address as string | null,
     userAgent: entry.user_agent,
     success: entry.success,
     errorMessage: entry.error_message,

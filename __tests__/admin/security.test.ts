@@ -44,7 +44,7 @@ describe('Admin Security - RLS Policy Tests', () => {
           user_id: 'fake-user-id',
           role: 'super_admin',
           is_active: true,
-        })
+        } as any)
 
       expect(error).toBeTruthy()
       expect(error?.message).toContain('new row violates row-level security policy')
@@ -53,7 +53,7 @@ describe('Admin Security - RLS Policy Tests', () => {
     it('should NOT allow regular users to update admin_users', async () => {
       const { error } = await regularUserClient
         .from('admin_users')
-        .update({ is_active: false })
+        .update({ is_active: false } as any)
         .eq('role', 'super_admin')
 
       expect(error).toBeTruthy()
@@ -88,7 +88,7 @@ describe('Admin Security - RLS Policy Tests', () => {
           key: 'test_config',
           value: { test: true },
           category: 'system',
-        })
+        } as any)
 
       expect(error).toBeTruthy()
       expect(error?.message).toContain('new row violates row-level security policy')
@@ -97,7 +97,7 @@ describe('Admin Security - RLS Policy Tests', () => {
     it('should NOT allow regular users to update app_config', async () => {
       const { error } = await regularUserClient
         .from('app_config')
-        .update({ value: { modified: true } })
+        .update({ value: { modified: true } } as any)
         .eq('key', 'feature_ai_generation')
 
       expect(error).toBeTruthy()
@@ -131,7 +131,7 @@ describe('Admin Security - RLS Policy Tests', () => {
           action: 'test_action',
           entity_type: 'test',
           success: true,
-        })
+        } as any)
 
       // Note: System can insert via policy, but regular users cannot
       expect(error).toBeTruthy()
@@ -140,7 +140,7 @@ describe('Admin Security - RLS Policy Tests', () => {
     it('should NOT allow regular users to update admin_audit_log', async () => {
       const { error } = await regularUserClient
         .from('admin_audit_log')
-        .update({ success: false })
+        .update({ success: false } as any)
         .eq('action', 'config_update')
 
       expect(error).toBeTruthy()
@@ -175,7 +175,7 @@ describe('Admin Security - RLS Policy Tests', () => {
           old_value: {},
           new_value: {},
           version: 1,
-        })
+        } as any)
 
       expect(error).toBeTruthy()
     })
@@ -264,7 +264,7 @@ describe('Admin Helper Function Security', () => {
   describe('is_admin() function', () => {
     it('should return false for non-admin users', async () => {
       const { data, error } = await regularUserClient
-        .rpc('is_admin', { user_id: 'fake-non-admin-id' })
+        .rpc('is_admin', { user_id: 'fake-non-admin-id' } as any)
 
       expect(error).toBeNull()
       expect(data).toBe(false)
@@ -273,7 +273,7 @@ describe('Admin Helper Function Security', () => {
     it('should not leak admin status of other users', async () => {
       // Regular users should only be able to check their own status
       const { data } = await regularUserClient
-        .rpc('is_admin', { user_id: 'some-other-user-id' })
+        .rpc('is_admin', { user_id: 'some-other-user-id' } as any)
 
       // Function should work but return false for non-admins
       expect(data).toBe(false)
@@ -286,7 +286,7 @@ describe('Admin Helper Function Security', () => {
         .rpc('get_config', { 
           config_key: 'feature_ai_generation',
           fallback: false 
-        })
+        } as any)
 
       expect(error).toBeNull()
       expect(data).toBeDefined()
@@ -297,7 +297,7 @@ describe('Admin Helper Function Security', () => {
         .rpc('get_config', { 
           config_key: 'non_existent_key',
           fallback: { default: true }
-        })
+        } as any)
 
       expect(error).toBeNull()
       expect(data).toEqual({ default: true })
