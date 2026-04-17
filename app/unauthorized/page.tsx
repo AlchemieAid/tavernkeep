@@ -23,7 +23,7 @@ export default function UnauthorizedPage() {
           </p>
 
           <div className="space-y-3">
-            <Link href="/dm">
+            <Link href="/dm/dashboard">
               <Button className="w-full">
                 Return to Dashboard
               </Button>

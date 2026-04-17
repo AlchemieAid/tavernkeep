@@ -76,9 +76,10 @@ export async function checkAdminStatus(
     .select('user_id, role, granted_at, granted_by, is_active')
     .eq('user_id', user.id)
     .eq('is_active', true)
-    .single()
+    .maybeSingle()
 
   if (error || !adminUser) {
+    console.error('[ADMIN AUTH] Error checking admin status:', error)
     return null
   }
 
