@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -813,6 +813,7 @@ export type Database = {
           id: string
           inventory_volatility: Database["public"]["Enums"]["inventory_volatility"]
           is_active: boolean
+          is_public: boolean | null
           is_revealed: boolean
           keeper_backstory: string | null
           keeper_image_url: string | null
@@ -847,6 +848,7 @@ export type Database = {
           id?: string
           inventory_volatility?: Database["public"]["Enums"]["inventory_volatility"]
           is_active?: boolean
+          is_public?: boolean | null
           is_revealed?: boolean
           keeper_backstory?: string | null
           keeper_image_url?: string | null
@@ -881,6 +883,7 @@ export type Database = {
           id?: string
           inventory_volatility?: Database["public"]["Enums"]["inventory_volatility"]
           is_active?: boolean
+          is_public?: boolean | null
           is_revealed?: boolean
           keeper_backstory?: string | null
           keeper_image_url?: string | null
