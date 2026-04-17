@@ -1,7 +1,28 @@
-# TavernKeep Implementation Audit
+# TavernKeep System Audit
 
-**Date**: April 5, 2026  
-**Purpose**: Review implementation against .windsurfrules design document
+> **Strategic System Tracking** - Updated monthly with system-wide status
+> 
+> For current sprint tasks, see **[BACKLOG.md](BACKLOG.md)**
+
+**Last Updated**: April 17, 2026  
+**Purpose**: Track system-wide feature status, technical debt, and long-term roadmap
+
+---
+
+## 📋 Two-Tier Tracking System
+
+### BACKLOG.md - Tactical (Weekly)
+- Current sprint tasks
+- Immediate priorities
+- Time estimates
+- Task status
+
+### This File (AUDIT.md) - Strategic (Monthly)
+- System-wide feature completion
+- Architecture decisions
+- Technical debt tracking
+- Long-term roadmap
+- Known issues
 
 ---
 
