@@ -12,7 +12,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:security": "jest __tests__/security",
-    "test:architecture": "jest __tests__/architecture"
+    "test:architecture": "jest __tests__/architecture",
+    "test:admin": "jest __tests__/admin",
+    "test:admin:security": "jest __tests__/admin/security.test.ts",
+    "test:admin:integration": "jest __tests__/admin/integration.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
