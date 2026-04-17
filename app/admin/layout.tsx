@@ -31,15 +31,18 @@ export default async function AdminLayout({
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <div className="flex h-screen">
-        <aside className="w-64 bg-gray-900 text-white flex flex-col">
-          <div className="p-6 border-b border-gray-800">
+        {/* Dark sidebar with better contrast */}
+        <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-xl">
+          <div className="p-6 border-b border-slate-700">
             <div className="flex items-center gap-3">
-              <Shield className="h-8 w-8 text-blue-400" />
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
               <div>
-                <h1 className="text-xl font-bold">Admin Panel</h1>
-                <p className="text-xs text-gray-400 capitalize">{adminStatus.role}</p>
+                <h1 className="text-lg font-bold text-white">Admin Panel</h1>
+                <p className="text-xs text-slate-400 capitalize">{adminStatus.role}</p>
               </div>
             </div>
           </div>
@@ -51,28 +54,29 @@ export default async function AdminLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-150"
                 >
                   <Icon className="h-5 w-5" />
-                  <span>{item.label}</span>
+                  <span className="font-medium">{item.label}</span>
                 </Link>
               )
             })}
           </nav>
 
-          <div className="p-4 border-t border-gray-800">
+          <div className="p-4 border-t border-slate-700">
             <Link
-              href="/dm"
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+              href="/dm/dashboard"
+              className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-all duration-150"
             >
               <LogOut className="h-5 w-5" />
-              <span>Exit Admin</span>
+              <span className="font-medium">Exit Admin</span>
             </Link>
           </div>
         </aside>
 
-        <main className="flex-1 overflow-auto">
-          <div className="p-8">
+        {/* Light content area with better readability */}
+        <main className="flex-1 overflow-auto bg-white">
+          <div className="p-8 max-w-7xl">
             {children}
           </div>
         </main>
