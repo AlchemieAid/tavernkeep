@@ -12,6 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:security": "jest __tests__/security",
+    "test:rls-audit": "jest __tests__/security/rls-policy-audit.test.ts",
     "test:architecture": "jest __tests__/architecture",
     "test:admin": "jest __tests__/admin",
     "test:admin:security": "jest __tests__/admin/security.test.ts",
