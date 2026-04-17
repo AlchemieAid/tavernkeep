@@ -51,9 +51,9 @@ describe('Admin Security - RLS Policy Tests', () => {
     })
 
     it('should NOT allow regular users to update admin_users', async () => {
-      const { error } = await regularUserClient
-        .from('admin_users')
-        .update({ is_active: false } as any)
+      const { error } = await (regularUserClient
+        .from('admin_users') as any)
+        .update({ is_active: false })
         .eq('role', 'super_admin')
 
       expect(error).toBeTruthy()
@@ -95,9 +95,9 @@ describe('Admin Security - RLS Policy Tests', () => {
     })
 
     it('should NOT allow regular users to update app_config', async () => {
-      const { error } = await regularUserClient
-        .from('app_config')
-        .update({ value: { modified: true } } as any)
+      const { error } = await (regularUserClient
+        .from('app_config') as any)
+        .update({ value: { modified: true } })
         .eq('key', 'feature_ai_generation')
 
       expect(error).toBeTruthy()
@@ -138,9 +138,9 @@ describe('Admin Security - RLS Policy Tests', () => {
     })
 
     it('should NOT allow regular users to update admin_audit_log', async () => {
-      const { error } = await regularUserClient
-        .from('admin_audit_log')
-        .update({ success: false } as any)
+      const { error } = await (regularUserClient
+        .from('admin_audit_log') as any)
+        .update({ success: false })
         .eq('action', 'config_update')
 
       expect(error).toBeTruthy()
