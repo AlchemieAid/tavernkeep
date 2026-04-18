@@ -314,7 +314,8 @@ export class GenerationOrchestrator {
       this.emitStepStarted('rate_limit', 'Checking rate limits...')
       
       const rateLimitStart = Date.now()
-      const rateLimitResult = await checkRateLimit(this.userId, 'campaign')
+      // Pass supabase client to avoid creating a new one (which can be slow)
+      const rateLimitResult = await checkRateLimit(this.userId, 'campaign', supabase)
       const rateLimitDuration = Date.now() - rateLimitStart
       
       console.log('[RATE_LIMIT] Check completed in', rateLimitDuration, 'ms')

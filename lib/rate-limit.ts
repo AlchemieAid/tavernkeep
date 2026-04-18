@@ -168,6 +168,22 @@ function incrementCachedCount(userId: string, type: string): void {
 }
 
 /**
+ * Invalidate cached request count
+ * 
+ * @param userId - User ID
+ * @param type - Generation type
+ * 
+ * @description
+ * Removes the cache entry, forcing the next check to query the database.
+ * Use this after recording usage to ensure fresh data on next check.
+ */
+function invalidateCachedCount(userId: string, type: string): void {
+  const key = getCacheKey(userId, type)
+  rateLimitCache.delete(key)
+  console.log(`[RATE-LIMIT] Invalidated cache for ${key}`)
+}
+
+/**
  * Check if user is within rate limits
  * 
  * @param userId - User ID to check
@@ -373,7 +389,9 @@ export async function recordUsage(
   metadata: UsageMetadata,
   supabase?: any
 ): Promise<void> {
-  incrementCachedCount(userId, generationType)
+  // Invalidate cache to force fresh DB query on next check
+  // This ensures accurate rate limiting after usage is recorded
+  invalidateCachedCount(userId, generationType)
 
   try {
     if (!supabase) {
@@ -392,7 +410,11 @@ export async function recordUsage(
       estimated_cost: metadata.estimatedCost,
       model: metadata.model,
     }).then(({ error }: { error: { message: string } | null }) => {
-      if (error) console.warn('[RATE-LIMIT] Failed to log usage:', error.message)
+      if (error) {
+        console.warn('[RATE-LIMIT] Failed to log usage:', error.message)
+      } else {
+        console.log(`[RATE-LIMIT] Recorded usage for ${userId}:${generationType}`)
+      }
     })
   } catch (err) {
     console.warn('[RATE-LIMIT] Failed to log usage:', (err as Error).message)
