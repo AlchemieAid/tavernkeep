@@ -446,10 +446,14 @@ export class GenerationOrchestrator {
       response_format: { type: 'json_object' },
     })
     
+    // Increase timeout to 120 seconds for campaign generation (can be slow)
     const completion = await Promise.race([
       openaiPromise,
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('AI generation timeout - OpenAI is slow')), 60000)
+        setTimeout(() => {
+          console.error('[CAMPAIGN] OpenAI timeout after 120 seconds')
+          reject(new Error('AI generation timeout - OpenAI took too long. Try a shorter prompt or try again later.'))
+        }, 120000)
       )
     ])
 
@@ -645,10 +649,14 @@ export class GenerationOrchestrator {
       response_format: { type: 'json_object' },
     })
     
+    // Increase timeout to 90 seconds for town generation
     const completion = await Promise.race([
       openaiPromise,
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Town generation timeout')), 60000)
+        setTimeout(() => {
+          console.error('[TOWN] OpenAI timeout after 90 seconds')
+          reject(new Error('Town generation timeout - OpenAI took too long.'))
+        }, 90000)
       )
     ])
 
@@ -850,10 +858,14 @@ export class GenerationOrchestrator {
         response_format: { type: 'json_object' },
       })
       
+      // Increase timeout to 90 seconds for shop generation
       const completion = await Promise.race([
         openaiPromise,
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Shop generation timeout')), 60000)
+          setTimeout(() => {
+            console.error('[SHOP] OpenAI timeout after 90 seconds')
+            reject(new Error('Shop generation timeout - OpenAI took too long.'))
+          }, 90000)
         )
       ])
 
