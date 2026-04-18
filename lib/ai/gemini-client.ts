@@ -11,7 +11,7 @@ export class GeminiClient implements AIClient {
   private genAI: GoogleGenerativeAI
   private modelName: string
 
-  constructor(apiKey: string, model: string = 'gemini-2.0-flash-exp') {
+  constructor(apiKey: string, model: string = 'gemini-2.5-flash-lite') {
     this.genAI = new GoogleGenerativeAI(apiKey)
     // Use model name as-is - Gemini API handles versioning internally
     this.modelName = model

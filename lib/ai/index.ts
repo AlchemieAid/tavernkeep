@@ -26,11 +26,11 @@ export function getConfiguredModel(provider: AIProvider): string {
     case 'openai':
       return process.env.OPENAI_MODEL || 'gpt-4o-mini'
     case 'gemini':
-      return process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp'
+      return process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'
     case 'claude':
       return process.env.CLAUDE_MODEL || 'claude-3-haiku-20240307'
     default:
-      return 'gemini-2.0-flash-exp'
+      return 'gemini-2.5-flash-lite'
   }
 }
 
