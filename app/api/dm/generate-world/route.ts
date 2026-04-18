@@ -20,30 +20,40 @@ import { createOrchestrator } from '@/lib/generation'
 import { GenerateCampaignSchema } from '@/lib/validators/campaign'
 
 export async function POST(request: NextRequest) {
+  console.log('[API] /api/dm/generate-world POST request received')
+  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
+    console.error('[API] Unauthorized request - no user')
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
     )
   }
 
+  console.log('[API] Authenticated user:', user.id)
+
   // Verify OpenAI API key is configured
   if (!process.env.OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY is not configured')
+    console.error('[API] OPENAI_API_KEY is not configured')
     return new Response(
       JSON.stringify({ error: 'AI service not configured. Please contact support.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
 
+  console.log('[API] OpenAI API key is configured')
+
   // Parse request
   const body = await request.json()
+  console.log('[API] Request body parsed, prompt length:', body.prompt?.length)
+  
   const validation = GenerateCampaignSchema.safeParse(body)
   
   if (!validation.success) {
+    console.error('[API] Validation failed:', validation.error.errors)
     return new Response(
       JSON.stringify({ error: validation.error.errors[0].message }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -52,6 +62,8 @@ export async function POST(request: NextRequest) {
 
   const { prompt, ruleset, setting } = validation.data
   const config = body.config
+  
+  console.log('[API] Request validated successfully')
 
   // Create SSE stream
   const encoder = new TextEncoder()
@@ -63,10 +75,14 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        console.log('[API] Starting SSE stream')
+        
         // Send connection confirmation
         send('connected', { message: 'World generation started' })
+        console.log('[API] Sent connected event')
 
         // Create orchestrator with streaming callbacks
+        console.log('[API] Creating orchestrator for user:', user.id)
         const orchestrator = createOrchestrator(user.id, user.id, {
           config,
           onProgress: (event: any) => {
@@ -121,17 +137,27 @@ export async function POST(request: NextRequest) {
         })
 
         // Start generation
+        console.log('[API] Sending initial progress event')
         send('progress', { message: 'Initializing world generation...', current: 0, total: 100 })
         
+        console.log('[API] Calling orchestrator.generateCampaign')
+        const generationStart = Date.now()
         const result = await orchestrator.generateCampaign(prompt, ruleset, setting)
+        const generationDuration = Date.now() - generationStart
+        
+        console.log(`[API] Generation completed in ${generationDuration}ms, success:`, result.success)
 
         if (!result.success) {
+          console.error('[API] Generation failed:', result.error)
           send('error', { message: result.error })
           controller.close()
+        } else {
+          console.log('[API] Generation succeeded')
         }
 
       } catch (error) {
-        console.error('Streaming generation error:', error)
+        console.error('[API] Streaming generation error:', error)
+        console.error('[API] Error stack:', (error as Error).stack)
         send('error', { message: (error as Error).message })
         controller.close()
       }

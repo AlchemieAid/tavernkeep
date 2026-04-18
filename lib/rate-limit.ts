@@ -208,17 +208,24 @@ export async function checkRateLimit(
   generationType: 'campaign' | 'town' | 'shop' | 'item',
   supabase?: any
 ): Promise<{ allowed: boolean; remaining: number; message: string }> {
+  console.log(`[RATE-LIMIT] checkRateLimit called for user ${userId}, type: ${generationType}`)
+  
   if (process.env.DISABLE_RATE_LIMITS === 'true') {
+    console.log('[RATE-LIMIT] Rate limits disabled via env var')
     return { allowed: true, remaining: 9999, message: 'Rate limits disabled (testing mode)' }
   }
 
   const config = RATE_LIMITS[generationType]
+  console.log(`[RATE-LIMIT] Config: ${config.maxRequests} requests per ${config.windowMinutes} minutes`)
 
   // Fast path: check in-memory cache
   const cachedCount = getCachedCount(userId, generationType)
+  console.log(`[RATE-LIMIT] Cache lookup result:`, cachedCount)
+  
   if (cachedCount !== null) {
     const remaining = Math.max(0, config.maxRequests - cachedCount)
     const allowed = cachedCount < config.maxRequests
+    console.log(`[RATE-LIMIT] Using cached count: ${cachedCount}, allowed: ${allowed}, remaining: ${remaining}`)
     return {
       allowed,
       remaining,
@@ -229,11 +236,20 @@ export async function checkRateLimit(
   }
 
   // Slow path: check DB with 500ms timeout
+  console.log('[RATE-LIMIT] Cache miss, checking database with 500ms timeout')
   const timeoutPromise = new Promise<{ allowed: boolean; remaining: number; message: string }>((resolve) => {
-    setTimeout(() => resolve({ allowed: true, remaining: 999, message: 'Rate limit check skipped (timeout)' }), 500)
+    setTimeout(() => {
+      console.warn('[RATE-LIMIT] Database check timed out after 500ms, failing open')
+      resolve({ allowed: true, remaining: 999, message: 'Rate limit check skipped (timeout)' })
+    }, 500)
   })
 
-  return Promise.race([doRateLimitCheck(userId, generationType, config, supabase), timeoutPromise])
+  const checkStart = Date.now()
+  const result = await Promise.race([doRateLimitCheck(userId, generationType, config, supabase), timeoutPromise])
+  const checkDuration = Date.now() - checkStart
+  console.log(`[RATE-LIMIT] Check completed in ${checkDuration}ms, result:`, result)
+  
+  return result
 }
 
 async function doRateLimitCheck(
@@ -243,29 +259,43 @@ async function doRateLimitCheck(
   supabase?: any
 ): Promise<{ allowed: boolean; remaining: number; message: string }> {
   try {
+    console.log('[RATE-LIMIT] doRateLimitCheck starting')
+    
     if (!supabase) {
+      console.log('[RATE-LIMIT] No supabase client provided, creating one')
       const { createClient } = await import('@/lib/supabase/server')
       supabase = await createClient()
+      console.log('[RATE-LIMIT] Supabase client created')
     }
 
     const windowStart = new Date(Date.now() - config.windowMinutes * 60 * 1000)
+    console.log(`[RATE-LIMIT] Querying ai_usage table for user ${userId} since ${windowStart.toISOString()}`)
+    
+    const queryStart = Date.now()
     const { count, error } = await supabase
       .from('ai_usage')
       .select('*', { count: 'exact', head: true })
       .eq('dm_id', userId)
       .eq('generation_type', generationType)
       .gte('created_at', windowStart.toISOString())
+    const queryDuration = Date.now() - queryStart
+    
+    console.log(`[RATE-LIMIT] Database query completed in ${queryDuration}ms`)
 
     if (error) {
       console.warn('[RATE-LIMIT] DB error, failing open:', error.message)
+      console.warn('[RATE-LIMIT] Error details:', error)
       return { allowed: true, remaining: 999, message: 'Rate limit check failed, allowing request' }
     }
 
     const requestCount = count || 0
+    console.log(`[RATE-LIMIT] Found ${requestCount} requests in window, caching result`)
     setCachedCount(userId, generationType, requestCount)
 
     const remaining = Math.max(0, config.maxRequests - requestCount)
     const allowed = requestCount < config.maxRequests
+    
+    console.log(`[RATE-LIMIT] Final result: allowed=${allowed}, remaining=${remaining}/${config.maxRequests}`)
 
     return {
       allowed,
@@ -276,6 +306,7 @@ async function doRateLimitCheck(
     }
   } catch (err) {
     console.warn('[RATE-LIMIT] Error, failing open:', (err as Error).message)
+    console.warn('[RATE-LIMIT] Error stack:', (err as Error).stack)
     return { allowed: true, remaining: 999, message: 'Rate limit check failed, allowing request' }
   }
 }

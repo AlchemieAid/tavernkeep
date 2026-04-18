@@ -310,17 +310,42 @@ export class GenerationOrchestrator {
       ]) as any
       
       // Rate limit check - allocate 1% of progress
+      console.log('[RATE_LIMIT] Starting rate limit check for user:', this.userId)
       this.emitStepStarted('rate_limit', 'Checking rate limits...')
+      
+      const rateLimitStart = Date.now()
+      const rateLimitResult = await checkRateLimit(this.userId, 'campaign')
+      const rateLimitDuration = Date.now() - rateLimitStart
+      
+      console.log('[RATE_LIMIT] Check completed in', rateLimitDuration, 'ms')
+      console.log('[RATE_LIMIT] Result:', rateLimitResult)
+      
+      if (!rateLimitResult.allowed) {
+        console.error('[RATE_LIMIT] Rate limit exceeded:', rateLimitResult.message)
+        throw new Error(rateLimitResult.message || 'Rate limit exceeded. Please wait before generating another campaign.')
+      }
+      
+      console.log('[RATE_LIMIT] Rate limit check passed, proceeding to campaign generation')
       this.progress.completedSteps = 1
       
       this.emitStepStarted('campaign', 'Generating campaign with AI (this takes 10-20 seconds)...')
+      console.log('[CAMPAIGN] Starting AI generation with prompt length:', prompt.length)
 
       // 1. Generate Campaign
+      console.log('[CAMPAIGN] Calling generateCampaignEntity...')
+      const campaignStart = Date.now()
       const campaignResult = await this.generateCampaignEntity(supabase, prompt, ruleset, setting)
+      const campaignDuration = Date.now() - campaignStart
+      
+      console.log('[CAMPAIGN] Generation completed in', campaignDuration, 'ms')
+      console.log('[CAMPAIGN] Result success:', campaignResult.success)
       
       if (!campaignResult.success) {
+        console.error('[CAMPAIGN] Generation failed:', campaignResult.error)
         return { success: false, error: campaignResult.error }
       }
+      
+      console.log('[CAMPAIGN] Campaign created with ID:', campaignResult.data?.id)
 
       let campaign = campaignResult.data
       this.progress.results.campaign = campaign
@@ -375,7 +400,9 @@ export class GenerationOrchestrator {
         errorMsg = 'AI service authentication failed. Please contact support.'
       }
       
-      console.error('Generation error:', error)
+      console.error('[ORCHESTRATOR] Generation error:', error)
+      console.error('[ORCHESTRATOR] Error stack:', err.stack)
+      console.error('[ORCHESTRATOR] User-friendly message:', errorMsg)
       this.progress.status = 'error'
       this.progress.errors.push(errorMsg)
       this.emit({ type: 'failed', error: errorMsg, progress: { ...this.progress } })
