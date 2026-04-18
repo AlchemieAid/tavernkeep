@@ -263,15 +263,17 @@ export function AICampaignGenerator() {
               <div className={`p-2 rounded-lg border transition-all ${towns.length > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-muted/50 border-muted'}`}>
                 <div className="flex items-center gap-1.5 text-xs font-medium mb-1">
                   <TreePine className="w-3 h-3 text-emerald-500" />
-                  Towns
+                  Towns ({towns.length})
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {towns.length > 0 ? (
                     <div className="space-y-0.5 max-h-12 overflow-hidden">
                       {towns.slice(-2).map(t => (
-                        <div key={t.id} className="text-emerald-600 truncate" title={t.name}>• {t.name}</div>
+                        <div key={t.id} className="text-emerald-600 font-medium truncate" title={t.name}>
+                          {t.name}
+                        </div>
                       ))}
-                      {towns.length > 2 && <div className="text-muted-foreground">+{towns.length - 2} more</div>}
+                      {towns.length > 2 && <div className="text-muted-foreground text-[10px]">+{towns.length - 2} more</div>}
                     </div>
                   ) : (
                     <span className={state.currentStep.includes('town') ? 'animate-pulse' : ''}>

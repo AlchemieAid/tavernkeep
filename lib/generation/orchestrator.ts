@@ -285,16 +285,17 @@ export class GenerationOrchestrator {
     this.progress.status = 'running'
     this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
     
-    // Calculate estimated total steps upfront for accurate progress bar
-    const estimatedTowns = Math.floor((this.config.campaign.townCount.min + this.config.campaign.townCount.max) / 2)
-    const estimatedShopsPerTown = Math.floor((this.config.town.shopCount.min + this.config.town.shopCount.max) / 2)
-    const estimatedItemsPerShop = Math.floor((this.config.shop.itemCount.min + this.config.shop.itemCount.max) / 2)
-    const estimatedPeoplePerTown = Math.floor((this.config.town.notablePeopleCount.min + this.config.town.notablePeopleCount.max) / 2)
+    // Progress bar allocation:
+    // - 1% for rate limit check
+    // - 98% distributed across towns and shops (divided by actual counts)
+    // - 1% reserved for final validation
+    // Total: 100%
     
-    // Total: 1 campaign + towns + (shops + items + notable_people) per town
-    this.progress.totalSteps = 1 + estimatedTowns + estimatedTowns * (estimatedShopsPerTown + estimatedPeoplePerTown + estimatedShopsPerTown * estimatedItemsPerShop)
+    // We'll use a percentage-based system instead of step counting
+    this.progress.totalSteps = 100
+    this.progress.completedSteps = 0
     
-    console.log(`[ORCHESTRATOR] Estimated total steps: ${this.progress.totalSteps} (campaign: 1, towns: ${estimatedTowns}, shops: ${estimatedTowns * estimatedShopsPerTown}, items: ${estimatedTowns * estimatedShopsPerTown * estimatedItemsPerShop}, people: ${estimatedTowns * estimatedPeoplePerTown})`)
+    console.log(`[ORCHESTRATOR] Starting campaign generation with percentage-based progress`)
     
     try {
       this.emitStepStarted('init', 'Connecting to database...')
@@ -308,6 +309,10 @@ export class GenerationOrchestrator {
         )
       ]) as any
       
+      // Rate limit check - allocate 1% of progress
+      this.emitStepStarted('rate_limit', 'Checking rate limits...')
+      this.progress.completedSteps = 1
+      
       this.emitStepStarted('campaign', 'Generating campaign with AI (this takes 10-20 seconds)...')
 
       // 1. Generate Campaign
@@ -319,7 +324,7 @@ export class GenerationOrchestrator {
 
       let campaign = campaignResult.data
       this.progress.results.campaign = campaign
-      this.progress.completedSteps++
+      // Campaign generation doesn't increment progress - towns will handle it
       
       // Reload campaign with full data including currencies (in case user edited it previously)
       const { data: fullCampaign, error: reloadError } = await supabase
@@ -499,9 +504,17 @@ export class GenerationOrchestrator {
 
   private async generateTownsForCampaign(supabase: any, campaign: any, originalPrompt: string) {
     const townCount = this.getRandomCount(this.config.campaign.townCount)
+    const estimatedShopsPerTown = Math.floor((this.config.town.shopCount.min + this.config.town.shopCount.max) / 2)
+    
+    // Calculate progress allocation:
+    // 98% available (1% used for rate limit, 1% reserved for validation)
+    // Divide by towns, then subdivide for shops
+    const progressPerTown = 98 / townCount
     
     this.progress.results.towns = []
     this.emitStepStarted('towns', `Generating ${townCount} towns...`)
+    
+    console.log(`[PROGRESS] Allocating ${progressPerTown.toFixed(1)}% per town (${townCount} towns)`)
 
     // Build context for town generation
     const contextBuilder = createContextBuilder(this.userId, this.dmId)
@@ -520,6 +533,7 @@ export class GenerationOrchestrator {
 
     // Generate each town
     for (let i = 0; i < townCount; i++) {
+      const townStartProgress = this.progress.completedSteps
       this.emitStepStarted(`town_${i + 1}`, `Generating town ${i + 1} of ${townCount}...`)
       
       const townPrompt = `${originalPrompt} - Town ${i + 1} of ${townCount}. CRITICAL: Do not use these existing town names: ${Array.from(this.generatedNames.towns).join(', ')}`
@@ -527,16 +541,28 @@ export class GenerationOrchestrator {
       const townResult = await this.generateTownEntity(
         supabase, 
         campaign.id, 
-        townPrompt
+        townPrompt,
+        progressPerTown,
+        townStartProgress
       )
 
       if (townResult.success && townResult.data) {
-        this.progress.results.towns.push(townResult.data)
-        this.progress.completedSteps++
-        this.generatedNames.towns.add(townResult.data.name)
-        this.emitEntityCreated('town', townResult.data)
+        this.progress.results.towns.push(townResult.data.town)
+        this.generatedNames.towns.add(townResult.data.town.name)
+        this.emitEntityCreated('town', townResult.data.town)
+        
+        // Increment progress by allocated amount for this town
+        this.progress.completedSteps = Math.min(townStartProgress + progressPerTown, 98)
       }
     }
+    
+    // Final validation - use last 1%
+    this.emitStepStarted('validation', 'Validating campaign setup...')
+    this.progress.completedSteps = 99
+    
+    // Brief delay for validation step visibility
+    await new Promise(resolve => setTimeout(resolve, 500))
+    this.progress.completedSteps = 100
   }
 
   /**
@@ -545,7 +571,9 @@ export class GenerationOrchestrator {
   private async generateTownEntity(
     supabase: any, 
     campaignId: string, 
-    prompt: string
+    prompt: string,
+    allocatedProgress: number = 0,
+    startProgress: number = 0
   ): Promise<GeneratorResult<any>> {
     
     // Fetch campaign context from database (single source of truth)
@@ -653,7 +681,7 @@ export class GenerationOrchestrator {
     // Auto-generate Shops (they will fetch their own context from DB)
     if (this.config.town.autoGenerateShops) {
       const shopCount = this.getRandomCount(this.config.town.shopCount)
-      await this.generateShopsForTown(supabase, campaignId, createdTown.id, shopCount, createdTown.name)
+      await this.generateShopsForTown(supabase, campaignId, createdTown.id, shopCount, createdTown.name, allocatedProgress, startProgress)
     }
 
     return { success: true, data: { town: createdTown, notablePeople } }
@@ -715,7 +743,9 @@ export class GenerationOrchestrator {
     campaignId: string,
     townId: string,
     count: number,
-    townName: string
+    townName: string,
+    allocatedProgress: number = 0,
+    startProgress: number = 0
   ) {
     // Fetch campaign and town context from database
     const { data: campaign } = await supabase
@@ -770,10 +800,14 @@ export class GenerationOrchestrator {
     
     let shopsCreated = 0
     let shopsAttempted = 0
+    const progressPerShop = allocatedProgress / count
 
     for (let i = 0; i < count; i++) {
       shopsAttempted++
       this.emitStepStarted(`shop_${i + 1}`, `Generating shop ${i + 1} of ${count} for ${townName}...`)
+      
+      // Update progress incrementally for each shop
+      this.progress.completedSteps = Math.min(startProgress + (i * progressPerShop), 98)
       
       const shopPrompt = `Generate a shop that fits in this town. CRITICAL: Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}`
 
@@ -864,7 +898,7 @@ export class GenerationOrchestrator {
         this.progress.results.shops = []
       }
       this.progress.results.shops.push(createdShop)
-      this.progress.completedSteps++
+      // Progress is updated incrementally above, not per shop
       this.emitEntityCreated('shop', createdShop)
 
       // Track usage
@@ -967,7 +1001,7 @@ export class GenerationOrchestrator {
         this.progress.results.items = []
       }
       this.progress.results.items.push(...createdItems)
-      this.progress.completedSteps += createdItems.length
+      // Progress is handled at shop level, not per item
       
       // Emit each item creation
       for (const item of createdItems) {

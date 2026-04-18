@@ -66,21 +66,20 @@ export async function POST(request: NextRequest) {
         // Send connection confirmation
         send('connected', { message: 'World generation started' })
 
-        let stepCount = 0
-        const totalSteps = 15 // Approximate: 1 campaign + ~3 towns + ~4 shops + ~4 people + ~12 items
-
         // Create orchestrator with streaming callbacks
         const orchestrator = createOrchestrator(user.id, user.id, {
           config,
           onProgress: (event: any) => {
             switch (event.type) {
               case 'step_started':
-                stepCount++
                 send('step', {
                   step: event.step,
                   status: 'started',
                   details: event.details,
-                  progress: { current: stepCount, total: totalSteps }
+                  progress: { 
+                    current: event.progress?.completedSteps || 0, 
+                    total: event.progress?.totalSteps || 100 
+                  }
                 })
                 break
 
@@ -89,7 +88,10 @@ export async function POST(request: NextRequest) {
                   step: event.step,
                   status: 'completed',
                   data: event.data,
-                  progress: { current: stepCount, total: totalSteps }
+                  progress: { 
+                    current: event.progress?.completedSteps || 0, 
+                    total: event.progress?.totalSteps || 100 
+                  }
                 })
                 break
 
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
         })
 
         // Start generation
-        send('progress', { message: 'Initializing world generation...', current: 0, total: totalSteps })
+        send('progress', { message: 'Initializing world generation...', current: 0, total: 100 })
         
         const result = await orchestrator.generateCampaign(prompt, ruleset, setting)
 

@@ -96,12 +96,21 @@ export function NavigationDropdowns() {
           }
         }
         
-        // Fallback to first campaign
-        const initialCampaign = campaignId || campaignsData[0]?.id
+        // Check if the detected/selected campaign still exists in the list
+        const campaignExists = campaignId && campaignsData.some(c => c.id === campaignId)
+        
+        // Fallback to first campaign if selected one was deleted
+        const initialCampaign = campaignExists ? campaignId : campaignsData[0]?.id
         
         if (initialCampaign) {
           setSelectedCampaign(initialCampaign)
           await loadCampaignData(initialCampaign, townMatch ? townMatch[1] : null)
+        } else {
+          // No campaigns left - clear everything
+          setSelectedCampaign(null)
+          setTowns([])
+          setShops([])
+          setNotablePeople([])
         }
       }
 
