@@ -2,25 +2,36 @@
  * Google Gemini Client Implementation
  * 
  * Wraps Google Gemini API in the unified AIClient interface
+ * Uses the new @google/genai SDK
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import { AIClient, AIGenerationRequest, AIGenerationResponse } from './types'
 
 export class GeminiClient implements AIClient {
-  private genAI: GoogleGenerativeAI
+  private ai: GoogleGenAI
   private modelName: string
 
   constructor(apiKey: string, model: string = 'gemini-2.5-flash-lite') {
-    this.genAI = new GoogleGenerativeAI(apiKey)
-    // Use model name as-is - Gemini API handles versioning internally
+    // New SDK uses environment variable by default, but we pass it explicitly
+    this.ai = new GoogleGenAI({ apiKey })
     this.modelName = model
   }
 
   async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
-    const model = this.genAI.getGenerativeModel({
+    // Combine system and user messages into a single prompt
+    const systemMessage = request.messages.find(m => m.role === 'system')
+    const userMessages = request.messages.filter(m => m.role === 'user')
+    
+    const contents = systemMessage 
+      ? `${systemMessage.content}\n\n${userMessages.map(m => m.content).join('\n')}`
+      : userMessages.map(m => m.content).join('\n')
+
+    // Use new SDK API
+    const response = await this.ai.models.generateContent({
       model: this.modelName,
-      generationConfig: {
+      contents,
+      config: {
         temperature: request.temperature ?? 0.8,
         maxOutputTokens: request.maxTokens,
         responseMimeType: request.responseFormat === 'json' 
@@ -29,28 +40,12 @@ export class GeminiClient implements AIClient {
       }
     })
 
-    // Gemini uses a different message format - combine system and user messages
-    const systemMessage = request.messages.find(m => m.role === 'system')
-    const userMessages = request.messages.filter(m => m.role === 'user')
-    
-    // Combine system prompt with user prompt
-    const prompt = systemMessage 
-      ? `${systemMessage.content}\n\n${userMessages.map(m => m.content).join('\n')}`
-      : userMessages.map(m => m.content).join('\n')
-
-    const result = await model.generateContent(prompt)
-    const response = result.response
-    const text = response.text()
-
-    // Gemini doesn't always provide token counts
-    const usageMetadata = response.usageMetadata
-
     return {
-      content: text,
-      tokensUsed: usageMetadata ? {
-        input: usageMetadata.promptTokenCount || 0,
-        output: usageMetadata.candidatesTokenCount || 0,
-        total: usageMetadata.totalTokenCount || 0
+      content: response.text || '',
+      tokensUsed: response.usageMetadata ? {
+        input: response.usageMetadata.promptTokenCount || 0,
+        output: response.usageMetadata.candidatesTokenCount || 0,
+        total: response.usageMetadata.totalTokenCount || 0
       } : undefined,
       model: this.modelName,
       provider: 'gemini'
