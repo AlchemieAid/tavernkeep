@@ -42,7 +42,7 @@
  * @see {@link GenerationConfig} for configuration options
  */
 
-import OpenAI from 'openai'
+import { createAIClient, AIClient } from '@/lib/ai'
 import { createClient } from '@/lib/supabase/server'
 import { 
   GenerationConfig, 
@@ -63,14 +63,10 @@ import { checkRateLimit, skipChildRateLimits } from '@/lib/rate-limit'
 import { nanoid } from 'nanoid'
 import { SLUG_LENGTH } from '@/lib/constants'
 
-// Validate API key exists before creating client
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY environment variable is not configured')
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Create AI client based on environment configuration
+// Defaults to Gemini 1.5 Flash for speed
+// Can be changed via AI_PROVIDER env var (openai, gemini, claude)
+const aiClient = createAIClient()
 
 /**
  * Result wrapper for generator methods
@@ -435,29 +431,29 @@ export class GenerationOrchestrator {
       return { success: false, error: rateLimit.message }
     }
 
-    // OpenAI call with timeout
-    const openaiPromise = openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    // AI call with timeout
+    const aiPromise = aiClient.generate({
       messages: [
         { role: 'system', content: CAMPAIGN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildCampaignGenerationPrompt(prompt, ruleset, setting) },
       ],
       temperature: 0.8,
-      response_format: { type: 'json_object' },
+      responseFormat: 'json',
     })
     
     // Increase timeout to 120 seconds for campaign generation (can be slow)
-    const completion = await Promise.race([
-      openaiPromise,
+    const response = await Promise.race([
+      aiPromise,
       new Promise<never>((_, reject) => 
         setTimeout(() => {
-          console.error('[CAMPAIGN] OpenAI timeout after 120 seconds')
-          reject(new Error('AI generation timeout - OpenAI took too long. Try a shorter prompt or try again later.'))
+          console.error(`[CAMPAIGN] AI timeout after 120 seconds (provider: ${aiClient.getProvider()})`)
+          reject(new Error('AI generation timeout - AI took too long. Try a shorter prompt or try again later.'))
         }, 120000)
       )
     ])
 
-    const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+    console.log(`[CAMPAIGN] AI response received from ${response.provider} (${response.model})`)
+    const generatedData = JSON.parse(response.content)
     const { campaign, suggestedTowns } = generatedData
 
     if (!campaign) {
@@ -500,11 +496,11 @@ export class GenerationOrchestrator {
       'campaign',
       prompt,
       {
-        input: completion.usage?.prompt_tokens || 0,
-        output: completion.usage?.completion_tokens || 0,
-        total: completion.usage?.total_tokens || 0
+        input: response.tokensUsed?.input || 0,
+        output: response.tokensUsed?.output || 0,
+        total: response.tokensUsed?.total || 0
       },
-      'gpt-4o-mini'
+      response.model
     )
 
     return { success: true, data: createdCampaign }
@@ -638,29 +634,29 @@ export class GenerationOrchestrator {
     
     const campaignContext = contextBuilder.buildTownContext()
     
-    // OpenAI call with timeout
-    const openaiPromise = openai.chat.completions.create({
-      model: 'gpt-4o',
+    // AI call with timeout
+    const aiPromise = aiClient.generate({
       messages: [
         { role: 'system', content: TOWN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildTownGenerationPrompt(prompt, campaignContext) },
       ],
       temperature: 0.8,
-      response_format: { type: 'json_object' },
+      responseFormat: 'json',
     })
     
     // Increase timeout to 90 seconds for town generation
-    const completion = await Promise.race([
-      openaiPromise,
+    const response = await Promise.race([
+      aiPromise,
       new Promise<never>((_, reject) => 
         setTimeout(() => {
-          console.error('[TOWN] OpenAI timeout after 90 seconds')
-          reject(new Error('Town generation timeout - OpenAI took too long.'))
+          console.error(`[TOWN] AI timeout after 90 seconds (provider: ${aiClient.getProvider()})`)
+          reject(new Error('Town generation timeout - AI took too long.'))
         }, 90000)
       )
     ])
 
-    const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+    console.log(`[TOWN] AI response received from ${response.provider} (${response.model})`)
+    const generatedData = JSON.parse(response.content)
     const { town, notablePeople, suggestedShops } = generatedData
 
     if (!town) {
@@ -702,11 +698,11 @@ export class GenerationOrchestrator {
       'town',
       prompt,
       {
-        input: completion.usage?.prompt_tokens || 0,
-        output: completion.usage?.completion_tokens || 0,
-        total: completion.usage?.total_tokens || 0
+        input: response.tokensUsed?.input || 0,
+        output: response.tokensUsed?.output || 0,
+        total: response.tokensUsed?.total || 0
       },
-      'gpt-4o'
+      response.model
     )
 
     // Auto-generate Notable People
@@ -847,29 +843,29 @@ export class GenerationOrchestrator {
       
       const shopPrompt = `Generate a shop that fits in this town. CRITICAL: Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}`
 
-      // OpenAI call with timeout
-      const openaiPromise = openai.chat.completions.create({
-        model: 'gpt-4o',
+      // AI call with timeout
+      const aiPromise = aiClient.generate({
         messages: [
           { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
           { role: 'user', content: buildShopGenerationPrompt(shopPrompt) },
         ],
         temperature: 0.8,
-        response_format: { type: 'json_object' },
+        responseFormat: 'json',
       })
       
       // Increase timeout to 90 seconds for shop generation
-      const completion = await Promise.race([
-        openaiPromise,
+      const response = await Promise.race([
+        aiPromise,
         new Promise<never>((_, reject) => 
           setTimeout(() => {
-            console.error('[SHOP] OpenAI timeout after 90 seconds')
-            reject(new Error('Shop generation timeout - OpenAI took too long.'))
+            console.error(`[SHOP] AI timeout after 90 seconds (provider: ${aiClient.getProvider()})`)
+            reject(new Error('Shop generation timeout - AI took too long.'))
           }, 90000)
         )
       ])
 
-      const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+      console.log(`[SHOP] AI response received from ${response.provider} (${response.model})`)
+      const generatedData = JSON.parse(response.content)
       const { shop: shopData, items: itemsData } = generatedData
 
       if (!shopData) {
@@ -947,11 +943,11 @@ export class GenerationOrchestrator {
         'shop',
         shopPrompt,
         {
-          input: completion.usage?.prompt_tokens || 0,
-          output: completion.usage?.completion_tokens || 0,
-          total: completion.usage?.total_tokens || 0
+          input: response.tokensUsed?.input || 0,
+          output: response.tokensUsed?.output || 0,
+          total: response.tokensUsed?.total || 0
         },
-        'gpt-4o'
+        response.model
       )
 
       // Populate items from library → catalog (no AI item generation)
@@ -1331,17 +1327,16 @@ export class GenerationOrchestrator {
       const context = contextBuilder.buildShopContext()
       const shopPrompt = `Generate a shop that fits in this setting. ${prompt}`
       
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+      const response = await aiClient.generate({
         messages: [
           { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
           { role: 'user', content: buildShopGenerationPrompt(shopPrompt) },
         ],
         temperature: 0.8,
-        response_format: { type: 'json_object' },
+        responseFormat: 'json',
       })
       
-      const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+      const generatedData = JSON.parse(response.content)
       const { shop: shopData, items: itemsData } = generatedData
       
       if (!shopData) {
