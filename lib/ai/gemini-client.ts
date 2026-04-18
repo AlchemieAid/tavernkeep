@@ -11,9 +11,10 @@ export class GeminiClient implements AIClient {
   private genAI: GoogleGenerativeAI
   private modelName: string
 
-  constructor(apiKey: string, model: string = 'gemini-1.5-flash') {
+  constructor(apiKey: string, model: string = 'gemini-1.5-flash-latest') {
     this.genAI = new GoogleGenerativeAI(apiKey)
-    this.modelName = model
+    // Ensure model name has -latest suffix for v1beta API
+    this.modelName = model.endsWith('-latest') ? model : `${model}-latest`
   }
 
   async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
