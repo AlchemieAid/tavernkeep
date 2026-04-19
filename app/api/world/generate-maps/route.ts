@@ -159,7 +159,7 @@ export async function PATCH(request: Request) {
 
     const { data: updated, error: updateError } = await supabase
       .from('campaign_maps')
-      .update({ is_selected: true, setup_stage: 'selected' })
+      .update({ is_selected: true, setup_stage: 'created' })
       .eq('id', map_id)
       .select()
       .single()

@@ -9,6 +9,7 @@ export interface ResourcePoint {
   resource_type: string
   richness: number
   influence_radius_pct: number
+  name?: string | null
 }
 
 export interface PlacedPoI {
@@ -23,6 +24,14 @@ export interface TerrainArea {
   terrain_type: string
   polygon: Array<{ x: number; y: number }>
   computed_elevation_m?: number | null
+  climate_zone?: string | null
+  temp_summer_high_c?: number | null
+  temp_winter_low_c?: number | null
+  annual_rainfall_mm?: number | null
+  ecosystem_flora?: string[] | null
+  ecosystem_fauna?: string[] | null
+  hazards?: Array<{ type: string; season: string; probability: string }> | null
+  atmosphere_text?: string | null
 }
 
 export interface IDWResult {
