@@ -2,27 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkAdminStatus } from '@/lib/admin/auth'
 import { createClient } from '@/lib/supabase/server'
 
-const ALLOWED_TABLES = [
-  'campaigns',
-  'towns',
-  'shops',
-  'items',
-  'item_library',
-  'notable_people',
-  'characters',
-  'players',
-  'profiles',
-  'campaign_members',
-  'cart_items',
-  'party_access',
-  'ai_usage',
-  'usage_logs',
-  'app_config',
-  'admin_users',
-  'admin_audit_log',
-  'app_config_history',
-  'ai_cache',
-]
+// Map of table names to their timestamp column for ordering
+const TABLE_TIMESTAMP_COLUMNS: Record<string, string> = {
+  campaigns: 'created_at',
+  towns: 'created_at',
+  shops: 'created_at',
+  items: 'added_at', // items uses added_at, not created_at
+  item_library: 'created_at',
+  notable_people: 'created_at',
+  characters: 'created_at',
+  players: 'created_at',
+  profiles: 'created_at',
+  campaign_members: 'joined_at',
+  cart_items: 'added_at',
+  party_access: 'last_seen_at',
+  ai_usage: 'created_at',
+  usage_logs: 'created_at',
+  app_config: 'created_at',
+  admin_users: 'granted_at',
+  admin_audit_log: 'created_at',
+  app_config_history: 'created_at',
+  ai_cache: 'created_at',
+  catalog_items: 'created_at',
+}
 
 export async function GET(
   request: NextRequest,
@@ -40,7 +42,9 @@ export async function GET(
 
     const tableName = params.table
 
-    if (!ALLOWED_TABLES.includes(tableName)) {
+    const timestampColumn = TABLE_TIMESTAMP_COLUMNS[tableName]
+
+    if (!timestampColumn) {
       return NextResponse.json(
         { error: 'Invalid table name' },
         { status: 400 }
@@ -48,12 +52,13 @@ export async function GET(
     }
 
     const supabase = await createClient()
-    
+
+    // Build query dynamically based on timestamp column
     const { data, error } = await supabase
       .from(tableName as any)
       .select('*')
       .limit(100)
-      .order('created_at', { ascending: false })
+      .order(timestampColumn, { ascending: false })
 
     if (error) {
       console.error('[API] Data fetch error:', error)

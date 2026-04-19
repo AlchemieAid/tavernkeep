@@ -69,7 +69,22 @@ export async function POST(request: NextRequest) {
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
     async start(controller) {
+      // Track if stream is closed to prevent double-close errors
+      let isClosed = false
+      
+      const safeClose = () => {
+        if (!isClosed) {
+          isClosed = true
+          try {
+            controller.close()
+          } catch (e) {
+            // Already closed, ignore
+          }
+        }
+      }
+      
       const send = (event: string, data: any) => {
+        if (isClosed) return // Don't try to send if already closed
         try {
           controller.enqueue(encoder.encode(`event: ${event}\n`))
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
@@ -80,7 +95,7 @@ export async function POST(request: NextRequest) {
       
       // Helper to flush events immediately (prevents buffering)
       const flush = () => {
-        // In some environments, we need to send a flush comment
+        if (isClosed) return
         try {
           controller.enqueue(encoder.encode(':flush\n\n'))
         } catch {
@@ -100,6 +115,8 @@ export async function POST(request: NextRequest) {
         const orchestrator = createOrchestrator(user.id, user.id, {
           config,
           onProgress: (event: any) => {
+            if (isClosed) return // Don't process events if stream is closed
+            
             switch (event.type) {
               case 'step_started':
                 send('step', {
@@ -143,13 +160,13 @@ export async function POST(request: NextRequest) {
               case 'failed':
                 send('error', { message: event.error })
                 flush()
-                controller.close()
+                safeClose()
                 break
 
               case 'completed':
                 send('complete', { results: event.results })
                 flush()
-                controller.close()
+                safeClose()
                 break
             }
           }
@@ -168,17 +185,26 @@ export async function POST(request: NextRequest) {
 
         if (!result.success) {
           console.error('[API] Generation failed:', result.error)
-          send('error', { message: result.error })
-          controller.close()
+          send('error', { message: result.error || 'Generation failed' })
+          flush()
+          safeClose()
         } else {
           console.log('[API] Generation succeeded')
+          // Success case should have been handled by 'completed' event
+          // But if not, make sure we close
+          if (!isClosed) {
+            send('complete', { results: result.data })
+            safeClose()
+          }
         }
 
       } catch (error) {
         console.error('[API] Streaming generation error:', error)
         console.error('[API] Error stack:', (error as Error).stack)
-        send('error', { message: (error as Error).message })
-        controller.close()
+        if (!isClosed) {
+          send('error', { message: (error as Error).message || 'Unknown error' })
+          safeClose()
+        }
       }
     }
   })
