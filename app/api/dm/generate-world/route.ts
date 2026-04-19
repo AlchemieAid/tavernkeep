@@ -70,8 +70,22 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (event: string, data: any) => {
-        controller.enqueue(encoder.encode(`event: ${event}\n`))
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\n`))
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+        } catch (e) {
+          console.error('[API] Failed to send SSE event:', e)
+        }
+      }
+      
+      // Helper to flush events immediately (prevents buffering)
+      const flush = () => {
+        // In some environments, we need to send a flush comment
+        try {
+          controller.enqueue(encoder.encode(':flush\n\n'))
+        } catch {
+          // Ignore flush errors
+        }
       }
 
       try {
@@ -97,6 +111,7 @@ export async function POST(request: NextRequest) {
                     total: event.progress?.totalSteps || 100 
                   }
                 })
+                flush()
                 break
 
               case 'step_completed':
@@ -109,6 +124,7 @@ export async function POST(request: NextRequest) {
                     total: event.progress?.totalSteps || 100 
                   }
                 })
+                flush()
                 break
 
               case 'entity_created':
@@ -121,15 +137,18 @@ export async function POST(request: NextRequest) {
                     ...(event.entity.shop_id && { shopId: event.entity.shop_id }),
                   }
                 })
+                flush()
                 break
 
               case 'failed':
                 send('error', { message: event.error })
+                flush()
                 controller.close()
                 break
 
               case 'completed':
                 send('complete', { results: event.results })
+                flush()
                 controller.close()
                 break
             }
