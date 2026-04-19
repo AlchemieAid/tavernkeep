@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen, Route } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen, Route, Layers, Gem } from 'lucide-react'
 import { computeIDW, type IDWResult, type ResourcePoint, type TerrainArea, type PlacedPoI } from '@/lib/world/resourceInterpolation'
 import { MapHoverTooltip } from './map-hover-tooltip'
 import { MapPoIPanel, type PlacedPoIResult } from './map-poi-panel'
@@ -12,6 +12,8 @@ import { MapTerritoryPanel, type PlacedTerritoryResult } from './map-territory-p
 import { MapHistoricalEventPanel, type PlacedHistoricalEventResult } from './map-historical-event-panel'
 import { MapMobileModal } from './map-mobile-modal'
 import { MapTradeRoutePanel, type PlacedTradeRouteResult } from './map-trade-route-panel'
+import { MapTerrainPainterPanel, type AddedTerrainArea } from './map-terrain-painter-panel'
+import { MapResourcePlacerPanel, type AddedResourcePoint } from './map-resource-placer-panel'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
 
 const RESOURCE_COLORS: Record<string, string> = {
@@ -49,7 +51,15 @@ function getResourceColor(type: string): string {
   return RESOURCE_COLORS[type] ?? '#9e9e9e'
 }
 
-type Mode = 'view' | 'town' | 'poi' | 'territory' | 'history' | 'trade_route'
+type Mode = 'view' | 'town' | 'poi' | 'territory' | 'history' | 'trade_route' | 'terrain' | 'resource'
+
+const TERRAIN_FILL_COLORS: Record<string, string> = {
+  ocean: '#1565c0', deep_sea: '#0d47a1', coast: '#42a5f5', river: '#29b6f6', lake: '#26c6da',
+  plains: '#aed581', grassland: '#66bb6a', farmland: '#cddc39', wetlands: '#558b2f', swamp: '#4e342e',
+  forest: '#388e3c', deep_forest: '#1b5e20', jungle: '#2e7d32',
+  hills: '#a1887f', highlands: '#8d6e63', mountains: '#78909c', high_mountains: '#546e7a',
+  desert: '#ffd54f', tundra: '#b0bec5', glacier: '#e0f7fa', volcano: '#e53935',
+}
 
 interface WorldTown {
   id: string
@@ -168,6 +178,12 @@ export function MapCanvas({
   const [territoryFormPolygon, setTerritoryFormPolygon] = useState<Array<{ x: number; y: number }> | null>(null)
   const [showTerritories, setShowTerritories] = useState(true)
   const [showHistory, setShowHistory] = useState(true)
+  const [showTerrainAreas, setShowTerrainAreas] = useState(false)
+  const [mutableTerrainAreas, setMutableTerrainAreas] = useState(terrainAreas)
+  const [drawingTerrainType, setDrawingTerrainType] = useState('forest')
+  const [terrainFormPolygon, setTerrainFormPolygon] = useState<Array<{ x: number; y: number }> | null>(null)
+  const [resourcePanelOpen, setResourcePanelOpen] = useState(false)
+  const [resourceClickPos, setResourceClickPos] = useState<{ xPct: number; yPct: number } | null>(null)
   const [mobileModal, setMobileModal] = useState<{ result: IDWResult; terrainType: string | null } | null>(null)
 
   const placedPoIs = useMemo<PlacedPoI[]>(() =>
@@ -177,8 +193,8 @@ export function MapCanvas({
 
   const hoveredTerrainArea = useMemo(() => {
     if (!idwResult) return null
-    return terrainAreas.find(a => a.terrain_type === idwResult.dominantTerrain) ?? null
-  }, [idwResult, terrainAreas])
+    return mutableTerrainAreas.find(a => a.terrain_type === idwResult.dominantTerrain) ?? null
+  }, [idwResult, mutableTerrainAreas])
 
   function getCanvasCoords(e: React.MouseEvent): { x: number; y: number; xPct: number; yPct: number } | null {
     const el = containerRef.current
@@ -200,10 +216,10 @@ export function MapCanvas({
 
     if (frameRef.current) cancelAnimationFrame(frameRef.current)
     frameRef.current = requestAnimationFrame(() => {
-      const result = computeIDW(coords.xPct, coords.yPct, resourcePoints, terrainAreas, placedPoIs)
+      const result = computeIDW(coords.xPct, coords.yPct, resourcePoints, mutableTerrainAreas, placedPoIs)
       setIdwResult(result)
     })
-  }, [resourcePoints, terrainAreas, placedPoIs])
+  }, [resourcePoints, mutableTerrainAreas, placedPoIs])
 
   function handleMouseLeave() {
     setHoverPos(null)
@@ -216,8 +232,8 @@ export function MapCanvas({
     const rect = containerRef.current.getBoundingClientRect()
     const xPct = (touch.clientX - rect.left) / rect.width
     const yPct = (touch.clientY - rect.top) / rect.height
-    const result = computeIDW(xPct, yPct, resourcePoints, terrainAreas, placedPoIs)
-    const terrain = terrainAreas.find(a => a.terrain_type === result.dominantTerrain)
+    const result = computeIDW(xPct, yPct, resourcePoints, mutableTerrainAreas, placedPoIs)
+    const terrain = mutableTerrainAreas.find(a => a.terrain_type === result.dominantTerrain)
     setMobileModal({ result, terrainType: terrain?.terrain_type ?? null })
   }
 
@@ -225,8 +241,13 @@ export function MapCanvas({
     const coords = getCanvasCoords(e)
     if (!coords) return
 
-    if (mode === 'territory') {
+    if (mode === 'territory' || mode === 'terrain') {
       setDrawingPolygon(prev => [...prev, { x: coords.xPct, y: coords.yPct }])
+      return
+    }
+
+    if (mode === 'resource') {
+      setResourceClickPos({ xPct: coords.xPct, yPct: coords.yPct })
       return
     }
 
@@ -236,7 +257,7 @@ export function MapCanvas({
     }
 
     if (mode === 'town') {
-      const result = computeIDW(coords.xPct, coords.yPct, resourcePoints, terrainAreas, placedPoIs)
+      const result = computeIDW(coords.xPct, coords.yPct, resourcePoints, mutableTerrainAreas, placedPoIs)
       setTownPanel({ xPct: coords.xPct, yPct: coords.yPct, result })
       return
     }
@@ -254,6 +275,11 @@ export function MapCanvas({
     if (mode === 'territory' && drawingPolygon.length >= 3) {
       e.preventDefault()
       setTerritoryFormPolygon(drawingPolygon)
+      setDrawingPolygon([])
+    }
+    if (mode === 'terrain' && drawingPolygon.length >= 3) {
+      e.preventDefault()
+      setTerrainFormPolygon(drawingPolygon)
       setDrawingPolygon([])
     }
   }
@@ -336,6 +362,12 @@ export function MapCanvas({
             label="Routes"
             icon={<Route className="w-3.5 h-3.5" />}
           />
+          <ToolbarToggle
+            active={showTerrainAreas}
+            onToggle={() => setShowTerrainAreas(v => !v)}
+            label="Terrain"
+            icon={<Layers className="w-3.5 h-3.5" />}
+          />
         </div>
 
         <div className="h-4 w-px bg-[#282a2d]" />
@@ -371,6 +403,18 @@ export function MapCanvas({
             label="Trade Route"
             icon={<Route className="w-3.5 h-3.5" />}
           />
+          <ModeButton
+            active={mode === 'terrain'}
+            onClick={() => { setMode(mode === 'terrain' ? 'view' : 'terrain'); setDrawingPolygon([]) }}
+            label="Paint Terrain"
+            icon={<Layers className="w-3.5 h-3.5" />}
+          />
+          <ModeButton
+            active={mode === 'resource'}
+            onClick={() => { setMode(mode === 'resource' ? 'view' : 'resource'); setResourcePanelOpen(true) }}
+            label="Place Resource"
+            icon={<Gem className="w-3.5 h-3.5" />}
+          />
         </div>
 
         {mode !== 'view' && (
@@ -381,6 +425,8 @@ export function MapCanvas({
             {mode === 'territory' && (drawingPolygon.length < 3 ? `Drawing… (${drawingPolygon.length} pts, need 3+)` : `${drawingPolygon.length} pts · double-click to finish`)}
             {mode === 'history' && 'Click map to record a historical event'}
             {mode === 'trade_route' && (!routeSourceTown ? 'Click a town pin to start the route' : `From: ${routeSourceTown.name ?? 'Town'} — click another town to complete`)}
+            {mode === 'terrain' && (drawingPolygon.length < 3 ? `Painting ${drawingTerrainType.replace(/_/g,' ')} — click to add points` : `${drawingPolygon.length} pts · double-click to close`)}
+            {mode === 'resource' && 'Click map to place a resource point'}
           </div>
         )}
       </div>
@@ -440,6 +486,22 @@ export function MapCanvas({
               )
             })}
 
+            {/* Terrain area outlines */}
+            {showTerrainAreas && mutableTerrainAreas.map((a, i) => {
+              const col = TERRAIN_FILL_COLORS[a.terrain_type] ?? '#9e9e9e'
+              return (
+                <polygon
+                  key={a.id ?? `ta-${i}`}
+                  points={a.polygon.map((p: {x:number;y:number}) => `${p.x},${p.y}`).join(' ')}
+                  fill={col}
+                  fillOpacity={0.25}
+                  stroke={col}
+                  strokeWidth={0.002}
+                  strokeOpacity={0.6}
+                />
+              )
+            })}
+
             {/* Trade route bezier curves */}
             {showTradeRoutes && tradeRoutes.map(route => {
               const a = worldTowns.find(t => t.id === route.town_a_id)
@@ -494,6 +556,23 @@ export function MapCanvas({
                 )}
               </g>
             ))}
+
+            {/* Terrain painting preview */}
+            {mode === 'terrain' && drawingPolygon.length > 0 && (
+              <>
+                <polygon
+                  points={drawingPolygon.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill={TERRAIN_FILL_COLORS[drawingTerrainType] ?? '#9e9e9e'}
+                  fillOpacity={0.2}
+                  stroke={TERRAIN_FILL_COLORS[drawingTerrainType] ?? '#9e9e9e'}
+                  strokeWidth={0.002}
+                  strokeDasharray="0.006 0.003"
+                />
+                {drawingPolygon.map((p, i) => (
+                  <circle key={i} cx={p.x} cy={p.y} r={0.004} fill={TERRAIN_FILL_COLORS[drawingTerrainType] ?? '#9e9e9e'} stroke="white" strokeWidth={0.001} />
+                ))}
+              </>
+            )}
 
             {/* Territory drawing preview */}
             {mode === 'territory' && drawingPolygon.length > 0 && (
@@ -644,6 +723,59 @@ export function MapCanvas({
               setTerritories(prev => [...prev, t as Territory])
               setTerritoryFormPolygon(null)
               setMode('view')
+            }}
+          />
+        )}
+
+        {/* Terrain painter panel */}
+        {mode === 'terrain' && (
+          <MapTerrainPainterPanel
+            campaignId={campaignId}
+            mapId={map.id}
+            polygon={terrainFormPolygon}
+            drawingPointCount={drawingPolygon.length}
+            selectedType={drawingTerrainType}
+            onSelectType={setDrawingTerrainType}
+            onClose={() => { setMode('view'); setDrawingPolygon([]); setTerrainFormPolygon(null) }}
+            onSaved={(area: AddedTerrainArea) => {
+              setMutableTerrainAreas(prev => [...prev, {
+                ...area,
+                polygon: area.polygon,
+                hazards: null,
+                computed_elevation_m: area.computed_elevation_m ?? null,
+                climate_zone: area.climate_zone ?? null,
+                temp_summer_high_c: null,
+                temp_winter_low_c: null,
+                annual_rainfall_mm: null,
+                ecosystem_flora: null,
+                ecosystem_fauna: null,
+                atmosphere_text: area.atmosphere_text ?? null,
+              }])
+              setTerrainFormPolygon(null)
+              setShowTerrainAreas(true)
+            }}
+            onClearPolygon={() => { setDrawingPolygon([]); setTerrainFormPolygon(null) }}
+          />
+        )}
+
+        {/* Resource placer panel */}
+        {(mode === 'resource' || resourcePanelOpen) && (
+          <MapResourcePlacerPanel
+            campaignId={campaignId}
+            mapId={map.id}
+            clickPos={mode === 'resource' ? resourceClickPos : null}
+            onClose={() => { setMode('view'); setResourcePanelOpen(false); setResourceClickPos(null) }}
+            onPlaced={(rp: AddedResourcePoint) => {
+              setResourcePoints(prev => [...prev, {
+                id: rp.id,
+                x_pct: rp.x_pct,
+                y_pct: rp.y_pct,
+                resource_type: rp.resource_type,
+                richness: rp.richness,
+                influence_radius_pct: rp.influence_radius_pct,
+                name: rp.name,
+                placed_by: 'manual',
+              }])
             }}
           />
         )}
