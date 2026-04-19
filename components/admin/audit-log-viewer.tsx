@@ -56,15 +56,15 @@ const actionIcons: Record<string, any> = {
 }
 
 const actionColors: Record<string, string> = {
-  config_update: 'bg-blue-100 text-blue-700',
-  config_create: 'bg-green-100 text-green-700',
-  config_delete: 'bg-red-100 text-red-700',
-  data_create: 'bg-green-100 text-green-700',
-  data_update: 'bg-blue-100 text-blue-700',
-  data_delete: 'bg-red-100 text-red-700',
-  admin_grant: 'bg-purple-100 text-purple-700',
-  admin_revoke: 'bg-orange-100 text-orange-700',
-  cache_clear: 'bg-gray-100 text-gray-700',
+  config_update: 'bg-gold/20 text-gold',
+  config_create: 'bg-parchment/20 text-parchment',
+  config_delete: 'bg-error/20 text-error',
+  data_create: 'bg-parchment/20 text-parchment',
+  data_update: 'bg-gold/20 text-gold',
+  data_delete: 'bg-error/20 text-error',
+  admin_grant: 'bg-ember/20 text-ember',
+  admin_revoke: 'bg-gold-light/20 text-gold-light',
+  cache_clear: 'bg-surface-container text-on-surface-variant',
 }
 
 export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
@@ -102,23 +102,23 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-on-surface">
+            <Filter className="h-5 w-5 text-gold" />
             Filters
           </CardTitle>
-          <CardDescription>Search and filter audit log entries</CardDescription>
+          <CardDescription className="text-on-surface-variant">Search and filter audit log entries</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-on-surface-variant" />
               <Input
                 placeholder="Search actions, entities..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-surface-container border-outline"
               />
             </div>
 
@@ -148,7 +148,7 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
             </Select>
           </div>
 
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="mt-4 text-sm text-on-surface-variant">
             Showing {filteredLogs.length} of {initialLogs.length} entries
           </div>
         </CardContent>
@@ -156,15 +156,15 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
 
       <div className="space-y-3">
         {filteredLogs.length === 0 ? (
-          <Card className="bg-white border-slate-200 shadow-sm">
-            <CardContent className="py-12 text-center text-gray-500">
+          <Card>
+            <CardContent className="py-12 text-center text-on-surface-variant">
               No audit log entries found matching your filters
             </CardContent>
           </Card>
         ) : (
           filteredLogs.map((log) => {
             const Icon = actionIcons[log.action] || Shield
-            const colorClass = actionColors[log.action] || 'bg-gray-100 text-gray-700'
+            const colorClass = actionColors[log.action] || 'bg-surface-container text-on-surface-variant'
             const isExpanded = expandedId === log.id
 
             return (
@@ -182,24 +182,24 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
                             {log.action.replace(/_/g, ' ')}
                           </Badge>
                           {log.success ? (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <CheckCircle className="h-4 w-4 text-gold" />
                           ) : (
-                            <XCircle className="h-4 w-4 text-red-600" />
+                            <XCircle className="h-4 w-4 text-error" />
                           )}
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-on-surface-variant">
                             {new Date(log.createdAt).toLocaleString()}
                           </span>
                         </div>
 
-                        <div className="text-sm text-gray-900">
+                        <div className="text-sm text-on-surface">
                           <span className="font-medium">{log.entityType}</span>
                           {log.entityId && (
-                            <span className="text-gray-600"> · {log.entityId}</span>
+                            <span className="text-on-surface-variant"> · {log.entityId}</span>
                           )}
                         </div>
 
                         {!log.success && log.errorMessage && (
-                          <div className="mt-2 text-sm text-red-600 bg-red-50 p-2 rounded">
+                          <div className="mt-2 text-sm text-error bg-error/10 p-2 rounded">
                             {log.errorMessage}
                           </div>
                         )}
@@ -209,10 +209,10 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {log.oldValue && (
                                 <div>
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">
+                                  <div className="text-xs font-semibold text-on-surface-variant mb-1">
                                     Old Value
                                   </div>
-                                  <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                                  <pre className="text-xs bg-surface-container p-2 rounded overflow-x-auto text-on-surface">
                                     {JSON.stringify(log.oldValue, null, 2)}
                                   </pre>
                                 </div>
@@ -220,30 +220,30 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
 
                               {log.newValue && (
                                 <div>
-                                  <div className="text-xs font-semibold text-gray-600 mb-1">
+                                  <div className="text-xs font-semibold text-on-surface-variant mb-1">
                                     New Value
                                   </div>
-                                  <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                                  <pre className="text-xs bg-surface-container p-2 rounded overflow-x-auto text-on-surface">
                                     {JSON.stringify(log.newValue, null, 2)}
                                   </pre>
                                 </div>
                               )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-xs text-gray-600">
+                            <div className="grid grid-cols-2 gap-4 text-xs text-on-surface-variant">
                               <div>
-                                <span className="font-semibold">Admin User:</span>{' '}
+                                <span className="font-semibold text-on-surface">Admin User:</span>{' '}
                                 {log.adminUserId}
                               </div>
                               {log.ipAddress && (
                                 <div>
-                                  <span className="font-semibold">IP Address:</span>{' '}
+                                  <span className="font-semibold text-on-surface">IP Address:</span>{' '}
                                   {log.ipAddress}
                                 </div>
                               )}
                               {log.userAgent && (
                                 <div className="col-span-2">
-                                  <span className="font-semibold">User Agent:</span>{' '}
+                                  <span className="font-semibold text-on-surface">User Agent:</span>{' '}
                                   {log.userAgent}
                                 </div>
                               )}
@@ -255,12 +255,12 @@ export function AuditLogViewer({ initialLogs }: AuditLogViewerProps) {
 
                     <button
                       onClick={() => toggleExpand(log.id)}
-                      className="ml-4 p-1 hover:bg-gray-100 rounded transition-colors"
+                      className="ml-4 p-1 hover:bg-surface-container rounded transition-colors"
                     >
                       {isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-gray-600" />
+                        <ChevronUp className="h-4 w-4 text-on-surface-variant" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-600" />
+                        <ChevronDown className="h-4 w-4 text-on-surface-variant" />
                       )}
                     </button>
                   </div>

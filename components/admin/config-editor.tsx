@@ -41,11 +41,11 @@ const categoryIcons: Record<string, any> = {
 }
 
 const categoryColors: Record<string, string> = {
-  rate_limits: 'text-yellow-600 bg-yellow-100',
-  features: 'text-blue-600 bg-blue-100',
-  ai: 'text-purple-600 bg-purple-100',
-  system: 'text-gray-600 bg-gray-100',
-  field_limits: 'text-green-600 bg-green-100',
+  rate_limits: 'text-gold bg-gold/20',
+  features: 'text-parchment bg-parchment/20',
+  ai: 'text-ember bg-ember/20',
+  system: 'text-on-surface-variant bg-surface-container',
+  field_limits: 'text-gold-light bg-gold-light/20',
 }
 
 export function ConfigEditor({ configs }: ConfigEditorProps) {
@@ -97,7 +97,7 @@ export function ConfigEditor({ configs }: ConfigEditorProps) {
         const colorClass = categoryColors[category] || 'text-gray-600 bg-gray-100'
 
         return (
-          <Card key={category} className="bg-white border-slate-200 shadow-sm">
+          <Card key={category}>
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${colorClass}`}>
@@ -118,22 +118,22 @@ export function ConfigEditor({ configs }: ConfigEditorProps) {
               <div className="space-y-4">
                 {categoryConfigs.map((config) => {
                   const isEditing = editingKey === config.key
-                  const displayValue = typeof config.value === 'object' 
+                  const displayValue = typeof config.value === 'object'
                     ? JSON.stringify(config.value, null, 2)
                     : String(config.value)
 
                   return (
-                    <div key={config.key} className="border border-gray-200 rounded-lg p-4">
+                    <div key={config.key} className="border border-outline rounded-lg p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <code className="text-sm font-mono text-gray-900">{config.key}</code>
+                            <code className="text-sm font-mono text-on-surface">{config.key}</code>
                             <Badge variant="outline" className="text-xs">
                               v{config.version}
                             </Badge>
                           </div>
                           {config.description && (
-                            <p className="text-sm text-gray-600">{config.description}</p>
+                            <p className="text-sm text-on-surface-variant">{config.description}</p>
                           )}
                         </div>
                         
@@ -153,7 +153,7 @@ export function ConfigEditor({ configs }: ConfigEditorProps) {
                           <Textarea
                             value={editValue}
                             onChange={(e) => setEditValue(e.target.value)}
-                            className="font-mono text-sm"
+                            className="font-mono text-sm bg-surface-container border-outline"
                             rows={6}
                           />
                           <div className="flex gap-2">
@@ -177,12 +177,12 @@ export function ConfigEditor({ configs }: ConfigEditorProps) {
                           </div>
                         </div>
                       ) : (
-                        <pre className="bg-gray-50 p-3 rounded text-sm font-mono overflow-x-auto">
+                        <pre className="bg-surface-container p-3 rounded text-sm font-mono overflow-x-auto text-on-surface">
                           {displayValue}
                         </pre>
                       )}
 
-                      <div className="mt-2 text-xs text-gray-500">
+                      <div className="mt-2 text-xs text-on-surface-variant">
                         Last updated: {new Date(config.updated_at).toLocaleString()}
                       </div>
                     </div>

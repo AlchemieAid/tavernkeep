@@ -367,13 +367,13 @@ export default async function TownPage({
               <Card key={shop.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle>{shop.name}</CardTitle>
-                      <CardDescription>
-                        {shop.shop_type} · {shop.economic_tier}
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="truncate">{shop.name}</CardTitle>
+                      <CardDescription className="capitalize">
+                        {shop.shop_type?.replace('_', ' ')} · {shop.economic_tier}
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                       <VisibilityToggle
                         entityType="shop"
                         entityId={shop.id}
@@ -393,6 +393,16 @@ export default async function TownPage({
                       />
                     </div>
                   </div>
+                  {shop.location_descriptor && (
+                    <p className="text-sm text-on-surface-variant mt-2 line-clamp-2">
+                      {shop.location_descriptor}
+                    </p>
+                  )}
+                  {shop.keeper_name && (
+                    <p className="text-sm text-on-surface mt-1">
+                      <span className="text-on-surface-variant">Keeper:</span> {shop.keeper_name}
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <Button asChild variant="outline" className="w-full">

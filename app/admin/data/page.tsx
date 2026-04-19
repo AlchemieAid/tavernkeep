@@ -44,8 +44,8 @@ export default async function DataBrowserPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Data Browser</h1>
-        <p className="text-slate-600 mt-2">
+        <h1 className="headline-lg text-gold">Data Browser</h1>
+        <p className="body-md text-on-surface-variant mt-2">
           View and explore database records
         </p>
       </div>
