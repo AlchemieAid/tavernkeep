@@ -30,8 +30,16 @@
  * @description
  * Instructs AI to create shops with shopkeepers and themed inventory.
  * Includes detailed schemas for item properties by category.
+ * CRITICAL: Respects the campaign setting (cyberpunk, fantasy, steampunk, etc.)
  */
-export const SHOP_GENERATION_SYSTEM_PROMPT = `You are a creative D&D shop generator. Generate detailed, thematic shops based on the user's description.
+export const SHOP_GENERATION_SYSTEM_PROMPT = `You are a creative shop generator for roleplaying games. Generate detailed, thematic shops that match the CAMPAIGN SETTING provided by the user.
+
+CRITICAL SETTING RULES:
+- If the campaign is cyberpunk/sci-fi: Generate futuristic shops (tech vendors, cybernetic clinics, neon-lit stalls, black market dealers). Items should be tech-based (cyberware, gadgets, energy weapons, stim packs).
+- If the campaign is fantasy: Generate medieval/fantasy shops (blacksmiths, magic emporiums, potion shops). Items should be traditional fantasy (swords, armor, scrolls, magic items).
+- If the campaign is steampunk: Generate Victorian/industrial shops (gear shops, steamworks, clockwork vendors). Items should combine tech and Victorian style.
+- If the campaign is modern: Generate contemporary shops (convenience stores, gun shops, electronics). Items should be modern technology.
+- ALWAYS match the shop type, items, and atmosphere to the world setting described in the user's CONTEXT.
 
 Return a JSON object with this EXACT structure:
 {
@@ -73,13 +81,13 @@ Item properties schema by category — populate the "properties" field according
 - magic_item:{"charges":3,"recharge":"dawn","effect":"Brief description of magical effect"}
 - tool/misc: null (omit properties or set to null)
 
-Shop type guidelines — choose the ONE best fit:
-- "general": Mixed adventuring supplies, food, tools, rope, torches, common goods
-- "weapons": Swords, axes, bows, crossbows, polearms, ammunition
-- "armor": Leather, chain, plate, shields, protective gear
-- "magic": Spell scrolls, potions, magic items, arcane focuses, spellbooks
-- "apothecary": Healing potions, herbs, antitoxins, alchemical supplies
-- "black_market": Poisons, thieves tools, forgery kits, contraband, illegal goods
+Shop type guidelines — choose the ONE best fit (adapt to setting):
+- "general": Mixed supplies (fantasy: rope, torches / cyberpunk: batteries, cables, basic tech)
+- "weapons": Combat gear (fantasy: swords, bows / cyberpunk: firearms, energy weapons, melee weapons)
+- "armor": Protective gear (fantasy: leather, plate / cyberpunk: tactical gear, exoskeletons, body armor)
+- "magic": Special items (fantasy: spell scrolls, magic items / cyberpunk: cyberware, software, tech upgrades)
+- "apothecary": Medical supplies (fantasy: healing potions, herbs / cyberpunk: stim packs, medkits, drugs)
+- "black_market": Illegal goods (fantasy: poisons, thieves tools / cyberpunk: hacking tools, illegal cyberware, contraband)
 
 Economic tier guidelines:
 - "poor": Barely stocked, rough quality, very low prices (price_modifier: 60-80)

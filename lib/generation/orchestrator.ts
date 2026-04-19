@@ -842,7 +842,15 @@ export class GenerationOrchestrator {
       // Update progress incrementally for each shop
       this.progress.completedSteps = Math.min(startProgress + (i * progressPerShop), 98)
       
-      const shopPrompt = `Generate a shop that fits in this town. CRITICAL: Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}`
+      const shopPrompt = `Generate a shop that fits in this town.
+
+CONTEXT:
+${context}
+
+CRITICAL:
+- The shop MUST fit the world setting described above (e.g., cyberpunk shops for cyberpunk campaigns, fantasy shops for fantasy campaigns)
+- Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}
+- Shop type, items, and atmosphere should match the campaign theme`
 
       // AI call with timeout
       const aiPromise = aiClient.generate({
