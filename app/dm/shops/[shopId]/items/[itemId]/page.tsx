@@ -54,6 +54,10 @@ export default async function EditItemPage({
     notFound()
   }
 
+  // Capture resolved params for server action closure
+  const currentShopId = shopId
+  const currentItemId = itemId
+
   async function updateItem(formData: FormData) {
     'use server'
     
@@ -86,15 +90,15 @@ export default async function EditItemPage({
         reveal_state: is_hidden ? false : true, // When marking as hidden, default to not revealed
         hidden_condition,
       } as any)
-      .eq('id', itemId)
+      .eq('id', currentItemId)
 
     if (error) {
       console.error('Error updating item:', error)
-      redirect(`/dm/shops/${shopId}?error=item_update_failed`)
+      redirect(`/dm/shops/${currentShopId}?error=item_update_failed`)
     }
 
-    revalidatePath(`/dm/shops/${shopId}`)
-    redirect(`/dm/shops/${shopId}`)
+    revalidatePath(`/dm/shops/${currentShopId}`)
+    redirect(`/dm/shops/${currentShopId}`)
   }
 
   return (

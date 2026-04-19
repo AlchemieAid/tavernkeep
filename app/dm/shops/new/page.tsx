@@ -37,6 +37,9 @@ export default async function NewShopPage({
     redirect('/dm/dashboard')
   }
 
+  // Capture resolved campaignId for server action closure
+  const currentCampaignId = campaignId
+
   async function createShop(formData: FormData) {
     'use server'
     
@@ -47,7 +50,6 @@ export default async function NewShopPage({
       redirect('/login')
     }
 
-    const campaignId = formData.get('campaign_id') as string
     const name = formData.get('name') as string
     const shop_type = formData.get('shop_type') as string
     const location_descriptor = formData.get('location_descriptor') as string
@@ -62,7 +64,7 @@ export default async function NewShopPage({
     const { data: shop, error } = await supabase
       .from('shops')
       .insert({
-        campaign_id: campaignId,
+        campaign_id: currentCampaignId,
         dm_id: user.id,
         name,
         slug,
@@ -80,7 +82,7 @@ export default async function NewShopPage({
 
     if (error) {
       console.error('Error creating shop:', error)
-      redirect(`/dm/campaigns/${campaignId}?error=shop_create_failed`)
+      redirect(`/dm/campaigns/${currentCampaignId}?error=shop_create_failed`)
     }
 
     redirect(`/dm/shops/${shop.id}`)

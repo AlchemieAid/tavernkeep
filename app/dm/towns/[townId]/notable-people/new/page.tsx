@@ -40,6 +40,9 @@ export default async function NewNotablePersonPage({
     redirect('/dm/dashboard')
   }
 
+  // Capture resolved townId for server action closure
+  const currentTownId = townId
+
   async function createNotablePerson(formData: FormData) {
     'use server'
     
@@ -67,7 +70,7 @@ export default async function NewNotablePersonPage({
     }
 
     const notablePersonData = {
-      town_id: townId,
+      town_id: currentTownId,
       dm_id: user.id,
       name,
       race: race || null,
@@ -84,11 +87,11 @@ export default async function NewNotablePersonPage({
 
     if (error) {
       console.error('Error creating notable person:', error)
-      redirect(`/dm/towns/${townId}?error=notable_person_creation_failed`)
+      redirect(`/dm/towns/${currentTownId}?error=notable_person_creation_failed`)
     }
 
-    revalidatePath(`/dm/towns/${townId}`)
-    redirect(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
+    redirect(`/dm/towns/${currentTownId}`)
   }
 
   return (

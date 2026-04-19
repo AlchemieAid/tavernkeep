@@ -48,6 +48,9 @@ export default async function CampaignPage({
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: false })
 
+  // Capture resolved campaignId for server action closures
+  const currentCampaignId = campaignId
+
   async function deleteTown(townId: string) {
     'use server'
     
@@ -64,7 +67,7 @@ export default async function CampaignPage({
       .eq('id', townId)
       .eq('dm_id', user.id)
 
-    revalidatePath(`/dm/campaigns/${campaignId}`)
+    revalidatePath(`/dm/campaigns/${currentCampaignId}`)
   }
 
   async function toggleTownVisibility(townId: string, isRevealed: boolean) {
@@ -74,12 +77,12 @@ export default async function CampaignPage({
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
-      redirect('/login')
+      throw new Error('Unauthorized')
     }
 
     const { error } = await supabase
       .from('towns')
-      .update({ is_revealed: isRevealed } as any)
+      .update({ is_revealed: isRevealed })
       .eq('id', townId)
       .eq('dm_id', user.id)
 
@@ -88,7 +91,7 @@ export default async function CampaignPage({
       throw error
     }
 
-    revalidatePath(`/dm/campaigns/${campaignId}`)
+    revalidatePath(`/dm/campaigns/${currentCampaignId}`)
   }
 
   return (

@@ -33,6 +33,9 @@ export default async function NewTownPage({
     redirect('/dm/dashboard')
   }
 
+  // Capture resolved campaignId for server action closure
+  const currentCampaignId = campaignId
+
   async function createTown(formData: FormData) {
     'use server'
     
@@ -49,7 +52,7 @@ export default async function NewTownPage({
     const { error } = await supabase
       .from('towns')
       .insert({
-        campaign_id: campaignId,
+        campaign_id: currentCampaignId,
         dm_id: user.id,
         name,
         description: description || null,
@@ -57,11 +60,11 @@ export default async function NewTownPage({
 
     if (error) {
       console.error('Error creating town:', error)
-      redirect(`/dm/campaigns/${campaignId}?error=town_creation_failed`)
+      redirect(`/dm/campaigns/${currentCampaignId}?error=town_creation_failed`)
     }
 
-    revalidatePath(`/dm/campaigns/${campaignId}`)
-    redirect(`/dm/campaigns/${campaignId}`)
+    revalidatePath(`/dm/campaigns/${currentCampaignId}`)
+    redirect(`/dm/campaigns/${currentCampaignId}`)
   }
 
   return (

@@ -66,6 +66,9 @@ export default async function ShopEditorPage({
     return Math.round(basePrice * (modifier / 100))
   }
 
+  // Capture resolved shopId for server action closures
+  const currentShopId = shopId
+
   async function deleteItem(itemId: string) {
     'use server'
     
@@ -81,7 +84,7 @@ export default async function ShopEditorPage({
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', itemId)
 
-    revalidatePath(`/dm/shops/${shopId}`)
+    revalidatePath(`/dm/shops/${currentShopId}`)
   }
 
   async function toggleItemVisibility(itemId: string, isRevealed: boolean) {
@@ -104,7 +107,7 @@ export default async function ShopEditorPage({
       throw error
     }
 
-    revalidatePath(`/dm/shops/${shopId}`)
+    revalidatePath(`/dm/shops/${currentShopId}`)
   }
 
   async function toggleShopVisibility(shopId: string, isRevealed: boolean) {
@@ -128,7 +131,7 @@ export default async function ShopEditorPage({
       throw error
     }
 
-    revalidatePath(`/dm/shops/${shopId}`)
+    revalidatePath(`/dm/shops/${currentShopId}`)
   }
 
   return (

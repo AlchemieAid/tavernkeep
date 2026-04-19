@@ -55,6 +55,9 @@ export default async function TownPage({
     .eq('town_id', townId)
     .order('created_at', { ascending: false })
 
+  // Capture resolved townId for server action closures
+  const currentTownId = townId
+
   async function deleteShop(shopId: string) {
     'use server'
     
@@ -71,7 +74,7 @@ export default async function TownPage({
       .eq('id', shopId)
       .eq('dm_id', user.id)
 
-    revalidatePath(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
   }
 
   async function deleteNotablePerson(personId: string) {
@@ -90,7 +93,7 @@ export default async function TownPage({
       .eq('id', personId)
       .eq('dm_id', user.id)
 
-    revalidatePath(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
   }
 
   async function toggleTownVisibility(townId: string, isRevealed: boolean) {
@@ -114,7 +117,7 @@ export default async function TownPage({
       throw townError
     }
 
-    revalidatePath(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
   }
 
   async function toggleShopVisibility(shopId: string, isRevealed: boolean) {
@@ -138,7 +141,7 @@ export default async function TownPage({
       throw shopError
     }
 
-    revalidatePath(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
   }
 
   async function togglePersonVisibility(personId: string, isRevealed: boolean) {
@@ -162,7 +165,7 @@ export default async function TownPage({
       throw personError
     }
 
-    revalidatePath(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
   }
 
   return (

@@ -43,6 +43,9 @@ export default async function NewShopPage({
     redirect('/dm/dashboard')
   }
 
+  // Capture resolved townId for server action closure
+  const currentTownId = townId
+
   async function createShop(formData: FormData) {
     'use server'
     
@@ -57,7 +60,7 @@ export default async function NewShopPage({
     const { data: townData } = await supabase
       .from('towns')
       .select('campaign_id')
-      .eq('id', townId)
+      .eq('id', currentTownId)
       .eq('dm_id', user.id)
       .single()
 
@@ -77,7 +80,7 @@ export default async function NewShopPage({
 
     const shopData = {
       campaign_id: townData.campaign_id,
-      town_id: townId,
+      town_id: currentTownId,
       dm_id: user.id,
       name,
       slug,
@@ -105,11 +108,11 @@ export default async function NewShopPage({
     if (error) {
       console.error('Error creating shop:', JSON.stringify(error, null, 2))
       console.error('Error details - code:', error.code, 'message:', error.message, 'details:', error.details)
-      redirect(`/dm/towns/${townId}?error=shop_creation_failed&details=${encodeURIComponent(error.message)}`)
+      redirect(`/dm/towns/${currentTownId}?error=shop_creation_failed&details=${encodeURIComponent(error.message)}`)
     }
 
-    revalidatePath(`/dm/towns/${townId}`)
-    redirect(`/dm/towns/${townId}`)
+    revalidatePath(`/dm/towns/${currentTownId}`)
+    redirect(`/dm/towns/${currentTownId}`)
   }
 
   return (
