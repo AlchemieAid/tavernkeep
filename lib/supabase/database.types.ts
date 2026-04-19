@@ -678,7 +678,7 @@ export type Database = {
           name: string
           personality_traits: string[] | null
           race: string | null
-          role: Database["public"]["Enums"]["notable_person_role"]
+          role: string
           town_id: string
           updated_at: string | null
         }
@@ -693,7 +693,7 @@ export type Database = {
           name: string
           personality_traits?: string[] | null
           race?: string | null
-          role: Database["public"]["Enums"]["notable_person_role"]
+          role: string
           town_id: string
           updated_at?: string | null
         }
@@ -708,7 +708,7 @@ export type Database = {
           name?: string
           personality_traits?: string[] | null
           race?: string | null
-          role?: Database["public"]["Enums"]["notable_person_role"]
+          role?: string
           town_id?: string
           updated_at?: string | null
         }
@@ -1124,22 +1124,6 @@ export type Database = {
         | "generated"
         | "quest_reward"
         | "gift"
-      notable_person_role:
-        | "shopkeeper"
-        | "quest_giver"
-        | "ruler"
-        | "priest"
-        | "magician"
-        | "merchant"
-        | "guard"
-        | "noble"
-        | "commoner"
-        | "blacksmith"
-        | "innkeeper"
-        | "healer"
-        | "scholar"
-        | "criminal"
-        | "artisan"
       political_system:
         | "monarchy"
         | "democracy"
@@ -1322,23 +1306,6 @@ export const Constants = {
         "generated",
         "quest_reward",
         "gift",
-      ],
-      notable_person_role: [
-        "shopkeeper",
-        "quest_giver",
-        "ruler",
-        "priest",
-        "magician",
-        "merchant",
-        "guard",
-        "noble",
-        "commoner",
-        "blacksmith",
-        "innkeeper",
-        "healer",
-        "scholar",
-        "criminal",
-        "artisan",
       ],
       political_system: [
         "monarchy",

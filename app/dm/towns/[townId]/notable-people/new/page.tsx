@@ -6,13 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 export default async function NewNotablePersonPage({
   params,
@@ -130,28 +123,12 @@ export default async function NewNotablePersonPage({
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
-              <Select name="role" required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="shopkeeper">Shopkeeper</SelectItem>
-                  <SelectItem value="quest_giver">Quest Giver</SelectItem>
-                  <SelectItem value="ruler">Ruler</SelectItem>
-                  <SelectItem value="priest">Priest</SelectItem>
-                  <SelectItem value="magician">Magician</SelectItem>
-                  <SelectItem value="merchant">Merchant</SelectItem>
-                  <SelectItem value="guard">Guard</SelectItem>
-                  <SelectItem value="noble">Noble</SelectItem>
-                  <SelectItem value="commoner">Commoner</SelectItem>
-                  <SelectItem value="blacksmith">Blacksmith</SelectItem>
-                  <SelectItem value="innkeeper">Innkeeper</SelectItem>
-                  <SelectItem value="healer">Healer</SelectItem>
-                  <SelectItem value="scholar">Scholar</SelectItem>
-                  <SelectItem value="criminal">Criminal</SelectItem>
-                  <SelectItem value="artisan">Artisan</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="role"
+                name="role"
+                placeholder="e.g., Fortune Teller, Blacksmith, Town Elder"
+                required
+              />
             </div>
           </CardContent>
         </Card>

@@ -21,7 +21,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Loader2, Save, X } from 'lucide-react'
 import Link from 'next/link'
 import { FIELD_LIMITS } from '@/lib/constants/field-limits'
@@ -145,33 +144,14 @@ export function NotablePersonEditForm({ person, townId }: NotablePersonEditFormP
 
               <div className="space-y-2">
                 <Label htmlFor="role">Role *</Label>
-                <Select
+                <Input
+                  id="role"
                   value={formData.role}
-                  onValueChange={(value) => setFormData({ ...formData, role: value })}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  placeholder="e.g., Fortune Teller, Blacksmith, Town Elder"
                   disabled={isSaving}
                   required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ruler">Ruler</SelectItem>
-                    <SelectItem value="priest">Priest</SelectItem>
-                    <SelectItem value="magician">Magician</SelectItem>
-                    <SelectItem value="merchant">Merchant</SelectItem>
-                    <SelectItem value="guard">Guard</SelectItem>
-                    <SelectItem value="noble">Noble</SelectItem>
-                    <SelectItem value="commoner">Commoner</SelectItem>
-                    <SelectItem value="blacksmith">Blacksmith</SelectItem>
-                    <SelectItem value="innkeeper">Innkeeper</SelectItem>
-                    <SelectItem value="healer">Healer</SelectItem>
-                    <SelectItem value="scholar">Scholar</SelectItem>
-                    <SelectItem value="criminal">Criminal</SelectItem>
-                    <SelectItem value="artisan">Artisan</SelectItem>
-                    <SelectItem value="shopkeeper">Shopkeeper</SelectItem>
-                    <SelectItem value="quest_giver">Quest Giver</SelectItem>
-                  </SelectContent>
-                </Select>
+                />
               </div>
             </div>
           </CardContent>

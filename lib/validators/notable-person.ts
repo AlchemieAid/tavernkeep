@@ -6,17 +6,11 @@
 import { z } from 'zod'
 import { FIELD_LIMITS } from '@/lib/constants/field-limits'
 
-const notablePersonRoleEnum = z.enum([
-  'shopkeeper', 'quest_giver', 'ruler', 'priest', 'magician',
-  'merchant', 'guard', 'noble', 'commoner', 'blacksmith',
-  'innkeeper', 'healer', 'scholar', 'criminal', 'artisan'
-])
-
 export const CreateNotablePersonSchema = z.object({
   town_id: z.string().uuid('Invalid town ID'),
   name: z.string().min(1, 'Name is required').max(FIELD_LIMITS.NOTABLE_PERSON_NAME, 'Name too long'),
   race: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_RACE).optional().nullable(),
-  role: notablePersonRoleEnum,
+  role: z.string().min(1, 'Role is required').max(100, 'Role too long'),
   backstory: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY).optional().nullable(),
   motivation: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION).optional().nullable(),
   personality_traits: z.array(z.string().max(100)).max(10).optional().nullable(),
@@ -26,7 +20,7 @@ export const CreateNotablePersonSchema = z.object({
 export const UpdateNotablePersonSchema = z.object({
   name: z.string().min(1, 'Name is required').max(FIELD_LIMITS.NOTABLE_PERSON_NAME, 'Name too long').optional(),
   race: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_RACE).optional().nullable(),
-  role: notablePersonRoleEnum.optional(),
+  role: z.string().min(1, 'Role is required').max(100, 'Role too long').optional(),
   backstory: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_BACKSTORY).optional().nullable(),
   motivation: z.string().max(FIELD_LIMITS.NOTABLE_PERSON_MOTIVATION).optional().nullable(),
   personality_traits: z.array(z.string().max(100)).max(10).optional().nullable(),
@@ -36,7 +30,7 @@ export const UpdateNotablePersonSchema = z.object({
 export const GenerateNotablePersonSchema = z.object({
   townId: z.string().uuid('Invalid town ID'),
   prompt: z.string().min(10, 'Prompt must be at least 10 characters').max(500, 'Prompt too long'),
-  role: notablePersonRoleEnum.optional(),
+  role: z.string().max(100).optional(),
   count: z.number().int().min(1).max(20).default(1),
 })
 
