@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import Link from 'next/link'
 import { DeleteMenu } from '@/components/shared/delete-menu'
 import { AICampaignGenerator } from '@/components/dm/ai-campaign-generator'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -127,14 +127,23 @@ export default async function DashboardPage() {
             </p>
           </div>
           
-          {/* Manual Creation Button */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Manually
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-3">
+            {/* New Unified Workflow */}
+            <Button asChild size="sm" className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
+              <Link href="/dm/newcampaign">
+                <Sparkles className="w-4 h-4 mr-2" />
+                New Campaign (Wizard)
+              </Link>
+            </Button>
+
+            {/* Manual Creation Button */}
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Manually
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Create Campaign Manually</DialogTitle>
@@ -185,6 +194,7 @@ export default async function DashboardPage() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* AI Campaign Generator - Full Width */}
