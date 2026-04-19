@@ -15,7 +15,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
@@ -24,6 +24,7 @@ import type { Campaign, Town, Shop, NotablePerson } from '@/types/database'
 export function NavigationDropdowns() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [towns, setTowns] = useState<Town[]>([])
   const [shops, setShops] = useState<Shop[]>([])
@@ -172,6 +173,30 @@ export function NavigationDropdowns() {
       supabase.removeChannel(channel)
     }
   }, [userId])
+
+  // Reload data when page becomes visible (handles deletion from other tabs/pages)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Navigation] Page became visible, reloading data')
+        loadDataRef.current?.()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
+  // Reload data when t query param changes (from deleteCampaign redirect)
+  useEffect(() => {
+    const timestamp = searchParams.get('t')
+    if (timestamp) {
+      console.log('[Navigation] Timestamp param detected, reloading data')
+      loadDataRef.current?.()
+    }
+  }, [searchParams])
 
   async function loadCampaignData(campaignId: string, townId: string | null = null) {
     const supabase = createClient()

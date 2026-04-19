@@ -113,7 +113,8 @@ export default async function DashboardPage() {
       .eq('id', campaignId)
       .eq('dm_id', user.id)
 
-    revalidatePath('/dm/dashboard')
+    // Hard redirect to force full page reload - layout needs fresh data
+    redirect('/dm/dashboard?t=' + Date.now())
   }
 
   return (
