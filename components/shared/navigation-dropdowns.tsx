@@ -15,7 +15,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
@@ -24,6 +24,7 @@ import type { Campaign, Town, Shop, NotablePerson } from '@/types/database'
 export function NavigationDropdowns() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [towns, setTowns] = useState<Town[]>([])
   const [shops, setShops] = useState<Shop[]>([])
@@ -31,6 +32,16 @@ export function NavigationDropdowns() {
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
   const [selectedTown, setSelectedTown] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+
+  // Force reset state on mount to prevent stale data after campaign deletion
+  useEffect(() => {
+    setCampaigns([])
+    setTowns([])
+    setShops([])
+    setNotablePeople([])
+    setSelectedCampaign(null)
+    setSelectedTown(null)
+  }, [searchParams.get('refresh')]) // Re-run when refresh param changes
 
   useEffect(() => {
     const supabase = createClient()
