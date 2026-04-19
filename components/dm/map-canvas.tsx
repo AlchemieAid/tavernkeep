@@ -778,6 +778,10 @@ export function MapCanvas({
             onUpdated={(poiId, patch) => {
               setPois(prev => prev.map(p => p.id === poiId ? { ...p, ...patch } : p))
             }}
+            onDeleted={(id) => {
+              setPois(prev => prev.filter(p => p.id !== id))
+              setSelectedPoi(null); setSelectedPoiPos(null)
+            }}
           />
         )}
 
@@ -794,6 +798,10 @@ export function MapCanvas({
             onUpdated={(eventId, patch) => {
               setHistoricalEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...patch } : e))
             }}
+            onDeleted={(id) => {
+              setHistoricalEvents(prev => prev.filter(e => e.id !== id))
+              setSelectedHistEvent(null); setSelectedHistEventPos(null)
+            }}
           />
         )}
 
@@ -801,11 +809,16 @@ export function MapCanvas({
         {selectedTerritory && selectedTerritoryPos && containerDims && (
           <MapTerritoryInfoCard
             territory={selectedTerritory}
+            mapId={map.id}
             x={selectedTerritoryPos.x}
             y={selectedTerritoryPos.y}
             containerWidth={containerDims.width}
             containerHeight={containerDims.height}
             onClose={() => { setSelectedTerritory(null); setSelectedTerritoryPos(null) }}
+            onDeleted={(id) => {
+              setTerritories(prev => prev.filter(t => t.id !== id))
+              setSelectedTerritory(null); setSelectedTerritoryPos(null)
+            }}
           />
         )}
 
@@ -814,11 +827,16 @@ export function MapCanvas({
           <MapTownCard
             town={selectedTown}
             campaignId={campaignId}
+            mapId={map.id}
             x={selectedTownPos.x}
             y={selectedTownPos.y}
             containerWidth={containerDims.width}
             containerHeight={containerDims.height}
             onClose={() => { setSelectedTown(null); setSelectedTownPos(null) }}
+            onDeleted={(id) => {
+              setWorldTowns(prev => prev.filter(t => t.id !== id))
+              setSelectedTown(null); setSelectedTownPos(null)
+            }}
           />
         )}
 

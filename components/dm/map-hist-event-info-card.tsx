@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, BookOpen, Users } from 'lucide-react'
+import { X, BookOpen, Users, Trash2, Loader2 } from 'lucide-react'
 
 const EVENT_TYPE_ICONS: Record<string, string> = {
   battle: '⚔️', founding: '🏛', disaster: '🌋', treaty: '📜',
@@ -24,13 +24,31 @@ interface MapHistEventInfoCardProps {
   containerHeight: number
   onClose: () => void
   onUpdated: (eventId: string, patch: { is_known_to_players: boolean }) => void
+  onDeleted?: (eventId: string) => void
 }
 
 export function MapHistEventInfoCard({
-  event, mapId, x, y, containerWidth, containerHeight, onClose, onUpdated,
+  event, mapId, x, y, containerWidth, containerHeight, onClose, onUpdated, onDeleted,
 }: MapHistEventInfoCardProps) {
   const [isKnown, setIsKnown] = useState(event.is_known_to_players ?? false)
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await fetch('/api/world/delete-element', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'historical_event', elementId: event.id, mapId }),
+      })
+      onDeleted?.(event.id)
+      onClose()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const CARD_W = 272
   const CARD_H = 200
@@ -78,9 +96,25 @@ export function MapHistEventInfoCard({
             </p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="text-on-surface-variant hover:text-on-surface shrink-0">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {!confirmDelete ? (
+            <button type="button" onClick={() => setConfirmDelete(true)} className="text-on-surface-variant hover:text-rose-400 p-0.5 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={handleDelete} disabled={deleting} className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30">
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Delete'}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} className="text-[10px] px-2 py-0.5 rounded bg-[#282a2d] text-on-surface-variant">
+                Cancel
+              </button>
+            </div>
+          )}
+          <button type="button" onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 pb-4 space-y-2 border-t border-[#282a2d] pt-3">

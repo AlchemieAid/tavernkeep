@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Eye, EyeOff, Compass } from 'lucide-react'
+import { X, Eye, EyeOff, Compass, Trash2, Loader2 } from 'lucide-react'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
 
 interface MapPoIInfoCardProps {
@@ -24,14 +24,32 @@ interface MapPoIInfoCardProps {
   containerHeight: number
   onClose: () => void
   onUpdated: (poiId: string, patch: { is_discovered?: boolean; is_visible_to_players?: boolean }) => void
+  onDeleted?: (poiId: string) => void
 }
 
 export function MapPoIInfoCard({
-  poi, mapId, x, y, containerWidth, containerHeight, onClose, onUpdated,
+  poi, mapId, x, y, containerWidth, containerHeight, onClose, onUpdated, onDeleted,
 }: MapPoIInfoCardProps) {
   const [isDiscovered, setIsDiscovered] = useState(poi.is_discovered)
   const [isVisibleToPlayers, setIsVisibleToPlayers] = useState(poi.is_visible_to_players ?? false)
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await fetch('/api/world/delete-element', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'poi', elementId: poi.id, mapId }),
+      })
+      onDeleted?.(poi.id)
+      onClose()
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const def = POI_DEFINITIONS.find(d => d.type === poi.poi_type)
 
@@ -82,9 +100,25 @@ export function MapPoIInfoCard({
             </p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="text-on-surface-variant hover:text-on-surface shrink-0">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {!confirmDelete ? (
+            <button type="button" onClick={() => setConfirmDelete(true)} className="text-on-surface-variant hover:text-rose-400 p-0.5 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={handleDelete} disabled={deleting} className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30">
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Delete'}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} className="text-[10px] px-2 py-0.5 rounded bg-[#282a2d] text-on-surface-variant">
+                Cancel
+              </button>
+            </div>
+          )}
+          <button type="button" onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Description */}

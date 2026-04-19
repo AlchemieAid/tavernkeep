@@ -1,6 +1,7 @@
 'use client'
 
-import { X, Shield } from 'lucide-react'
+import { useState } from 'react'
+import { X, Shield, Trash2, Loader2 } from 'lucide-react'
 
 const LAW_LABELS: Record<string, string> = {
   lawless: 'Lawless', low: 'Low', moderate: 'Moderate', strict: 'Strict', absolute: 'Absolute',
@@ -23,12 +24,31 @@ interface MapTerritoryInfoCardProps {
   y: number
   containerWidth: number
   containerHeight: number
+  mapId: string
   onClose: () => void
+  onDeleted?: (territoryId: string) => void
 }
 
 export function MapTerritoryInfoCard({
-  territory, x, y, containerWidth, containerHeight, onClose,
+  territory, mapId, x, y, containerWidth, containerHeight, onClose, onDeleted,
 }: MapTerritoryInfoCardProps) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleDelete() {
+    setDeleting(true)
+    try {
+      await fetch('/api/world/delete-element', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'territory', elementId: territory.id, mapId }),
+      })
+      onDeleted?.(territory.id)
+      onClose()
+    } finally {
+      setDeleting(false)
+    }
+  }
   const CARD_W = 256
   const CARD_H = 220
   const left = x + CARD_W > containerWidth - 16 ? x - CARD_W - 12 : x + 12
@@ -60,9 +80,25 @@ export function MapTerritoryInfoCard({
             )}
           </div>
         </div>
-        <button type="button" onClick={onClose} className="text-on-surface-variant hover:text-on-surface shrink-0">
-          <X className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {!confirmDelete ? (
+            <button type="button" onClick={() => setConfirmDelete(true)} className="text-on-surface-variant hover:text-rose-400 p-0.5 transition-colors">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={handleDelete} disabled={deleting} className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30">
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Delete'}
+              </button>
+              <button type="button" onClick={() => setConfirmDelete(false)} className="text-[10px] px-2 py-0.5 rounded bg-[#282a2d] text-on-surface-variant">
+                Cancel
+              </button>
+            </div>
+          )}
+          <button type="button" onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="px-4 py-3 space-y-2">
