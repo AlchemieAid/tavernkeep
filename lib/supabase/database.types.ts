@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -237,6 +237,75 @@ export type Database = {
             columns: ["config_id"]
             isOneToOne: false
             referencedRelation: "app_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_maps: {
+        Row: {
+          biome_profile: string | null
+          campaign_id: string
+          created_at: string | null
+          creation_method: string
+          dm_id: string
+          generation_count: number | null
+          height_px: number | null
+          id: string
+          image_url: string
+          is_selected: boolean | null
+          map_size: string
+          map_style: string | null
+          original_filename: string | null
+          setup_stage: string
+          width_px: number | null
+        }
+        Insert: {
+          biome_profile?: string | null
+          campaign_id: string
+          created_at?: string | null
+          creation_method?: string
+          dm_id: string
+          generation_count?: number | null
+          height_px?: number | null
+          id?: string
+          image_url: string
+          is_selected?: boolean | null
+          map_size: string
+          map_style?: string | null
+          original_filename?: string | null
+          setup_stage?: string
+          width_px?: number | null
+        }
+        Update: {
+          biome_profile?: string | null
+          campaign_id?: string
+          created_at?: string | null
+          creation_method?: string
+          dm_id?: string
+          generation_count?: number | null
+          height_px?: number | null
+          id?: string
+          image_url?: string
+          is_selected?: boolean | null
+          map_size?: string
+          map_style?: string | null
+          original_filename?: string | null
+          setup_stage?: string
+          width_px?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_maps_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_maps_dm_id_fkey"
+            columns: ["dm_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -505,6 +574,76 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      historical_events: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          description: string | null
+          dm_id: string
+          event_name: string
+          event_type: string | null
+          id: string
+          is_known_to_players: boolean | null
+          lingering_effect: string | null
+          map_id: string
+          x_pct: number
+          y_pct: number
+          years_ago: number | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          description?: string | null
+          dm_id: string
+          event_name: string
+          event_type?: string | null
+          id?: string
+          is_known_to_players?: boolean | null
+          lingering_effect?: string | null
+          map_id: string
+          x_pct: number
+          y_pct: number
+          years_ago?: number | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          description?: string | null
+          dm_id?: string
+          event_name?: string
+          event_type?: string | null
+          id?: string
+          is_known_to_players?: boolean | null
+          lingering_effect?: string | null
+          map_id?: string
+          x_pct?: number
+          y_pct?: number
+          years_ago?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historical_events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_events_dm_id_fkey"
+            columns: ["dm_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "historical_events_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
             referencedColumns: ["id"]
           },
         ]
@@ -781,6 +920,172 @@ export type Database = {
         }
         Relationships: []
       }
+      points_of_interest: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          description: string | null
+          dm_id: string
+          id: string
+          image_url: string | null
+          is_discovered: boolean | null
+          is_visible_to_players: boolean | null
+          linked_shop_id: string | null
+          linked_town_id: string | null
+          map_id: string
+          name: string | null
+          player_hint: string | null
+          poi_category: string
+          poi_type: string
+          x_pct: number
+          y_pct: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          description?: string | null
+          dm_id: string
+          id?: string
+          image_url?: string | null
+          is_discovered?: boolean | null
+          is_visible_to_players?: boolean | null
+          linked_shop_id?: string | null
+          linked_town_id?: string | null
+          map_id: string
+          name?: string | null
+          player_hint?: string | null
+          poi_category: string
+          poi_type: string
+          x_pct: number
+          y_pct: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          description?: string | null
+          dm_id?: string
+          id?: string
+          image_url?: string | null
+          is_discovered?: boolean | null
+          is_visible_to_players?: boolean | null
+          linked_shop_id?: string | null
+          linked_town_id?: string | null
+          map_id?: string
+          name?: string | null
+          player_hint?: string | null
+          poi_category?: string
+          poi_type?: string
+          x_pct?: number
+          y_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "points_of_interest_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_of_interest_dm_id_fkey"
+            columns: ["dm_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_of_interest_linked_shop_id_fkey"
+            columns: ["linked_shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_of_interest_linked_town_id_fkey"
+            columns: ["linked_town_id"]
+            isOneToOne: false
+            referencedRelation: "world_towns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_of_interest_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      political_territories: {
+        Row: {
+          attitude_to_strangers: string | null
+          campaign_id: string
+          color: string | null
+          created_at: string | null
+          dm_id: string
+          faction: string | null
+          id: string
+          law_level: string | null
+          map_id: string
+          name: string
+          notes: string | null
+          patrol_intensity: string | null
+          polygon: Json
+        }
+        Insert: {
+          attitude_to_strangers?: string | null
+          campaign_id: string
+          color?: string | null
+          created_at?: string | null
+          dm_id: string
+          faction?: string | null
+          id?: string
+          law_level?: string | null
+          map_id: string
+          name: string
+          notes?: string | null
+          patrol_intensity?: string | null
+          polygon: Json
+        }
+        Update: {
+          attitude_to_strangers?: string | null
+          campaign_id?: string
+          color?: string | null
+          created_at?: string | null
+          dm_id?: string
+          faction?: string | null
+          id?: string
+          law_level?: string | null
+          map_id?: string
+          name?: string
+          notes?: string | null
+          patrol_intensity?: string | null
+          polygon?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "political_territories_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "political_territories_dm_id_fkey"
+            columns: ["dm_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "political_territories_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -801,6 +1106,50 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      resource_points: {
+        Row: {
+          id: string
+          influence_radius_pct: number | null
+          map_id: string
+          name: string | null
+          placed_by: string | null
+          resource_type: string
+          richness: number
+          x_pct: number
+          y_pct: number
+        }
+        Insert: {
+          id?: string
+          influence_radius_pct?: number | null
+          map_id: string
+          name?: string | null
+          placed_by?: string | null
+          resource_type: string
+          richness: number
+          x_pct: number
+          y_pct: number
+        }
+        Update: {
+          id?: string
+          influence_radius_pct?: number | null
+          map_id?: string
+          name?: string | null
+          placed_by?: string | null
+          resource_type?: string
+          richness?: number
+          x_pct?: number
+          y_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_points_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shops: {
         Row: {
@@ -939,6 +1288,89 @@ export type Database = {
           },
         ]
       }
+      terrain_areas: {
+        Row: {
+          annual_rainfall_mm: number | null
+          atmosphere_generated_at: string | null
+          atmosphere_text: string | null
+          climate_zone: string | null
+          computed_elevation_m: number | null
+          ecosystem_fauna: string[] | null
+          ecosystem_flora: string[] | null
+          elevation_max_m: number | null
+          elevation_min_m: number | null
+          encounter_type: string | null
+          foraging_yield: string | null
+          growing_season_months: number | null
+          hazards: Json | null
+          id: string
+          map_id: string
+          pass_open_months: number | null
+          placed_by: string | null
+          polygon: Json
+          snowfall_likely: boolean | null
+          temp_summer_high_c: number | null
+          temp_winter_low_c: number | null
+          terrain_type: string
+        }
+        Insert: {
+          annual_rainfall_mm?: number | null
+          atmosphere_generated_at?: string | null
+          atmosphere_text?: string | null
+          climate_zone?: string | null
+          computed_elevation_m?: number | null
+          ecosystem_fauna?: string[] | null
+          ecosystem_flora?: string[] | null
+          elevation_max_m?: number | null
+          elevation_min_m?: number | null
+          encounter_type?: string | null
+          foraging_yield?: string | null
+          growing_season_months?: number | null
+          hazards?: Json | null
+          id?: string
+          map_id: string
+          pass_open_months?: number | null
+          placed_by?: string | null
+          polygon: Json
+          snowfall_likely?: boolean | null
+          temp_summer_high_c?: number | null
+          temp_winter_low_c?: number | null
+          terrain_type: string
+        }
+        Update: {
+          annual_rainfall_mm?: number | null
+          atmosphere_generated_at?: string | null
+          atmosphere_text?: string | null
+          climate_zone?: string | null
+          computed_elevation_m?: number | null
+          ecosystem_fauna?: string[] | null
+          ecosystem_flora?: string[] | null
+          elevation_max_m?: number | null
+          elevation_min_m?: number | null
+          encounter_type?: string | null
+          foraging_yield?: string | null
+          growing_season_months?: number | null
+          hazards?: Json | null
+          id?: string
+          map_id?: string
+          pass_open_months?: number | null
+          placed_by?: string | null
+          polygon?: Json
+          snowfall_likely?: boolean | null
+          temp_summer_high_c?: number | null
+          temp_winter_low_c?: number | null
+          terrain_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "terrain_areas_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       towns: {
         Row: {
           campaign_id: string
@@ -1014,6 +1446,58 @@ export type Database = {
           },
         ]
       }
+      trade_routes: {
+        Row: {
+          id: string
+          map_id: string
+          path_points: Json | null
+          primary_goods: string[] | null
+          town_a_id: string
+          town_b_id: string
+          trade_volume: number | null
+        }
+        Insert: {
+          id?: string
+          map_id: string
+          path_points?: Json | null
+          primary_goods?: string[] | null
+          town_a_id: string
+          town_b_id: string
+          trade_volume?: number | null
+        }
+        Update: {
+          id?: string
+          map_id?: string
+          path_points?: Json | null
+          primary_goods?: string[] | null
+          town_a_id?: string
+          town_b_id?: string
+          trade_volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trade_routes_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trade_routes_town_a_id_fkey"
+            columns: ["town_a_id"]
+            isOneToOne: false
+            referencedRelation: "world_towns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trade_routes_town_b_id_fkey"
+            columns: ["town_b_id"]
+            isOneToOne: false
+            referencedRelation: "world_towns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       usage_logs: {
         Row: {
           dm_id: string | null
@@ -1049,6 +1533,105 @@ export type Database = {
           },
         ]
       }
+      world_towns: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          dm_id: string
+          economic_context: Json | null
+          id: string
+          map_id: string
+          name: string | null
+          poi_id: string | null
+          population_est: number | null
+          price_index: Json | null
+          resource_snapshot: Json
+          shop_id: string | null
+          specializations: string[] | null
+          town_tier: string | null
+          trade_partners: Json | null
+          wealth_score: number | null
+          x_pct: number
+          y_pct: number
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          dm_id: string
+          economic_context?: Json | null
+          id?: string
+          map_id: string
+          name?: string | null
+          poi_id?: string | null
+          population_est?: number | null
+          price_index?: Json | null
+          resource_snapshot: Json
+          shop_id?: string | null
+          specializations?: string[] | null
+          town_tier?: string | null
+          trade_partners?: Json | null
+          wealth_score?: number | null
+          x_pct: number
+          y_pct: number
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          dm_id?: string
+          economic_context?: Json | null
+          id?: string
+          map_id?: string
+          name?: string | null
+          poi_id?: string | null
+          population_est?: number | null
+          price_index?: Json | null
+          resource_snapshot?: Json
+          shop_id?: string | null
+          specializations?: string[] | null
+          town_tier?: string | null
+          trade_partners?: Json | null
+          wealth_score?: number | null
+          x_pct?: number
+          y_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_towns_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_towns_dm_id_fkey"
+            columns: ["dm_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_towns_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_towns_poi_id_fkey"
+            columns: ["poi_id"]
+            isOneToOne: false
+            referencedRelation: "points_of_interest"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_towns_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1057,6 +1640,17 @@ export type Database = {
       clean_expired_cache: {
         Args: { older_than_hours?: number }
         Returns: number
+      }
+      get_all_policies: {
+        Args: never
+        Returns: {
+          cmd: string
+          policyname: unknown
+          qual: string
+          schemaname: unknown
+          tablename: unknown
+          with_check: string
+        }[]
       }
       get_cache_stats: {
         Args: never
@@ -1082,6 +1676,25 @@ export type Database = {
         Args: { config_key: string; fallback?: Json }
         Returns: Json
       }
+      get_dangerous_policies: {
+        Args: never
+        Returns: {
+          cmd: string
+          issue: string
+          policyname: unknown
+          qual: string
+          tablename: unknown
+        }[]
+      }
+      get_table_policies: {
+        Args: { table_name: string }
+        Returns: {
+          cmd: string
+          policyname: unknown
+          qual: string
+          with_check: string
+        }[]
+      }
       is_admin: {
         Args: { required_role?: string; user_id: string }
         Returns: boolean
@@ -1089,6 +1702,16 @@ export type Database = {
       is_item_locked_by_other: {
         Args: { p_character_id: string; p_item_id: string }
         Returns: boolean
+      }
+      verify_dm_table_security: {
+        Args: never
+        Returns: {
+          has_auth_check: boolean
+          has_dm_id_check: boolean
+          has_select_policy: boolean
+          status: string
+          tablename: string
+        }[]
       }
     }
     Enums: {
