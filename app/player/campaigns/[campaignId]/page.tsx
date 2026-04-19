@@ -68,6 +68,14 @@ export default async function PlayerCampaignPage({ params }: PlayerCampaignPageP
     .eq('campaign_id', params.campaignId)
     .order('created_at', { ascending: true })
 
+  // Get available (ready) maps
+  const { data: campaignMaps } = await supabase
+    .from('campaign_maps')
+    .select('id, image_url, map_size, map_style')
+    .eq('campaign_id', params.campaignId)
+    .eq('setup_stage', 'ready')
+    .order('created_at', { ascending: true })
+
   // Get revealed towns (RLS policy filters automatically)
   const { data: towns } = await supabase
     .from('towns')
@@ -143,6 +151,31 @@ export default async function PlayerCampaignPage({ params }: PlayerCampaignPageP
             </div>
           )}
         </div>
+
+        {/* Maps Section */}
+        {campaignMaps && campaignMaps.length > 0 && (
+          <div>
+            <h2 className="headline-sm text-on-surface mb-4">World Maps</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {campaignMaps.map(m => (
+                <Link
+                  key={m.id}
+                  href={`/player/campaigns/${params.campaignId}/maps/${m.id}`}
+                  className="group relative rounded-xl overflow-hidden border border-border hover:border-gold transition-all"
+                  style={{ aspectRatio: '16/9' }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={m.image_url} alt="Map" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 p-4">
+                    <p className="text-sm font-semibold text-white capitalize">{m.map_style?.replace(/_/g,' ') ?? 'World Map'}</p>
+                    <p className="text-xs text-white/60 capitalize">{m.map_size} scale</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Towns Section */}
         <div>

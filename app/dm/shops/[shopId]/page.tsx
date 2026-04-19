@@ -23,6 +23,8 @@ import { Eye, EyeOff, Plus } from 'lucide-react'
 import { VisibilityToggle } from '@/components/dm/visibility-toggle'
 import { PendingTransactions } from '@/components/dm/pending-transactions'
 import { ItemStatsDisplay } from '@/components/shared/item-stats-display'
+import { PriceIndexPanel } from '@/components/shared/price-index-panel'
+import type { ResourceScores } from '@/lib/world/terrainScores'
 
 export default async function ShopEditorPage({
   params,
@@ -58,6 +60,15 @@ export default async function ShopEditorPage({
     .is('deleted_at', null)
     .order('added_at', { ascending: true })
     .order('name', { ascending: true })
+
+  // Fetch linked world_town for price index (if this shop is linked to a world map town)
+  const { data: linkedWorldTown } = await supabase
+    .from('world_towns')
+    .select('name, resource_snapshot')
+    .eq('shop_id', shopId)
+    .maybeSingle()
+
+  const resourceScores = linkedWorldTown?.resource_snapshot as ResourceScores | null
 
   // Helper to calculate final price with shop markup
   const getFinalPrice = (basePrice: number): number => {
@@ -171,6 +182,13 @@ export default async function ShopEditorPage({
             <Link href={`/shop/${typedShop.slug}`} target="_blank">Preview Shop</Link>
           </Button>
         </div>
+
+        {resourceScores && (
+          <PriceIndexPanel
+            resourceScores={resourceScores}
+            townName={linkedWorldTown?.name}
+          />
+        )}
 
         <div>
           <h2 className="headline-sm text-on-surface mb-4">Pending Transactions</h2>
