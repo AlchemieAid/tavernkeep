@@ -117,6 +117,15 @@ export async function createClient() {
           }
         },
       },
+      db: {
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          // Add connection pooling hint
+          'x-connection-pooling': 'true',
+        },
+      },
     }
   )
 }
