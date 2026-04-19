@@ -14,8 +14,8 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ChevronDown } from 'lucide-react'
 import Link from 'next/link'
@@ -24,7 +24,6 @@ import type { Campaign, Town, Shop, NotablePerson } from '@/types/database'
 export function NavigationDropdowns() {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [towns, setTowns] = useState<Town[]>([])
   const [shops, setShops] = useState<Shop[]>([])
@@ -32,125 +31,147 @@ export function NavigationDropdowns() {
   const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null)
   const [selectedTown, setSelectedTown] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  
+  // Use ref to track if component is mounted to prevent state updates after unmount
+  const isMounted = useRef(true)
+  
+  // Use ref for loadData to avoid stale closures in realtime subscription
+  const loadDataRef = useRef<() => Promise<void>>()
 
-  // Force reset state on mount to prevent stale data after campaign deletion
-  useEffect(() => {
-    setCampaigns([])
-    setTowns([])
-    setShops([])
-    setNotablePeople([])
-    setSelectedCampaign(null)
-    setSelectedTown(null)
-  }, [searchParams.get('refresh')]) // Re-run when refresh param changes
-
-  useEffect(() => {
-    const supabase = createClient()
+  // Main data loading function
+  const loadData = useCallback(async () => {
+    if (!isMounted.current) return
     
-    async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser()
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      if (isMounted.current) setLoading(false)
+      return
+    }
+    
+    if (isMounted.current) setUserId(user.id)
+
+    // Load campaigns
+    const { data: campaignsData } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('dm_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (!isMounted.current) return
+
+    if (campaignsData) {
+      setCampaigns(campaignsData)
       
-      if (!user) {
-        setLoading(false)
-        return
+      // Detect campaign from URL
+      let campaignId: string | null = null
+      
+      // Check if we're on a campaign page
+      const campaignMatch = pathname.match(/\/campaigns\/([^\/]+)/)
+      if (campaignMatch) {
+        campaignId = campaignMatch[1]
       }
-
-      // Load campaigns
-      const { data: rawCampaignsData } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('dm_id', user.id)
-        .order('created_at', { ascending: false })
-      const campaignsData = rawCampaignsData as Campaign[] | null
-
-      if (campaignsData) {
-        setCampaigns(campaignsData)
+      
+      // Check if we're on a town page - fetch the campaign_id and set selected town
+      const townMatch = pathname.match(/\/towns\/([^\/]+)/)
+      if (townMatch && !campaignId) {
+        const townId = townMatch[1]
+        setSelectedTown(townId)
         
-        // Detect campaign from URL
-        let campaignId: string | null = null
-        
-        // Check if we're on a campaign page
-        const campaignMatch = pathname.match(/\/campaigns\/([^\/]+)/)
-        if (campaignMatch) {
-          campaignId = campaignMatch[1]
+        const { data: townData } = await supabase
+          .from('towns')
+          .select('campaign_id')
+          .eq('id', townId)
+          .single()
+        if (townData) {
+          campaignId = townData.campaign_id
         }
-        
-        // Check if we're on a town page - fetch the campaign_id and set selected town
-        const townMatch = pathname.match(/\/towns\/([^\/]+)/)
-        if (townMatch && !campaignId) {
-          const townId = townMatch[1]
-          setSelectedTown(townId)
-          
-          const { data: rawTownData } = await supabase
-            .from('towns')
-            .select('campaign_id')
-            .eq('id', townId)
-            .single()
-          const townData = rawTownData as { campaign_id: string } | null
-          if (townData) {
-            campaignId = townData.campaign_id
-          }
-        } else if (!townMatch) {
-          setSelectedTown(null)
-        }
-        
-        // Check if we're on a shop page - fetch the campaign_id
-        const shopMatch = pathname.match(/\/shops\/([^\/]+)/)
-        if (shopMatch && !campaignId) {
-          const { data: rawShopData } = await supabase
-            .from('shops')
-            .select('campaign_id')
-            .eq('id', shopMatch[1])
-            .single()
-          const shopData = rawShopData as { campaign_id: string } | null
-          if (shopData) {
-            campaignId = shopData.campaign_id
-          }
-        }
-        
-        // Check if the detected/selected campaign still exists in the list
-        const campaignExists = campaignId && campaignsData.some(c => c.id === campaignId)
-        
-        // Fallback to first campaign if selected one was deleted
-        const initialCampaign = campaignExists ? campaignId : campaignsData[0]?.id
-        
-        if (initialCampaign) {
-          setSelectedCampaign(initialCampaign)
-          await loadCampaignData(initialCampaign, townMatch ? townMatch[1] : null)
-        } else {
-          // No campaigns left - clear everything
-          setSelectedCampaign(null)
-          setTowns([])
-          setShops([])
-          setNotablePeople([])
+      } else if (!townMatch) {
+        setSelectedTown(null)
+      }
+      
+      // Check if we're on a shop page - fetch the campaign_id
+      const shopMatch = pathname.match(/\/shops\/([^\/]+)/)
+      if (shopMatch && !campaignId) {
+        const { data: shopData } = await supabase
+          .from('shops')
+          .select('campaign_id')
+          .eq('id', shopMatch[1])
+          .single()
+        if (shopData) {
+          campaignId = shopData.campaign_id
         }
       }
-
-      setLoading(false)
+      
+      // Check if the detected/selected campaign still exists in the list
+      const campaignExists = campaignId && campaignsData.some(c => c.id === campaignId)
+      
+      // Fallback to first campaign if selected one was deleted
+      const initialCampaign = campaignExists ? campaignId : campaignsData[0]?.id
+      
+      if (initialCampaign) {
+        setSelectedCampaign(initialCampaign)
+        await loadCampaignData(initialCampaign, townMatch ? townMatch[1] : null)
+      } else {
+        // No campaigns left - clear everything
+        setSelectedCampaign(null)
+        setTowns([])
+        setShops([])
+        setNotablePeople([])
+      }
     }
 
-    loadData()
+    if (isMounted.current) setLoading(false)
+  }, [pathname])
+  
+  // Keep ref updated with latest loadData
+  useEffect(() => {
+    loadDataRef.current = loadData
+  }, [loadData])
 
-    // Subscribe to campaign changes (create, update, delete)
+  // Initial data load
+  useEffect(() => {
+    isMounted.current = true
+    loadData()
+    
+    return () => {
+      isMounted.current = false
+    }
+  }, [loadData])
+
+  // Realtime subscription with proper user filtering
+  useEffect(() => {
+    if (!userId) return
+    
+    const supabase = createClient()
+    
+    // Subscribe to campaign changes for this user only
     const channel = supabase
-      .channel('navigation-campaigns')
+      .channel(`navigation-campaigns-${userId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'campaigns'
+          table: 'campaigns',
+          filter: `dm_id=eq.${userId}`
         },
-        () => {
-          // Reload campaigns when any change occurs
-          loadData()
+        (payload) => {
+          console.log('[Navigation] Campaign change detected:', payload.eventType, payload.new)
+          // Use ref to call latest loadData
+          loadDataRef.current?.()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('[Navigation] Realtime subscription status:', status)
+      })
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [pathname])
+  }, [userId])
 
   async function loadCampaignData(campaignId: string, townId: string | null = null) {
     const supabase = createClient()
