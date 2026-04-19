@@ -10,6 +10,7 @@ import { MapTownPanel, type PlacedTownResult } from './map-town-panel'
 import { MapTownCard } from './map-town-card'
 import { MapTerritoryPanel, type PlacedTerritoryResult } from './map-territory-panel'
 import { MapHistoricalEventPanel, type PlacedHistoricalEventResult } from './map-historical-event-panel'
+import { MapMobileModal } from './map-mobile-modal'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
 
 const RESOURCE_COLORS: Record<string, string> = {
@@ -152,6 +153,7 @@ export function MapCanvas({
   const [territoryFormPolygon, setTerritoryFormPolygon] = useState<Array<{ x: number; y: number }> | null>(null)
   const [showTerritories, setShowTerritories] = useState(true)
   const [showHistory, setShowHistory] = useState(true)
+  const [mobileModal, setMobileModal] = useState<{ result: IDWResult; terrainType: string | null } | null>(null)
 
   const placedPoIs = useMemo<PlacedPoI[]>(() =>
     pois.map(p => ({ id: p.id, x_pct: p.x_pct, y_pct: p.y_pct, poi_type: p.poi_type })),
@@ -191,6 +193,17 @@ export function MapCanvas({
   function handleMouseLeave() {
     setHoverPos(null)
     setIdwResult(null)
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const touch = e.changedTouches[0]
+    if (!touch || !containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const xPct = (touch.clientX - rect.left) / rect.width
+    const yPct = (touch.clientY - rect.top) / rect.height
+    const result = computeIDW(xPct, yPct, resourcePoints, terrainAreas, placedPoIs)
+    const terrain = terrainAreas.find(a => a.terrain_type === result.dominantTerrain)
+    setMobileModal({ result, terrainType: terrain?.terrain_type ?? null })
   }
 
   function handleMapClick(e: React.MouseEvent) {
@@ -343,6 +356,7 @@ export function MapCanvas({
           onMouseLeave={handleMouseLeave}
           onClick={handleMapClick}
           onDoubleClick={handleDoubleClick}
+          onTouchEnd={handleTouchEnd}
         >
           {/* Map image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -562,6 +576,15 @@ export function MapCanvas({
               setTerritoryFormPolygon(null)
               setMode('view')
             }}
+          />
+        )}
+
+        {/* Mobile resource modal */}
+        {mobileModal && (
+          <MapMobileModal
+            idwResult={mobileModal.result}
+            terrainType={mobileModal.terrainType}
+            onClose={() => setMobileModal(null)}
           />
         )}
 
