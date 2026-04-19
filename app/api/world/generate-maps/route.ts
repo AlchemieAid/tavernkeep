@@ -114,3 +114,69 @@ export async function POST(request: Request) {
     )
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json(
+        { data: null, error: { message: 'Unauthorized' } },
+        { status: 401 }
+      )
+    }
+
+    const body = await request.json()
+    const { map_id, campaign_id } = body as { map_id: string; campaign_id: string }
+
+    if (!map_id || !campaign_id) {
+      return NextResponse.json(
+        { data: null, error: { message: 'map_id and campaign_id are required' } },
+        { status: 400 }
+      )
+    }
+
+    const { data: map, error: mapError } = await supabase
+      .from('campaign_maps')
+      .select('id')
+      .eq('id', map_id)
+      .eq('campaign_id', campaign_id)
+      .eq('dm_id', user.id)
+      .single()
+
+    if (mapError || !map) {
+      return NextResponse.json(
+        { data: null, error: { message: 'Map not found' } },
+        { status: 404 }
+      )
+    }
+
+    await supabase
+      .from('campaign_maps')
+      .update({ is_selected: false })
+      .eq('campaign_id', campaign_id)
+
+    const { data: updated, error: updateError } = await supabase
+      .from('campaign_maps')
+      .update({ is_selected: true, setup_stage: 'selected' })
+      .eq('id', map_id)
+      .select()
+      .single()
+
+    if (updateError) {
+      return NextResponse.json(
+        { data: null, error: { message: updateError.message } },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ data: updated, error: null })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return NextResponse.json(
+      { data: null, error: { message } },
+      { status: 500 }
+    )
+  }
+}
