@@ -128,6 +128,7 @@ export class GenerationOrchestrator {
     towns: new Set<string>(),
     shops: new Set<string>(),
     people: new Set<string>(),
+    shopkeepers: new Set<string>(), // Track shopkeepers to prevent one person owning multiple shops
   }
 
   /**
@@ -280,7 +281,7 @@ export class GenerationOrchestrator {
    */
   async generateCampaign(prompt: string, ruleset?: string, setting?: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
-    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
+    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set(), shopkeepers: new Set() }
     
     // Progress bar allocation:
     // - 1% for rate limit check
@@ -849,7 +850,9 @@ ${context}
 
 CRITICAL:
 - The shop MUST fit the world setting described above (e.g., cyberpunk shops for cyberpunk campaigns, fantasy shops for fantasy campaigns)
-- Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ')}
+- Do not use these existing shop names: ${Array.from(this.generatedNames.shops).join(', ') || 'none yet'}
+- Do not use these existing shopkeeper names (each shopkeeper must be a unique person): ${Array.from(this.generatedNames.shopkeepers).join(', ') || 'none yet'}
+- Each shop must have a DIFFERENT shopkeeper - one person cannot own multiple shops
 - Shop type, items, and atmosphere should match the campaign theme`
 
       // AI call with timeout
@@ -900,6 +903,10 @@ CRITICAL:
       if (shopkeeperError) {
         console.error(`Shopkeeper creation failed for shop ${i + 1} in ${townName}:`, shopkeeperError)
         // Continue anyway - shop can exist without a linked shopkeeper
+      } else if (shopData.keeper_name) {
+        // Track shopkeeper name to prevent one person owning multiple shops
+        this.generatedNames.shopkeepers.add(shopData.keeper_name)
+        console.log(`[SHOP] Tracked shopkeeper: ${shopData.keeper_name}`)
       }
 
       // Create shop
@@ -1185,7 +1192,7 @@ CRITICAL:
    */
   async generateTown(campaignId: string, prompt: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
-    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
+    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set(), shopkeepers: new Set() }
     
     // Calculate estimated steps
     const estimatedShops = Math.floor((this.config.town.shopCount.min + this.config.town.shopCount.max) / 2)
@@ -1265,7 +1272,7 @@ CRITICAL:
    */
   async generateShop(campaignId: string, townId: string | null, prompt: string, createNotablePerson: boolean = true, notablePersonId?: string): Promise<GeneratorResult<any>> {
     this.progress.status = 'running'
-    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set() }
+    this.generatedNames = { campaigns: new Set(), towns: new Set(), shops: new Set(), people: new Set(), shopkeepers: new Set() }
     
     // Calculate estimated steps
     const estimatedItems = Math.floor((this.config.shop.itemCount.min + this.config.shop.itemCount.max) / 2)
