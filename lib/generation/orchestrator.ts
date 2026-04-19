@@ -44,6 +44,7 @@
 
 import { createAIClient, AIClient } from '@/lib/ai'
 import { createClient } from '@/lib/supabase/server'
+import { sanitizeAndParseJSON } from '@/lib/utils'
 import { 
   GenerationConfig, 
   DEFAULT_GENERATION_CONFIG, 
@@ -453,7 +454,7 @@ export class GenerationOrchestrator {
     ])
 
     console.log(`[CAMPAIGN] AI response received from ${response.provider} (${response.model})`)
-    const generatedData = JSON.parse(response.content)
+    const generatedData = sanitizeAndParseJSON(response.content)
     const { campaign, suggestedTowns } = generatedData
 
     if (!campaign) {
@@ -656,7 +657,7 @@ export class GenerationOrchestrator {
     ])
 
     console.log(`[TOWN] AI response received from ${response.provider} (${response.model})`)
-    const generatedData = JSON.parse(response.content)
+    const generatedData = sanitizeAndParseJSON(response.content)
     const { town, notablePeople, suggestedShops } = generatedData
 
     if (!town) {
@@ -865,7 +866,7 @@ export class GenerationOrchestrator {
       ])
 
       console.log(`[SHOP] AI response received from ${response.provider} (${response.model})`)
-      const generatedData = JSON.parse(response.content)
+      const generatedData = sanitizeAndParseJSON(response.content)
       const { shop: shopData, items: itemsData } = generatedData
 
       if (!shopData) {
@@ -1336,7 +1337,7 @@ export class GenerationOrchestrator {
         responseFormat: 'json',
       })
       
-      const generatedData = JSON.parse(response.content)
+      const generatedData = sanitizeAndParseJSON(response.content)
       const { shop: shopData, items: itemsData } = generatedData
       
       if (!shopData) {
