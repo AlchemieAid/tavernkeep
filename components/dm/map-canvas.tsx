@@ -16,6 +16,8 @@ import { MapTerrainPainterPanel, type AddedTerrainArea } from './map-terrain-pai
 import { MapResourcePlacerPanel, type AddedResourcePoint } from './map-resource-placer-panel'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
 import { MapPoIInfoCard } from './map-poi-info-card'
+import { MapHistEventInfoCard } from './map-hist-event-info-card'
+import { MapTerritoryInfoCard } from './map-territory-info-card'
 
 const RESOURCE_COLORS: Record<string, string> = {
   iron_deposit:     '#78909c',
@@ -174,6 +176,10 @@ export function MapCanvas({
   const [poiPanelOpen, setPoiPanelOpen] = useState(false)
   const [selectedPoi, setSelectedPoi] = useState<PoI | null>(null)
   const [selectedPoiPos, setSelectedPoiPos] = useState<{ x: number; y: number } | null>(null)
+  const [selectedHistEvent, setSelectedHistEvent] = useState<HistEvent | null>(null)
+  const [selectedHistEventPos, setSelectedHistEventPos] = useState<{ x: number; y: number } | null>(null)
+  const [selectedTerritory, setSelectedTerritory] = useState<Territory | null>(null)
+  const [selectedTerritoryPos, setSelectedTerritoryPos] = useState<{ x: number; y: number } | null>(null)
   const [townPanel, setTownPanel] = useState<{ xPct: number; yPct: number; result: IDWResult } | null>(null)
   const [selectedTown, setSelectedTown] = useState<WorldTown | null>(null)
   const [selectedTownPos, setSelectedTownPos] = useState<{ x: number; y: number } | null>(null)
@@ -275,6 +281,10 @@ export function MapCanvas({
     setSelectedTownPos(null)
     setSelectedPoi(null)
     setSelectedPoiPos(null)
+    setSelectedHistEvent(null)
+    setSelectedHistEventPos(null)
+    setSelectedTerritory(null)
+    setSelectedTerritoryPos(null)
   }
 
   function handleDoubleClick(e: React.MouseEvent) {
@@ -554,13 +564,26 @@ export function MapCanvas({
 
             {/* Territory polygons */}
             {showTerritories && territories.map(t => (
-              <g key={t.id}>
+              <g
+                key={t.id}
+                style={{ pointerEvents: mode === 'view' ? 'all' : 'none', cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (mode !== 'view') return
+                  const coords = getCanvasCoords(e as unknown as React.MouseEvent)
+                  setSelectedTown(null); setSelectedTownPos(null)
+                  setSelectedPoi(null); setSelectedPoiPos(null)
+                  setSelectedHistEvent(null); setSelectedHistEventPos(null)
+                  setSelectedTerritory(t)
+                  setSelectedTerritoryPos(coords ? { x: coords.x, y: coords.y } : null)
+                }}
+              >
                 <polygon
                   points={t.polygon.map(p => `${p.x},${p.y}`).join(' ')}
                   fill={t.color ?? '#3b82f6'}
-                  fillOpacity={0.18}
+                  fillOpacity={selectedTerritory?.id === t.id ? 0.28 : 0.18}
                   stroke={t.color ?? '#3b82f6'}
-                  strokeWidth={0.003}
+                  strokeWidth={selectedTerritory?.id === t.id ? 0.004 : 0.003}
                   strokeOpacity={0.7}
                 />
                 {t.polygon.length > 0 && (
@@ -626,22 +649,42 @@ export function MapCanvas({
             )}
 
             {/* Historical event markers */}
-            {showHistory && historicalEvents.map(ev => (
-              <g key={ev.id}>
-                <circle cx={ev.x_pct} cy={ev.y_pct} r={0.009} fill="#f59e0b" stroke="#78350f" strokeWidth={0.002} />
-                <text
-                  x={ev.x_pct}
-                  y={ev.y_pct}
-                  fontSize={0.010}
-                  fill="#78350f"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  style={{ pointerEvents: 'none' }}
+            {showHistory && historicalEvents.map(ev => {
+              const isSelected = selectedHistEvent?.id === ev.id
+              const isKnown = ev.is_known_to_players
+              return (
+                <g
+                  key={ev.id}
+                  style={{ pointerEvents: mode === 'view' ? 'all' : 'none', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (mode !== 'view') return
+                    const coords = getCanvasCoords(e as unknown as React.MouseEvent)
+                    setSelectedTown(null); setSelectedTownPos(null)
+                    setSelectedPoi(null); setSelectedPoiPos(null)
+                    setSelectedTerritory(null); setSelectedTerritoryPos(null)
+                    setSelectedHistEvent(ev)
+                    setSelectedHistEventPos(coords ? { x: coords.x, y: coords.y } : null)
+                  }}
                 >
-                  !
-                </text>
-              </g>
-            ))}
+                  {isSelected && (
+                    <circle cx={ev.x_pct} cy={ev.y_pct} r={0.014} fill="none" stroke="#f59e0b" strokeWidth={0.002} strokeOpacity={0.5} />
+                  )}
+                  <circle cx={ev.x_pct} cy={ev.y_pct} r={0.009} fill={isKnown ? '#f59e0b' : '#92400e'} stroke="#78350f" strokeWidth={0.002} />
+                  <text
+                    x={ev.x_pct}
+                    y={ev.y_pct}
+                    fontSize={0.010}
+                    fill={isKnown ? '#78350f' : '#fde68a'}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    !
+                  </text>
+                </g>
+              )
+            })}
 
             {showTowns && worldTowns.map(town => {
               const isRouteSource = routeSourceTown?.id === town.id
@@ -735,6 +778,34 @@ export function MapCanvas({
             onUpdated={(poiId, patch) => {
               setPois(prev => prev.map(p => p.id === poiId ? { ...p, ...patch } : p))
             }}
+          />
+        )}
+
+        {/* Historical event info card */}
+        {selectedHistEvent && selectedHistEventPos && containerDims && (
+          <MapHistEventInfoCard
+            event={selectedHistEvent}
+            mapId={map.id}
+            x={selectedHistEventPos.x}
+            y={selectedHistEventPos.y}
+            containerWidth={containerDims.width}
+            containerHeight={containerDims.height}
+            onClose={() => { setSelectedHistEvent(null); setSelectedHistEventPos(null) }}
+            onUpdated={(eventId, patch) => {
+              setHistoricalEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...patch } : e))
+            }}
+          />
+        )}
+
+        {/* Territory info card */}
+        {selectedTerritory && selectedTerritoryPos && containerDims && (
+          <MapTerritoryInfoCard
+            territory={selectedTerritory}
+            x={selectedTerritoryPos.x}
+            y={selectedTerritoryPos.y}
+            containerWidth={containerDims.width}
+            containerHeight={containerDims.height}
+            onClose={() => { setSelectedTerritory(null); setSelectedTerritoryPos(null) }}
           />
         )}
 

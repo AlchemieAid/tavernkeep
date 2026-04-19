@@ -12,6 +12,7 @@ interface TerrainAreaData {
   ecosystem_flora?: string[] | null
   ecosystem_fauna?: string[] | null
   hazards?: Array<{ type: string; season: string; probability: string }> | null
+  atmosphere_text?: string | null
 }
 
 interface MapHoverTooltipProps {
@@ -132,6 +133,14 @@ export function MapHoverTooltip({
         {hazardList && (
           <div className="border-t border-[#282a2d] pt-2">
             <div className="text-on-surface-variant"><span className="text-on-surface">Hazards</span> {hazardList}</div>
+          </div>
+        )}
+
+        {terrainArea?.atmosphere_text && (
+          <div className="border-t border-[#282a2d] pt-2">
+            <div className="text-on-surface-variant italic leading-relaxed line-clamp-3">
+              &ldquo;{terrainArea.atmosphere_text}&rdquo;
+            </div>
           </div>
         )}
 

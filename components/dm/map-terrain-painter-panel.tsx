@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Loader2, Check, Layers } from 'lucide-react'
+import { X, Loader2, Check, Layers, Sparkles } from 'lucide-react'
 
 export interface AddedTerrainArea {
   id: string
@@ -83,6 +83,9 @@ export function MapTerrainPainterPanel({
   const [atmosphereText, setAtmosphereText] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastSavedAreaId, setLastSavedAreaId] = useState<string | null>(null)
+  const [generatingAtmos, setGeneratingAtmos] = useState(false)
+  const [generatedAtmos, setGeneratedAtmos] = useState<string | null>(null)
 
   const canSave = polygon && polygon.length >= 3
 
@@ -117,8 +120,31 @@ export function MapTerrainPainterPanel({
       polygon: (json.data.polygon ?? polygon) as Array<{ x: number; y: number }>,
     }
     setSaving(false)
+    setLastSavedAreaId(result.id)
+    setGeneratedAtmos(result.atmosphere_text ?? null)
     onSaved(result)
     onClearPolygon()
+    setAtmosphereText('')
+    setClimateZone('')
+    setElevationM('')
+  }
+
+  async function generateAtmosphere() {
+    if (!lastSavedAreaId) return
+    setGeneratingAtmos(true)
+    try {
+      const res = await fetch('/api/world/generate-atmosphere', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ terrain_area_id: lastSavedAreaId, map_id: mapId }),
+      })
+      const json = await res.json()
+      if (json.data?.atmosphere_text) {
+        setGeneratedAtmos(json.data.atmosphere_text)
+      }
+    } finally {
+      setGeneratingAtmos(false)
+    }
   }
 
   const selectedTypeDef = TERRAIN_GROUPS.flatMap(g => g.types).find(t => t.value === selectedType)
@@ -226,6 +252,27 @@ export function MapTerrainPainterPanel({
             />
           </div>
         </div>
+
+        {/* Post-save atmosphere generation */}
+        {lastSavedAreaId && (
+          <div className="rounded-xl border border-[#282a2d] bg-[#1a1c1f] p-3 space-y-2">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">Last saved area</div>
+            {generatedAtmos ? (
+              <p className="text-xs text-on-surface-variant italic leading-relaxed">&ldquo;{generatedAtmos}&rdquo;</p>
+            ) : (
+              <p className="text-[10px] text-on-surface-variant">No atmosphere description yet.</p>
+            )}
+            <button
+              type="button"
+              onClick={generateAtmosphere}
+              disabled={generatingAtmos}
+              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#282a2d] hover:bg-[#32363b] text-primary transition-colors disabled:opacity-50"
+            >
+              {generatingAtmos ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {generatingAtmos ? 'Generating...' : generatedAtmos ? 'Regenerate with AI' : 'Generate with AI'}
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-lg bg-[#93000a]/20 px-3 py-2 text-xs text-[#ffb4ab]">{error}</div>
