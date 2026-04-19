@@ -2,11 +2,14 @@
 
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen } from 'lucide-react'
 import { computeIDW, type IDWResult, type ResourcePoint, type TerrainArea, type PlacedPoI } from '@/lib/world/resourceInterpolation'
 import { MapHoverTooltip } from './map-hover-tooltip'
 import { MapPoIPanel, type PlacedPoIResult } from './map-poi-panel'
 import { MapTownPanel, type PlacedTownResult } from './map-town-panel'
+import { MapTownCard } from './map-town-card'
+import { MapTerritoryPanel, type PlacedTerritoryResult } from './map-territory-panel'
+import { MapHistoricalEventPanel, type PlacedHistoricalEventResult } from './map-historical-event-panel'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
 
 const RESOURCE_COLORS: Record<string, string> = {
@@ -44,7 +47,7 @@ function getResourceColor(type: string): string {
   return RESOURCE_COLORS[type] ?? '#9e9e9e'
 }
 
-type Mode = 'view' | 'town' | 'poi'
+type Mode = 'view' | 'town' | 'poi' | 'territory' | 'history'
 
 interface WorldTown {
   id: string
@@ -54,6 +57,29 @@ interface WorldTown {
   town_tier: string | null
   wealth_score: number | null
   specializations: string[] | null
+  shop_id?: string | null
+  poi_id?: string | null
+  population_est?: number | null
+}
+
+interface Territory {
+  id: string
+  name: string
+  faction: string | null
+  color: string | null
+  polygon: Array<{ x: number; y: number }>
+  law_level: string | null
+  attitude_to_strangers: string | null
+}
+
+interface HistEvent {
+  id: string
+  x_pct: number
+  y_pct: number
+  event_name: string
+  event_type: string | null
+  years_ago: number | null
+  is_known_to_players: boolean | null
 }
 
 interface PoI {
@@ -82,6 +108,8 @@ interface MapCanvasProps {
   resourcePoints: ResourcePoint[]
   worldTowns: WorldTown[]
   pois: PoI[]
+  territories: Territory[]
+  historicalEvents: HistEvent[]
 }
 
 const THROTTLE_MS = 32
@@ -94,6 +122,8 @@ export function MapCanvas({
   resourcePoints: initialResourcePoints,
   worldTowns: initialWorldTowns,
   pois: initialPois,
+  territories: initialTerritories,
+  historicalEvents: initialHistoricalEvents,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const lastMoveRef = useRef(0)
@@ -110,9 +140,18 @@ export function MapCanvas({
   const [resourcePoints, setResourcePoints] = useState(initialResourcePoints)
   const [worldTowns, setWorldTowns] = useState(initialWorldTowns)
   const [pois, setPois] = useState(initialPois)
+  const [territories, setTerritories] = useState(initialTerritories)
+  const [historicalEvents, setHistoricalEvents] = useState(initialHistoricalEvents)
 
   const [poiPanelOpen, setPoiPanelOpen] = useState(false)
   const [townPanel, setTownPanel] = useState<{ xPct: number; yPct: number; result: IDWResult } | null>(null)
+  const [selectedTown, setSelectedTown] = useState<WorldTown | null>(null)
+  const [selectedTownPos, setSelectedTownPos] = useState<{ x: number; y: number } | null>(null)
+  const [histEventPos, setHistEventPos] = useState<{ xPct: number; yPct: number } | null>(null)
+  const [drawingPolygon, setDrawingPolygon] = useState<Array<{ x: number; y: number }>>([])  
+  const [territoryFormPolygon, setTerritoryFormPolygon] = useState<Array<{ x: number; y: number }> | null>(null)
+  const [showTerritories, setShowTerritories] = useState(true)
+  const [showHistory, setShowHistory] = useState(true)
 
   const placedPoIs = useMemo<PlacedPoI[]>(() =>
     pois.map(p => ({ id: p.id, x_pct: p.x_pct, y_pct: p.y_pct, poi_type: p.poi_type })),
@@ -158,6 +197,16 @@ export function MapCanvas({
     const coords = getCanvasCoords(e)
     if (!coords) return
 
+    if (mode === 'territory') {
+      setDrawingPolygon(prev => [...prev, { x: coords.xPct, y: coords.yPct }])
+      return
+    }
+
+    if (mode === 'history') {
+      setHistEventPos({ xPct: coords.xPct, yPct: coords.yPct })
+      return
+    }
+
     if (mode === 'town') {
       const result = computeIDW(coords.xPct, coords.yPct, resourcePoints, terrainAreas, placedPoIs)
       setTownPanel({ xPct: coords.xPct, yPct: coords.yPct, result })
@@ -168,6 +217,25 @@ export function MapCanvas({
       setPoiPanelOpen(true)
       return
     }
+
+    setSelectedTown(null)
+    setSelectedTownPos(null)
+  }
+
+  function handleDoubleClick(e: React.MouseEvent) {
+    if (mode === 'territory' && drawingPolygon.length >= 3) {
+      e.preventDefault()
+      setTerritoryFormPolygon(drawingPolygon)
+      setDrawingPolygon([])
+    }
+  }
+
+  function handleTownPinClick(e: React.MouseEvent, town: WorldTown) {
+    e.stopPropagation()
+    if (mode !== 'view') return
+    const coords = getCanvasCoords(e)
+    setSelectedTown(town)
+    setSelectedTownPos(coords ? { x: coords.x, y: coords.y } : null)
   }
 
   useEffect(() => {
@@ -213,6 +281,18 @@ export function MapCanvas({
             label="Towns"
             icon={<Castle className="w-3.5 h-3.5" />}
           />
+          <ToolbarToggle
+            active={showTerritories}
+            onToggle={() => setShowTerritories(v => !v)}
+            label="Territories"
+            icon={<Shield className="w-3.5 h-3.5" />}
+          />
+          <ToolbarToggle
+            active={showHistory}
+            onToggle={() => setShowHistory(v => !v)}
+            label="History"
+            icon={<BookOpen className="w-3.5 h-3.5" />}
+          />
         </div>
 
         <div className="h-4 w-px bg-[#282a2d]" />
@@ -230,12 +310,27 @@ export function MapCanvas({
             label="Add PoI"
             icon={<MapPin className="w-3.5 h-3.5" />}
           />
+          <ModeButton
+            active={mode === 'territory'}
+            onClick={() => { setMode(mode === 'territory' ? 'view' : 'territory'); setDrawingPolygon([]) }}
+            label="Draw Territory"
+            icon={<Shield className="w-3.5 h-3.5" />}
+          />
+          <ModeButton
+            active={mode === 'history'}
+            onClick={() => setMode(mode === 'history' ? 'view' : 'history')}
+            label="Add Event"
+            icon={<BookOpen className="w-3.5 h-3.5" />}
+          />
         </div>
 
         {mode !== 'view' && (
           <div className="flex items-center gap-1.5 ml-auto text-xs font-manrope text-primary animate-pulse">
             <Crosshair className="w-3.5 h-3.5" />
-            {mode === 'town' ? 'Click map to place a town' : 'Click map to place a PoI'}
+            {mode === 'town' && 'Click map to place a town'}
+            {mode === 'poi' && 'Click map to place a PoI'}
+            {mode === 'territory' && (drawingPolygon.length < 3 ? `Drawing… (${drawingPolygon.length} pts, need 3+)` : `${drawingPolygon.length} pts · double-click to finish`)}
+            {mode === 'history' && 'Click map to record a historical event'}
           </div>
         )}
       </div>
@@ -247,6 +342,7 @@ export function MapCanvas({
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           onClick={handleMapClick}
+          onDoubleClick={handleDoubleClick}
         >
           {/* Map image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -293,16 +389,105 @@ export function MapCanvas({
               )
             })}
 
+            {/* Territory polygons */}
+            {showTerritories && territories.map(t => (
+              <g key={t.id}>
+                <polygon
+                  points={t.polygon.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill={t.color ?? '#3b82f6'}
+                  fillOpacity={0.18}
+                  stroke={t.color ?? '#3b82f6'}
+                  strokeWidth={0.003}
+                  strokeOpacity={0.7}
+                />
+                {t.polygon.length > 0 && (
+                  <text
+                    x={t.polygon.reduce((s, p) => s + p.x, 0) / t.polygon.length}
+                    y={t.polygon.reduce((s, p) => s + p.y, 0) / t.polygon.length}
+                    fontSize={0.018}
+                    fill="white"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{ pointerEvents: 'none' }}
+                    opacity={0.9}
+                  >
+                    {t.name}
+                  </text>
+                )}
+              </g>
+            ))}
+
+            {/* Territory drawing preview */}
+            {mode === 'territory' && drawingPolygon.length > 0 && (
+              <g>
+                <polyline
+                  points={drawingPolygon.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth={0.003}
+                  strokeDasharray="0.015 0.007"
+                />
+                {hoverPos && (
+                  <line
+                    x1={drawingPolygon[drawingPolygon.length - 1].x}
+                    y1={drawingPolygon[drawingPolygon.length - 1].y}
+                    x2={hoverPos.xPct}
+                    y2={hoverPos.yPct}
+                    stroke="#3b82f6"
+                    strokeWidth={0.002}
+                    strokeDasharray="0.008 0.005"
+                    opacity={0.5}
+                  />
+                )}
+                {drawingPolygon.map((p, i) => (
+                  <circle key={i} cx={p.x} cy={p.y} r={0.005} fill="#3b82f6" opacity={0.9} />
+                ))}
+              </g>
+            )}
+
+            {/* Historical event markers */}
+            {showHistory && historicalEvents.map(ev => (
+              <g key={ev.id}>
+                <circle cx={ev.x_pct} cy={ev.y_pct} r={0.009} fill="#f59e0b" stroke="#78350f" strokeWidth={0.002} />
+                <text
+                  x={ev.x_pct}
+                  y={ev.y_pct}
+                  fontSize={0.010}
+                  fill="#78350f"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  !
+                </text>
+              </g>
+            ))}
+
             {showTowns && worldTowns.map(town => (
-              <g key={town.id}>
+              <g
+                key={town.id}
+                style={{ pointerEvents: 'all', cursor: mode === 'view' ? 'pointer' : 'default' }}
+                onClick={(e) => handleTownPinClick(e as unknown as React.MouseEvent, town)}
+              >
                 <circle
                   cx={town.x_pct}
                   cy={town.y_pct}
-                  r={0.012}
+                  r={0.014}
                   fill="#ffc637"
                   stroke="#3f2e00"
                   strokeWidth={0.002}
                 />
+                <text
+                  x={town.x_pct}
+                  y={town.y_pct}
+                  fontSize={0.010}
+                  fill="#3f2e00"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {(town.town_tier ?? 'hamlet').charAt(0).toUpperCase()}
+                </text>
               </g>
             ))}
           </svg>
@@ -347,6 +532,50 @@ export function MapCanvas({
             onPlaced={(newTown: PlacedTownResult) => {
               setWorldTowns(prev => [...prev, newTown as WorldTown])
               setTownPanel(null)
+              setMode('view')
+            }}
+          />
+        )}
+
+        {/* Town info card (click existing pin) */}
+        {selectedTown && selectedTownPos && containerDims && (
+          <MapTownCard
+            town={selectedTown}
+            campaignId={campaignId}
+            x={selectedTownPos.x}
+            y={selectedTownPos.y}
+            containerWidth={containerDims.width}
+            containerHeight={containerDims.height}
+            onClose={() => { setSelectedTown(null); setSelectedTownPos(null) }}
+          />
+        )}
+
+        {/* Territory form panel */}
+        {territoryFormPolygon && (
+          <MapTerritoryPanel
+            campaignId={campaignId}
+            mapId={map.id}
+            polygon={territoryFormPolygon}
+            onClose={() => { setTerritoryFormPolygon(null); setMode('view') }}
+            onPlaced={(t: PlacedTerritoryResult) => {
+              setTerritories(prev => [...prev, t as Territory])
+              setTerritoryFormPolygon(null)
+              setMode('view')
+            }}
+          />
+        )}
+
+        {/* Historical event panel */}
+        {histEventPos && (
+          <MapHistoricalEventPanel
+            campaignId={campaignId}
+            mapId={map.id}
+            xPct={histEventPos.xPct}
+            yPct={histEventPos.yPct}
+            onClose={() => { setHistEventPos(null) }}
+            onPlaced={(ev: PlacedHistoricalEventResult) => {
+              setHistoricalEvents(prev => [...prev, ev as HistEvent])
+              setHistEventPos(null)
               setMode('view')
             }}
           />

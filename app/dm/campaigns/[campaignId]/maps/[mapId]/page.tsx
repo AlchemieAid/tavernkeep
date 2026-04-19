@@ -30,25 +30,44 @@ export default async function MapViewPage({
     .eq('id', campaignId)
     .single()
 
-  const [{ data: terrainAreas }, { data: resourcePoints }, { data: worldTowns }, { data: pois }] =
-    await Promise.all([
-      supabase
-        .from('terrain_areas')
-        .select('id, terrain_type, polygon, computed_elevation_m, climate_zone, temp_summer_high_c, temp_winter_low_c, annual_rainfall_mm, ecosystem_flora, ecosystem_fauna, hazards, atmosphere_text')
-        .eq('map_id', mapId),
-      supabase
-        .from('resource_points')
-        .select('id, x_pct, y_pct, resource_type, richness, influence_radius_pct, name, placed_by')
-        .eq('map_id', mapId),
-      supabase
-        .from('world_towns')
-        .select('id, x_pct, y_pct, name, town_tier, wealth_score, specializations')
-        .eq('map_id', mapId),
-      supabase
-        .from('points_of_interest')
-        .select('id, x_pct, y_pct, poi_type, poi_category, name, is_discovered, player_hint, description')
-        .eq('map_id', mapId),
-    ])
+  const [
+    { data: terrainAreas },
+    { data: resourcePoints },
+    { data: worldTowns },
+    { data: pois },
+    { data: territories },
+    { data: historicalEvents },
+  ] = await Promise.all([
+    supabase
+      .from('terrain_areas')
+      .select('id, terrain_type, polygon, computed_elevation_m, climate_zone, temp_summer_high_c, temp_winter_low_c, annual_rainfall_mm, ecosystem_flora, ecosystem_fauna, hazards, atmosphere_text')
+      .eq('map_id', mapId),
+    supabase
+      .from('resource_points')
+      .select('id, x_pct, y_pct, resource_type, richness, influence_radius_pct, name, placed_by')
+      .eq('map_id', mapId),
+    supabase
+      .from('world_towns')
+      .select('id, x_pct, y_pct, name, town_tier, wealth_score, specializations, shop_id, poi_id, population_est')
+      .eq('map_id', mapId),
+    supabase
+      .from('points_of_interest')
+      .select('id, x_pct, y_pct, poi_type, poi_category, name, is_discovered, player_hint, description')
+      .eq('map_id', mapId),
+    supabase
+      .from('political_territories')
+      .select('id, name, faction, color, polygon, law_level, attitude_to_strangers')
+      .eq('map_id', mapId),
+    supabase
+      .from('historical_events')
+      .select('id, x_pct, y_pct, event_name, event_type, years_ago, is_known_to_players')
+      .eq('map_id', mapId),
+  ])
+
+  const normalizedTerritories = (territories ?? []).map(t => ({
+    ...t,
+    polygon: (t.polygon ?? []) as Array<{ x: number; y: number }>,
+  }))
 
   const normalizedTerrainAreas = (terrainAreas ?? []).map(a => ({
     ...a,
@@ -86,6 +105,8 @@ export default async function MapViewPage({
       resourcePoints={normalizedResourcePoints}
       worldTowns={worldTowns ?? []}
       pois={normalizedPois}
+      territories={normalizedTerritories}
+      historicalEvents={historicalEvents ?? []}
     />
   )
 }
