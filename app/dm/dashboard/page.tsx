@@ -113,8 +113,8 @@ export default async function DashboardPage() {
       .eq('id', campaignId)
       .eq('dm_id', user.id)
 
-    revalidatePath('/dm/dashboard')
-    revalidatePath('/', 'layout') // Refresh navigation dropdowns
+    // Force full page refresh to update all client-side caches including navigation dropdowns
+    redirect('/dm/dashboard?refresh=' + Date.now())
   }
 
   return (
