@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ShoppingBag } from '@/components/player/shopping-cart'
 import { AddToCartButton } from '@/components/player/add-to-cart-button'
 import { Coins, Package, User } from 'lucide-react'
+import { PriceIndexPanel } from '@/components/shared/price-index-panel'
+import type { ResourceScores } from '@/lib/world/terrainScores'
 
 interface PlayerShopPageProps {
   params: Promise<{
@@ -118,6 +120,15 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
 
   const lockedItemIds = new Set(cartItems?.map(ci => ci.item_id) || [])
 
+  // Fetch linked world_town for local economy context
+  const { data: linkedWorldTown } = await supabase
+    .from('world_towns')
+    .select('name, resource_snapshot')
+    .eq('shop_id', shopId)
+    .maybeSingle()
+
+  const resourceScores = linkedWorldTown?.resource_snapshot as ResourceScores | null
+
   return (
     <main className="min-h-screen bg-surface">
       {/* Sticky Header */}
@@ -196,6 +207,14 @@ export default async function PlayerShopPage({ params }: PlayerShopPageProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Local Economy */}
+        {resourceScores && (
+          <PriceIndexPanel
+            resourceScores={resourceScores}
+            townName={linkedWorldTown?.name}
+          />
+        )}
 
         {/* Items */}
         <div>

@@ -15,6 +15,7 @@ import { MapTradeRoutePanel, type PlacedTradeRouteResult } from './map-trade-rou
 import { MapTerrainPainterPanel, type AddedTerrainArea } from './map-terrain-painter-panel'
 import { MapResourcePlacerPanel, type AddedResourcePoint } from './map-resource-placer-panel'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
+import { MapPoIInfoCard } from './map-poi-info-card'
 
 const RESOURCE_COLORS: Record<string, string> = {
   iron_deposit:     '#78909c',
@@ -110,6 +111,7 @@ interface PoI {
   poi_category: string
   name: string | null
   is_discovered: boolean
+  is_visible_to_players?: boolean
   player_hint: string | null
   description: string | null
 }
@@ -170,6 +172,8 @@ export function MapCanvas({
   const [showTradeRoutes, setShowTradeRoutes] = useState(true)
 
   const [poiPanelOpen, setPoiPanelOpen] = useState(false)
+  const [selectedPoi, setSelectedPoi] = useState<PoI | null>(null)
+  const [selectedPoiPos, setSelectedPoiPos] = useState<{ x: number; y: number } | null>(null)
   const [townPanel, setTownPanel] = useState<{ xPct: number; yPct: number; result: IDWResult } | null>(null)
   const [selectedTown, setSelectedTown] = useState<WorldTown | null>(null)
   const [selectedTownPos, setSelectedTownPos] = useState<{ x: number; y: number } | null>(null)
@@ -269,6 +273,8 @@ export function MapCanvas({
 
     setSelectedTown(null)
     setSelectedTownPos(null)
+    setSelectedPoi(null)
+    setSelectedPoiPos(null)
   }
 
   function handleDoubleClick(e: React.MouseEvent) {
@@ -472,8 +478,24 @@ export function MapCanvas({
             {showPois && pois.map(poi => {
               const def = POI_DEFINITIONS.find(d => d.type === poi.poi_type)
               const color = def?.mapColor ?? '#9e9e9e'
+              const isSelected = selectedPoi?.id === poi.id
               return (
-                <g key={poi.id}>
+                <g
+                  key={poi.id}
+                  style={{ pointerEvents: mode === 'view' ? 'all' : 'none', cursor: 'pointer' }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (mode !== 'view') return
+                    const coords = getCanvasCoords(e as unknown as React.MouseEvent)
+                    setSelectedTown(null)
+                    setSelectedTownPos(null)
+                    setSelectedPoi(poi)
+                    setSelectedPoiPos(coords ? { x: coords.x, y: coords.y } : null)
+                  }}
+                >
+                  {isSelected && (
+                    <circle cx={poi.x_pct} cy={poi.y_pct} r={0.013} fill="none" stroke="white" strokeWidth={0.002} strokeOpacity={0.6} />
+                  )}
                   <circle
                     cx={poi.x_pct}
                     cy={poi.y_pct}
@@ -481,6 +503,7 @@ export function MapCanvas({
                     fill={color}
                     stroke="white"
                     strokeWidth={0.0015}
+                    fillOpacity={poi.is_discovered ? 1 : 0.55}
                   />
                 </g>
               )
@@ -695,6 +718,22 @@ export function MapCanvas({
               setWorldTowns(prev => [...prev, newTown as WorldTown])
               setTownPanel(null)
               setMode('view')
+            }}
+          />
+        )}
+
+        {/* PoI info card */}
+        {selectedPoi && selectedPoiPos && containerDims && (
+          <MapPoIInfoCard
+            poi={selectedPoi}
+            mapId={map.id}
+            x={selectedPoiPos.x}
+            y={selectedPoiPos.y}
+            containerWidth={containerDims.width}
+            containerHeight={containerDims.height}
+            onClose={() => { setSelectedPoi(null); setSelectedPoiPos(null) }}
+            onUpdated={(poiId, patch) => {
+              setPois(prev => prev.map(p => p.id === poiId ? { ...p, ...patch } : p))
             }}
           />
         )}

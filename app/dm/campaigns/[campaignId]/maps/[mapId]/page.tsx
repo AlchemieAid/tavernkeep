@@ -53,7 +53,7 @@ export default async function MapViewPage({
       .eq('map_id', mapId),
     supabase
       .from('points_of_interest')
-      .select('id, x_pct, y_pct, poi_type, poi_category, name, is_discovered, player_hint, description')
+      .select('id, x_pct, y_pct, poi_type, poi_category, name, is_discovered, is_visible_to_players, player_hint, description')
       .eq('map_id', mapId),
     supabase
       .from('political_territories')
@@ -87,6 +87,7 @@ export default async function MapViewPage({
   const normalizedPois = (pois ?? []).map(p => ({
     ...p,
     is_discovered: p.is_discovered ?? false,
+    is_visible_to_players: p.is_visible_to_players ?? false,
   }))
 
   if (map.setup_stage !== 'ready') {
