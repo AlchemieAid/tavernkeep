@@ -37,6 +37,7 @@ export default async function MapViewPage({
     { data: pois },
     { data: territories },
     { data: historicalEvents },
+    { data: tradeRoutes },
   ] = await Promise.all([
     supabase
       .from('terrain_areas')
@@ -61,6 +62,10 @@ export default async function MapViewPage({
     supabase
       .from('historical_events')
       .select('id, x_pct, y_pct, event_name, event_type, years_ago, is_known_to_players')
+      .eq('map_id', mapId),
+    supabase
+      .from('trade_routes')
+      .select('id, town_a_id, town_b_id, primary_goods, trade_volume')
       .eq('map_id', mapId),
   ])
 
@@ -107,6 +112,7 @@ export default async function MapViewPage({
       pois={normalizedPois}
       territories={normalizedTerritories}
       historicalEvents={historicalEvents ?? []}
+      tradeRoutes={tradeRoutes ?? []}
     />
   )
 }

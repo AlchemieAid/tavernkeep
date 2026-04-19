@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen, Route } from 'lucide-react'
 import { computeIDW, type IDWResult, type ResourcePoint, type TerrainArea, type PlacedPoI } from '@/lib/world/resourceInterpolation'
 import { MapHoverTooltip } from './map-hover-tooltip'
 import { MapPoIPanel, type PlacedPoIResult } from './map-poi-panel'
@@ -11,6 +11,7 @@ import { MapTownCard } from './map-town-card'
 import { MapTerritoryPanel, type PlacedTerritoryResult } from './map-territory-panel'
 import { MapHistoricalEventPanel, type PlacedHistoricalEventResult } from './map-historical-event-panel'
 import { MapMobileModal } from './map-mobile-modal'
+import { MapTradeRoutePanel, type PlacedTradeRouteResult } from './map-trade-route-panel'
 import { POI_DEFINITIONS } from '@/lib/world/poiDefinitions'
 
 const RESOURCE_COLORS: Record<string, string> = {
@@ -48,7 +49,7 @@ function getResourceColor(type: string): string {
   return RESOURCE_COLORS[type] ?? '#9e9e9e'
 }
 
-type Mode = 'view' | 'town' | 'poi' | 'territory' | 'history'
+type Mode = 'view' | 'town' | 'poi' | 'territory' | 'history' | 'trade_route'
 
 interface WorldTown {
   id: string
@@ -71,6 +72,14 @@ interface Territory {
   polygon: Array<{ x: number; y: number }>
   law_level: string | null
   attitude_to_strangers: string | null
+}
+
+interface TradeRoute {
+  id: string
+  town_a_id: string
+  town_b_id: string
+  primary_goods: string[] | null
+  trade_volume: number | null
 }
 
 interface HistEvent {
@@ -111,6 +120,7 @@ interface MapCanvasProps {
   pois: PoI[]
   territories: Territory[]
   historicalEvents: HistEvent[]
+  tradeRoutes: TradeRoute[]
 }
 
 const THROTTLE_MS = 32
@@ -125,6 +135,7 @@ export function MapCanvas({
   pois: initialPois,
   territories: initialTerritories,
   historicalEvents: initialHistoricalEvents,
+  tradeRoutes: initialTradeRoutes,
 }: MapCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const lastMoveRef = useRef(0)
@@ -143,6 +154,10 @@ export function MapCanvas({
   const [pois, setPois] = useState(initialPois)
   const [territories, setTerritories] = useState(initialTerritories)
   const [historicalEvents, setHistoricalEvents] = useState(initialHistoricalEvents)
+  const [tradeRoutes, setTradeRoutes] = useState(initialTradeRoutes)
+  const [routeSourceTown, setRouteSourceTown] = useState<WorldTown | null>(null)
+  const [routeTargetTown, setRouteTargetTown] = useState<WorldTown | null>(null)
+  const [showTradeRoutes, setShowTradeRoutes] = useState(true)
 
   const [poiPanelOpen, setPoiPanelOpen] = useState(false)
   const [townPanel, setTownPanel] = useState<{ xPct: number; yPct: number; result: IDWResult } | null>(null)
@@ -245,6 +260,15 @@ export function MapCanvas({
 
   function handleTownPinClick(e: React.MouseEvent, town: WorldTown) {
     e.stopPropagation()
+    if (mode === 'trade_route') {
+      if (!routeSourceTown) {
+        setRouteSourceTown(town)
+        return
+      }
+      if (routeSourceTown.id === town.id) return
+      setRouteTargetTown(town)
+      return
+    }
     if (mode !== 'view') return
     const coords = getCanvasCoords(e)
     setSelectedTown(town)
@@ -306,6 +330,12 @@ export function MapCanvas({
             label="History"
             icon={<BookOpen className="w-3.5 h-3.5" />}
           />
+          <ToolbarToggle
+            active={showTradeRoutes}
+            onToggle={() => setShowTradeRoutes(v => !v)}
+            label="Routes"
+            icon={<Route className="w-3.5 h-3.5" />}
+          />
         </div>
 
         <div className="h-4 w-px bg-[#282a2d]" />
@@ -335,6 +365,12 @@ export function MapCanvas({
             label="Add Event"
             icon={<BookOpen className="w-3.5 h-3.5" />}
           />
+          <ModeButton
+            active={mode === 'trade_route'}
+            onClick={() => { setMode(mode === 'trade_route' ? 'view' : 'trade_route'); setRouteSourceTown(null); setRouteTargetTown(null) }}
+            label="Trade Route"
+            icon={<Route className="w-3.5 h-3.5" />}
+          />
         </div>
 
         {mode !== 'view' && (
@@ -344,6 +380,7 @@ export function MapCanvas({
             {mode === 'poi' && 'Click map to place a PoI'}
             {mode === 'territory' && (drawingPolygon.length < 3 ? `Drawing… (${drawingPolygon.length} pts, need 3+)` : `${drawingPolygon.length} pts · double-click to finish`)}
             {mode === 'history' && 'Click map to record a historical event'}
+            {mode === 'trade_route' && (!routeSourceTown ? 'Click a town pin to start the route' : `From: ${routeSourceTown.name ?? 'Town'} — click another town to complete`)}
           </div>
         )}
       </div>
@@ -398,6 +435,33 @@ export function MapCanvas({
                     fill={color}
                     stroke="white"
                     strokeWidth={0.0015}
+                  />
+                </g>
+              )
+            })}
+
+            {/* Trade route bezier curves */}
+            {showTradeRoutes && tradeRoutes.map(route => {
+              const a = worldTowns.find(t => t.id === route.town_a_id)
+              const b = worldTowns.find(t => t.id === route.town_b_id)
+              if (!a || !b) return null
+              const mx = (a.x_pct + b.x_pct) / 2
+              const my = (a.y_pct + b.y_pct) / 2
+              const dx = b.x_pct - a.x_pct
+              const dy = b.y_pct - a.y_pct
+              const cx = mx - dy * 0.08
+              const cy = my + dx * 0.08
+              const vol = route.trade_volume ?? 5
+              const strokeW = 0.002 + vol * 0.0008
+              return (
+                <g key={route.id}>
+                  <path
+                    d={`M ${a.x_pct} ${a.y_pct} Q ${cx} ${cy} ${b.x_pct} ${b.y_pct}`}
+                    fill="none"
+                    stroke="#ffc637"
+                    strokeWidth={strokeW}
+                    strokeOpacity={0.6}
+                    strokeDasharray={`${strokeW * 4} ${strokeW * 2}`}
                   />
                 </g>
               )
@@ -477,17 +541,22 @@ export function MapCanvas({
               </g>
             ))}
 
-            {showTowns && worldTowns.map(town => (
+            {showTowns && worldTowns.map(town => {
+              const isRouteSource = routeSourceTown?.id === town.id
+              return (
               <g
                 key={town.id}
-                style={{ pointerEvents: 'all', cursor: mode === 'view' ? 'pointer' : 'default' }}
+                style={{ pointerEvents: 'all', cursor: mode === 'view' || mode === 'trade_route' ? 'pointer' : 'default' }}
                 onClick={(e) => handleTownPinClick(e as unknown as React.MouseEvent, town)}
               >
+                {isRouteSource && (
+                  <circle cx={town.x_pct} cy={town.y_pct} r={0.02} fill="none" stroke="#ffc637" strokeWidth={0.003} strokeOpacity={0.8} />
+                )}
                 <circle
                   cx={town.x_pct}
                   cy={town.y_pct}
                   r={0.014}
-                  fill="#ffc637"
+                  fill={isRouteSource ? '#ffe066' : '#ffc637'}
                   stroke="#3f2e00"
                   strokeWidth={0.002}
                 />
@@ -503,7 +572,7 @@ export function MapCanvas({
                   {(town.town_tier ?? 'hamlet').charAt(0).toUpperCase()}
                 </text>
               </g>
-            ))}
+            )})}
           </svg>
         </div>
 
@@ -574,6 +643,23 @@ export function MapCanvas({
             onPlaced={(t: PlacedTerritoryResult) => {
               setTerritories(prev => [...prev, t as Territory])
               setTerritoryFormPolygon(null)
+              setMode('view')
+            }}
+          />
+        )}
+
+        {/* Trade route panel */}
+        {routeSourceTown && routeTargetTown && (
+          <MapTradeRoutePanel
+            campaignId={campaignId}
+            mapId={map.id}
+            townA={routeSourceTown}
+            townB={routeTargetTown}
+            onClose={() => { setRouteSourceTown(null); setRouteTargetTown(null); setMode('view') }}
+            onPlaced={(r: PlacedTradeRouteResult) => {
+              setTradeRoutes(prev => [...prev, r as TradeRoute])
+              setRouteSourceTown(null)
+              setRouteTargetTown(null)
               setMode('view')
             }}
           />
