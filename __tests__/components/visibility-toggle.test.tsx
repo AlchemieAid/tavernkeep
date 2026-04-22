@@ -29,10 +29,11 @@ describe('VisibilityToggle', () => {
         isRevealed={false}
         onToggle={onToggle}
         entityType="town"
+        entityName="Test Town"
       />
     )
     
-    const toggle = screen.getByRole('switch')
+    const toggle = screen.getByRole('button', { name: /hidden from players/i })
     await user.click(toggle)
     
     await waitFor(() => {
@@ -47,11 +48,11 @@ describe('VisibilityToggle', () => {
         isRevealed={false}
         onToggle={jest.fn()}
         entityType="town"
+        entityName="Test Town"
       />
     )
     
-    const toggle = screen.getByRole('switch')
-    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByText(/hidden from players/i)).toBeInTheDocument()
     
     rerender(
       <VisibilityToggle
@@ -59,10 +60,11 @@ describe('VisibilityToggle', () => {
         isRevealed={true}
         onToggle={jest.fn()}
         entityType="town"
+        entityName="Test Town"
       />
     )
     
-    expect(toggle).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByText(/revealed to players/i)).toBeInTheDocument()
   })
 
   test('should handle multiple toggle clicks correctly', async () => {
@@ -75,10 +77,11 @@ describe('VisibilityToggle', () => {
         isRevealed={false}
         onToggle={onToggle}
         entityType="town"
+        entityName="Test Town"
       />
     )
     
-    const toggle = screen.getByRole('switch')
+    const toggle = screen.getByRole('button')
     
     // Click to reveal
     await user.click(toggle)
@@ -101,10 +104,11 @@ describe('VisibilityToggle', () => {
         isRevealed={false}
         onToggle={onToggle}
         entityType="shop"
+        entityName="Test Shop"
       />
     )
     
-    const toggle = screen.getByRole('switch')
+    const toggle = screen.getByRole('button')
     await user.click(toggle)
     
     await waitFor(() => {

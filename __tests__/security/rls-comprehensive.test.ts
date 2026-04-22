@@ -10,15 +10,22 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-// Test configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Test configuration - skip if env vars not available
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Skip tests if environment variables aren't set
-const describeOrSkip = supabaseUrl && supabaseKey ? describe : describe.skip
+// Determine if we should run or skip
+const shouldRun = !!(supabaseUrl && supabaseKey)
 
-describeOrSkip('RLS Security Audit', () => {
-  const supabase = createClient(supabaseUrl, supabaseKey)
+describe('RLS Security Audit', () => {
+  if (!shouldRun) {
+    it('SKIPPED - No Supabase credentials', () => {
+      console.log('Skipping RLS tests - NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY not set')
+    })
+    return
+  }
+  
+  const supabase = createClient(supabaseUrl!, supabaseKey!)
 
   beforeAll(async () => {
     // Verify we can connect
