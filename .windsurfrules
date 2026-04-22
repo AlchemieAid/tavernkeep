@@ -259,7 +259,42 @@ All async operations wrapped in try/catch.
 
 ---
 
-## 15. Security Checklist
+## 15. Testing Framework (Jest Only)
+
+**Jest is the single testing framework for this project.** Vitest was evaluated and deprecated to maintain consistency.
+
+### Test Organization
+```
+__tests__/
+  /security/        → RLS, authentication, data isolation tests
+  /admin/           → Admin panel, config, audit log tests
+  /architecture/    → Pattern enforcement tests
+  /[feature]/       → Feature-specific tests (create as needed)
+```
+
+### Test Standards
+- All test files: `*.test.ts` or `*.test.tsx`
+- Place tests in `__tests__/` mirror structure, not alongside source files
+- Security tests MUST verify RLS policies prevent unauthorized access
+- Database tests use actual Supabase (integration tests, not mocks)
+- Run security tests with: `npm run test:security`
+
+### Available Test Scripts
+```bash
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:security # Security/RLS tests only
+npm run test:admin    # Admin feature tests
+```
+
+### Never Introduce Alternative Frameworks
+- No Vitest, Mocha, or other test runners
+- No mixing test frameworks in same project
+- If migrating tests, complete the migration fully
+
+---
+
+## 16. Security Checklist
 
 Before any commit:
 - [ ] No API keys in client-side code
@@ -299,7 +334,30 @@ design: update DESIGN.md from Stitch token extraction
 
 ---
 
-## 18. What Windsurf Should NEVER Do
+## 19. Git Command Syntax (Windows/PowerShell)
+
+**NEVER use `&&` for chaining git commands.** PowerShell does not support `&&` as a statement separator. Using it causes parse errors and can leave `.git/index.lock` files that block future operations.
+
+```powershell
+# ❌ BAD - PowerShell parse error
+git add -A && git commit -m "message"
+
+# ✅ GOOD - Use semicolon for sequential execution
+git add -A; git commit -m "message"
+
+# ✅ GOOD - Use separate commands
+git add -A
+git commit -m "message"
+
+# ✅ GOOD - For complex operations, use cmd /c with &&
+cmd /c "git add -A && git commit -m 'message'"
+```
+
+**If `.git/index.lock` persists:** Restart your IDE or run `Remove-Item .git\index.lock` to clear stale locks from interrupted git operations.
+
+---
+
+## 20. What Windsurf Should NEVER Do
 
 - Never build a UI screen without first checking for a Stitch design via MCP
 - Never hand-edit `DESIGN.md` — it is always generated from Stitch
@@ -312,3 +370,5 @@ design: update DESIGN.md from Stitch token extraction
 - Never create shadcn components from scratch — install via the shadcn CLI
 - Never commit `.env.local`
 - Never use `eslint-disable` without naming the specific rule and explaining why
+- **Never use `&&` to chain git commands** — PowerShell doesn't support it; use `;` or separate commands
+- **Never introduce alternative testing frameworks** — Jest is the standard; no Vitest, Mocha, etc.

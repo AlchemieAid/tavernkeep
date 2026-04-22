@@ -54,7 +54,7 @@ npm run build
 
 Consider adding:
 
-- **Unit tests** with Jest or Vitest
+- **Unit tests** with Jest (standard framework for this project)
 - **E2E tests** with Playwright or Cypress
 - **Visual regression tests** with Percy or Chromatic
 - **Database migration tests** to verify schema changes
