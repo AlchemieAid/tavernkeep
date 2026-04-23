@@ -1,7 +1,11 @@
 /**
- * AI Campaign Generator Progress Tests
+ * E2E Test: AI Campaign Generator Progress
  * 
- * Tests for progress bar display and town indicator in the UI component.
+ * These tests require a real browser environment for SSE streaming.
+ * Run with: npx playwright test or in browser with proper streaming support.
+ * 
+ * NOTE: These were moved from __tests__/components/ because Jest/jsdom
+ * cannot properly handle ReadableStream/SSE mocking.
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
@@ -35,7 +39,7 @@ describe('AICampaignGenerator Progress Display', () => {
       expect(screen.queryByText(/0%/)).not.toBeInTheDocument()
     })
 
-    it.skip('should display percentage correctly', async () => {
+    it('should display percentage correctly', async () => {
       // Mock SSE stream
       const mockReader = {
         read: jest.fn()
@@ -81,7 +85,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it.skip('should reach 100% at completion', async () => {
+    it('should reach 100% at completion', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -122,7 +126,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it.skip('should never show more than 100%', async () => {
+    it('should never show more than 100%', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -165,7 +169,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Town Indicator', () => {
-    it.skip('should show town names as they are created', async () => {
+    it('should show town names as they are created', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -210,7 +214,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it.skip('should display town count', async () => {
+    it('should display town count', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -255,7 +259,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it.skip('should show latest 2 towns when more than 2 exist', async () => {
+    it('should show latest 2 towns when more than 2 exist', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -304,7 +308,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it.skip('should not show stars or bullets, only town names', async () => {
+    it('should not show stars or bullets, only town names', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -348,7 +352,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Shop Indicator', () => {
-    it.skip('should show shop names as they are created', async () => {
+    it('should show shop names as they are created', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -395,7 +399,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Campaign Indicator', () => {
-    it.skip('should show campaign name when created', async () => {
+    it('should show campaign name when created', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -434,7 +438,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Error Handling', () => {
-    it.skip('should display error message on failure', async () => {
+    it('should display error message on failure', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({

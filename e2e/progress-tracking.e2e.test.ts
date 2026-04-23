@@ -1,8 +1,11 @@
 /**
- * Progress Tracking Tests
+ * E2E Test: Progress Tracking
  * 
- * Tests for campaign generation progress bar calculations and indicators.
- * Ensures progress percentages are accurate and don't regress.
+ * These tests require a real backend environment with working AI/Supabase.
+ * Run with: npx playwright test or against staging environment.
+ * 
+ * NOTE: These were moved from __tests__/generation/ because they need
+ * full orchestrator event emission chain which requires complex mocking.
  */
 
 // Mock environment variables before any imports
@@ -141,7 +144,7 @@ jest.mock('@/lib/rate-limit', () => ({
 
 describe('Progress Tracking', () => {
   describe('Progress Bar Calculations', () => {
-    it.skip('should start at 0% and use percentage-based system', () => {
+    it('should start at 0% and use percentage-based system', () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
@@ -157,7 +160,7 @@ describe('Progress Tracking', () => {
       expect(progress.completedSteps).toBe(0)
     })
 
-    it.skip('should allocate 1% for rate limit check', async () => {
+    it('should allocate 1% for rate limit check', async () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
@@ -203,7 +206,7 @@ describe('Progress Tracking', () => {
       expect(totalProgress).toBeCloseTo(98, 0.1)
     })
 
-    it.skip('should reserve 1% for final validation', async () => {
+    it('should reserve 1% for final validation', async () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
@@ -298,7 +301,7 @@ describe('Progress Tracking', () => {
   })
 
   describe('Town Progress Indicator', () => {
-    it.skip('should emit town entity with name', async () => {
+    it('should emit town entity with name', async () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
@@ -337,7 +340,7 @@ describe('Progress Tracking', () => {
       }
     })
 
-    it.skip('should emit town entities in order', async () => {
+    it('should emit town entities in order', async () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
@@ -404,7 +407,7 @@ describe('Progress Tracking', () => {
       expect(progress).toBeLessThanOrEqual(98)
     })
 
-    it.skip('should emit shop entities with names', async () => {
+    it('should emit shop entities with names', async () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
@@ -496,7 +499,7 @@ describe('Progress Tracking', () => {
       }
     })
 
-    it.skip('should emit progress updates for all major steps', async () => {
+    it('should emit progress updates for all major steps', async () => {
       const events: GenerationEvent[] = []
       const orchestrator = new (GenerationOrchestrator as any)(
         'test-user',
