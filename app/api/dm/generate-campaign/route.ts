@@ -32,15 +32,11 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
+import { createAIClient } from '@/lib/ai'
 import { GenerateCampaignSchema } from '@/lib/validators/campaign'
 import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from '@/lib/prompts/campaign-generation'
 import { checkRateLimit, recordUsage } from '@/lib/rate-limit'
 import { truncateFields, CAMPAIGN_FIELD_MAP } from '@/lib/utils/truncate-fields'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 export async function POST(request: Request) {
   const startTime = Date.now()
@@ -94,46 +90,37 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('[CAMPAIGN GEN] OPENAI_API_KEY not configured')
+    // Create AI client using unified interface
+    let aiClient
+    try {
+      aiClient = createAIClient()
+    } catch (error) {
+      console.error('[CAMPAIGN GEN] Failed to create AI client:', error)
       return NextResponse.json(
         { data: null, error: { message: 'AI service not configured' } },
         { status: 500 }
       )
     }
 
+    console.log('[CAMPAIGN GEN] Using AI provider:', aiClient.getProvider(), 'model:', aiClient.getModel())
+
     // TODO: Implement generation cache for reusing similar prompts
     
-    // Check for inappropriate content
-    const moderationStart = Date.now()
-    const moderation = await openai.moderations.create({ input: prompt })
-    const moderationDuration = Date.now() - moderationStart
-    console.log('[CAMPAIGN GEN] Moderation check took', moderationDuration, 'ms')
-    
-    if (moderation.results[0].flagged) {
-      console.error('[CAMPAIGN GEN] Content flagged by moderation')
-      return NextResponse.json(
-        { data: null, error: { message: 'Content violates usage policies. Please revise your prompt.' } },
-        { status: 400 }
-      )
-    }
-
-    console.log('[CAMPAIGN GEN] Calling OpenAI API...')
-    const openaiStart = Date.now()
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Much cheaper than gpt-4o
+    console.log('[CAMPAIGN GEN] Calling AI API...')
+    const aiStart = Date.now()
+    const response = await aiClient.generate({
       messages: [
         { role: 'system', content: CAMPAIGN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildCampaignGenerationPrompt(prompt, ruleset, setting) },
       ],
       temperature: 0.8,
-      response_format: { type: 'json_object' },
+      responseFormat: 'json',
     })
-    const openaiDuration = Date.now() - openaiStart
-    console.log('[CAMPAIGN GEN] OpenAI API call took', openaiDuration, 'ms')
+    const aiDuration = Date.now() - aiStart
+    console.log('[CAMPAIGN GEN] AI API call took', aiDuration, 'ms')
 
-    console.log('[CAMPAIGN GEN] OpenAI response received')
-    const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
+    console.log('[CAMPAIGN GEN] AI response received')
+    const generatedData = JSON.parse(response.content || '{}')
     console.log('[CAMPAIGN GEN] Generated campaign data:', JSON.stringify(generatedData, null, 2))
     
     const { campaign, suggestedTowns } = generatedData
@@ -185,11 +172,22 @@ export async function POST(request: Request) {
 
     console.log('[CAMPAIGN GEN] Campaign created successfully, ID:', createdCampaign.id)
 
-    // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
-    const inputTokens = completion.usage?.prompt_tokens || 0
-    const outputTokens = completion.usage?.completion_tokens || 0
-    const totalTokens = completion.usage?.total_tokens || 0
-    const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+    // Calculate cost based on provider
+    const inputTokens = response.tokensUsed?.input || 0
+    const outputTokens = response.tokensUsed?.output || 0
+    const totalTokens = response.tokensUsed?.total || 0
+    const provider = aiClient.getProvider()
+    const model = aiClient.getModel()
+    
+    // Cost calculation (approximate)
+    let estimatedCost = 0
+    if (provider === 'openai') {
+      // gpt-4o-mini: $0.150/1M input, $0.600/1M output
+      estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+    } else if (provider === 'gemini') {
+      // gemini-2.5-flash-lite: Free tier, minimal cost
+      estimatedCost = 0
+    }
 
     // Track usage async (fire-and-forget, don't block response)
     console.log('[CAMPAIGN GEN] Recording usage...')
@@ -199,7 +197,7 @@ export async function POST(request: Request) {
       inputTokens,
       outputTokens,
       estimatedCost,
-      model: 'gpt-4o',
+      model,
     }, supabase)
 
     const totalDuration = Date.now() - startTime
@@ -225,7 +223,8 @@ export async function POST(request: Request) {
           inputTokens,
           outputTokens,
           estimatedCost: estimatedCost.toFixed(6),
-          model: 'gpt-4o-mini',
+          model,
+          provider,
           cached: false
         }
       },

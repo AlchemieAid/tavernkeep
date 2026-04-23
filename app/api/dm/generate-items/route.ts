@@ -11,14 +11,10 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
+import { createAIClient } from '@/lib/ai'
 import { buildItemGenerationSystemPrompt, buildItemGenerationPrompt } from '@/lib/prompts/item-generation'
 import { GenerateItemsSchema } from '@/lib/validators/item'
 import { checkRateLimit, recordUsage } from '@/lib/rate-limit'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 export async function POST(request: Request) {
   try {
@@ -59,13 +55,19 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not configured')
+    // Create AI client using unified interface
+    let aiClient
+    try {
+      aiClient = createAIClient()
+    } catch (error) {
+      console.error('[ITEMS GEN] Failed to create AI client:', error)
       return NextResponse.json(
         { data: null, error: { message: 'AI service not configured' } },
         { status: 500 }
       )
     }
+
+    console.log('[ITEMS GEN] Using AI provider:', aiClient.getProvider(), 'model:', aiClient.getModel())
 
     // Verify shop ownership and get context
     const { data: shop, error: shopError } = await supabase
@@ -106,20 +108,19 @@ export async function POST(request: Request) {
 
     const currency = campaign?.currency || 'gp'
 
-    console.log('Generating items with prompt:', prompt, 'count:', count, 'currency:', currency)
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    console.log('[ITEMS GEN] Generating items with prompt:', prompt, 'count:', count, 'currency:', currency)
+    const response = await aiClient.generate({
       messages: [
         { role: 'system', content: buildItemGenerationSystemPrompt(currency) },
         { role: 'user', content: buildItemGenerationPrompt(prompt, shopContext, campaignContext, count) },
       ],
       temperature: 0.9,
-      response_format: { type: 'json_object' },
+      responseFormat: 'json',
     })
 
-    console.log('OpenAI response received')
-    const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
-    console.log('Generated items data:', JSON.stringify(generatedData, null, 2))
+    console.log('[ITEMS GEN] AI response received')
+    const generatedData = JSON.parse(response.content || '{}')
+    console.log('[ITEMS GEN] Generated items data:', JSON.stringify(generatedData, null, 2))
     
     const { items } = generatedData
 
@@ -160,11 +161,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // Calculate cost
-    const inputTokens = completion.usage?.prompt_tokens || 0
-    const outputTokens = completion.usage?.completion_tokens || 0
-    const totalTokens = completion.usage?.total_tokens || 0
-    const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+    // Calculate cost based on provider
+    const inputTokens = response.tokensUsed?.input || 0
+    const outputTokens = response.tokensUsed?.output || 0
+    const totalTokens = response.tokensUsed?.total || 0
+    const provider = aiClient.getProvider()
+    const model = aiClient.getModel()
+    
+    // Cost calculation (approximate)
+    let estimatedCost = 0
+    if (provider === 'openai') {
+      // gpt-4o-mini: $0.150/1M input, $0.600/1M output
+      estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+    } else if (provider === 'gemini') {
+      // gemini-2.5-flash-lite: Free tier, minimal cost
+      estimatedCost = 0
+    }
 
     // Track usage async (fire-and-forget, don't block response)
     void recordUsage(user.id, 'item', {
@@ -173,7 +185,7 @@ export async function POST(request: Request) {
       inputTokens,
       outputTokens,
       estimatedCost,
-      model: 'gpt-4o-mini',
+      model,
     }, supabase)
 
     return NextResponse.json({ 
@@ -184,7 +196,8 @@ export async function POST(request: Request) {
           inputTokens,
           outputTokens,
           estimatedCost: estimatedCost.toFixed(6),
-          model: 'gpt-4o-mini'
+          model,
+          provider
         }
       },
       error: null

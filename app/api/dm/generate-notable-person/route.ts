@@ -11,16 +11,12 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import OpenAI from 'openai'
+import { createAIClient } from '@/lib/ai'
 import { z } from 'zod'
 import { NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT, buildNotablePersonGenerationPrompt } from '@/lib/prompts/notable-person-generation'
 import { checkRateLimit, recordUsage } from '@/lib/rate-limit'
 import { truncateFields, NOTABLE_PERSON_FIELD_MAP } from '@/lib/utils/truncate-fields'
 import { GenerateNotablePersonSchema } from '@/lib/validators/notable-person'
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
 
 export async function POST(request: Request) {
   try {
@@ -61,13 +57,19 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not configured')
+    // Create AI client using unified interface
+    let aiClient
+    try {
+      aiClient = createAIClient()
+    } catch (error) {
+      console.error('[NPC GEN] Failed to create AI client:', error)
       return NextResponse.json(
         { data: null, error: { message: 'AI service not configured' } },
         { status: 500 }
       )
     }
+
+    console.log('[NPC GEN] Using AI provider:', aiClient.getProvider(), 'model:', aiClient.getModel())
 
     // Verify town ownership and get context
     const { data: town, error: townError } = await supabase
@@ -111,20 +113,19 @@ export async function POST(request: Request) {
       campaign.pantheon && `Pantheon: ${campaign.pantheon}`,
     ].filter(Boolean).join('\n') : undefined
 
-    console.log('Generating notable person(s) with prompt:', prompt, 'count:', count, 'role:', role)
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    console.log('[NPC GEN] Generating notable person(s) with prompt:', prompt, 'count:', count, 'role:', role)
+    const response = await aiClient.generate({
       messages: [
         { role: 'system', content: NOTABLE_PERSON_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildNotablePersonGenerationPrompt(prompt, townContext, campaignContext, role, count) },
       ],
       temperature: 0.9, // Higher temperature for more creative NPCs
-      response_format: { type: 'json_object' },
+      responseFormat: 'json',
     })
 
-    console.log('OpenAI response received')
-    const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
-    console.log('Generated notable people data:', JSON.stringify(generatedData, null, 2))
+    console.log('[NPC GEN] AI response received')
+    const generatedData = JSON.parse(response.content || '{}')
+    console.log('[NPC GEN] Generated notable people data:', JSON.stringify(generatedData, null, 2))
     
     const { notablePeople } = generatedData
 
@@ -159,11 +160,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
-    const inputTokens = completion.usage?.prompt_tokens || 0
-    const outputTokens = completion.usage?.completion_tokens || 0
-    const totalTokens = completion.usage?.total_tokens || 0
-    const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+    // Calculate cost based on provider
+    const inputTokens = response.tokensUsed?.input || 0
+    const outputTokens = response.tokensUsed?.output || 0
+    const totalTokens = response.tokensUsed?.total || 0
+    const provider = aiClient.getProvider()
+    const model = aiClient.getModel()
+    
+    // Cost calculation (approximate)
+    let estimatedCost = 0
+    if (provider === 'openai') {
+      // gpt-4o-mini: $0.150/1M input, $0.600/1M output
+      estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
+    } else if (provider === 'gemini') {
+      // gemini-2.5-flash-lite: Free tier, minimal cost
+      estimatedCost = 0
+    }
 
     // Track usage async (fire-and-forget, don't block response)
     void recordUsage(user.id, 'item', {
@@ -172,7 +184,7 @@ export async function POST(request: Request) {
       inputTokens,
       outputTokens,
       estimatedCost,
-      model: 'gpt-4o-mini',
+      model,
     }, supabase)
 
     return NextResponse.json({ 
@@ -183,7 +195,8 @@ export async function POST(request: Request) {
           inputTokens,
           outputTokens,
           estimatedCost: estimatedCost.toFixed(6),
-          model: 'gpt-4o-mini'
+          model,
+          provider
         }
       },
       error: null
