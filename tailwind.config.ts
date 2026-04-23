@@ -145,6 +145,10 @@ const config = {
             transform: "scale(1)",
           },
         },
+        "pulse-slow": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.5" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -152,6 +156,7 @@ const config = {
         "shimmer": "shimmer 1.5s infinite",
         "slideUp": "slideUp 300ms ease-out",
         "scaleIn": "scaleIn 300ms ease-out",
+        "pulse-slow": "pulse-slow 3s ease-in-out infinite",
       },
     },
   },
