@@ -43,22 +43,29 @@ const openai = new OpenAI({
 })
 
 export async function POST(request: Request) {
+  const startTime = Date.now()
+  console.log('[CAMPAIGN GEN] API call started at', new Date().toISOString())
+  
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      console.error('[CAMPAIGN GEN] No user found')
       return NextResponse.json(
         { data: null, error: { message: 'Unauthorized' } },
         { status: 401 }
       )
     }
 
+    console.log('[CAMPAIGN GEN] User authenticated:', user.id)
+
     // Validate request body with Zod
     const body = await request.json()
     const validation = GenerateCampaignSchema.safeParse(body)
     
     if (!validation.success) {
+      console.error('[CAMPAIGN GEN] Validation failed:', validation.error.errors)
       return NextResponse.json(
         { data: null, error: { message: validation.error.errors[0].message } },
         { status: 400 }
@@ -66,10 +73,16 @@ export async function POST(request: Request) {
     }
 
     const { prompt, ruleset, setting } = validation.data
+    console.log('[CAMPAIGN GEN] Validation passed, prompt:', prompt.substring(0, 50))
 
     // Check rate limit
+    const rateLimitStart = Date.now()
     const rateLimit = await checkRateLimit(user.id, 'campaign')
+    const rateLimitDuration = Date.now() - rateLimitStart
+    console.log('[CAMPAIGN GEN] Rate limit check took', rateLimitDuration, 'ms')
+    
     if (!rateLimit.allowed) {
+      console.error('[CAMPAIGN GEN] Rate limit exceeded')
       return NextResponse.json(
         { data: null, error: { message: rateLimit.message } },
         { 
@@ -82,7 +95,7 @@ export async function POST(request: Request) {
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      console.error('OPENAI_API_KEY is not configured')
+      console.error('[CAMPAIGN GEN] OPENAI_API_KEY not configured')
       return NextResponse.json(
         { data: null, error: { message: 'AI service not configured' } },
         { status: 500 }
@@ -92,15 +105,21 @@ export async function POST(request: Request) {
     // TODO: Implement generation cache for reusing similar prompts
     
     // Check for inappropriate content
+    const moderationStart = Date.now()
     const moderation = await openai.moderations.create({ input: prompt })
+    const moderationDuration = Date.now() - moderationStart
+    console.log('[CAMPAIGN GEN] Moderation check took', moderationDuration, 'ms')
+    
     if (moderation.results[0].flagged) {
+      console.error('[CAMPAIGN GEN] Content flagged by moderation')
       return NextResponse.json(
         { data: null, error: { message: 'Content violates usage policies. Please revise your prompt.' } },
         { status: 400 }
       )
     }
 
-    console.log('Generating campaign with prompt:', prompt, 'ruleset:', ruleset, 'setting:', setting)
+    console.log('[CAMPAIGN GEN] Calling OpenAI API...')
+    const openaiStart = Date.now()
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // Much cheaper than gpt-4o
       messages: [
@@ -110,10 +129,12 @@ export async function POST(request: Request) {
       temperature: 0.8,
       response_format: { type: 'json_object' },
     })
+    const openaiDuration = Date.now() - openaiStart
+    console.log('[CAMPAIGN GEN] OpenAI API call took', openaiDuration, 'ms')
 
-    console.log('OpenAI response received')
+    console.log('[CAMPAIGN GEN] OpenAI response received')
     const generatedData = JSON.parse(completion.choices[0].message.content || '{}')
-    console.log('Generated campaign data:', JSON.stringify(generatedData, null, 2))
+    console.log('[CAMPAIGN GEN] Generated campaign data:', JSON.stringify(generatedData, null, 2))
     
     const { campaign, suggestedTowns } = generatedData
 
@@ -129,6 +150,7 @@ export async function POST(request: Request) {
       .replace(/^-+|-+$/g, '')
       .substring(0, 50)
     
+    console.log('[CAMPAIGN GEN] Inserting campaign into database...')
     // Create campaign (truncate to ensure field limits)
     const campaignData = truncateFields({
       dm_id: user.id,
@@ -144,19 +166,24 @@ export async function POST(request: Request) {
       slug: slug,
     }, CAMPAIGN_FIELD_MAP)
 
+    const dbInsertStart = Date.now()
     const { data: createdCampaign, error: campaignError } = await supabase
       .from('campaigns')
       .insert(campaignData as any)
       .select()
       .single()
+    const dbInsertDuration = Date.now() - dbInsertStart
+    console.log('[CAMPAIGN GEN] DB insert took', dbInsertDuration, 'ms')
 
     if (campaignError) {
-      console.error('Error creating campaign:', campaignError)
+      console.error('[CAMPAIGN GEN] Error creating campaign:', campaignError)
       return NextResponse.json(
         { data: null, error: { message: 'Failed to create campaign in DB' } },
         { status: 500 }
       )
     }
+
+    console.log('[CAMPAIGN GEN] Campaign created successfully, ID:', createdCampaign.id)
 
     // Calculate cost (gpt-4o-mini: $0.150/1M input, $0.600/1M output)
     const inputTokens = completion.usage?.prompt_tokens || 0
@@ -165,6 +192,7 @@ export async function POST(request: Request) {
     const estimatedCost = (inputTokens * 0.150 / 1000000) + (outputTokens * 0.600 / 1000000)
 
     // Track usage async (fire-and-forget, don't block response)
+    console.log('[CAMPAIGN GEN] Recording usage...')
     void recordUsage(user.id, 'campaign', {
       prompt,
       tokensUsed: totalTokens,
@@ -173,6 +201,10 @@ export async function POST(request: Request) {
       estimatedCost,
       model: 'gpt-4o',
     }, supabase)
+
+    const totalDuration = Date.now() - startTime
+    console.log('[CAMPAIGN GEN] Total API duration:', totalDuration, 'ms')
+    console.log('[CAMPAIGN GEN] Sending response to client')
 
     // TODO: Re-enable when cache tables are created
     // Store in cache for future reuse
@@ -200,7 +232,13 @@ export async function POST(request: Request) {
       error: null
     })
   } catch (error) {
-    console.error('AI campaign generation failed:', error)
+    const totalDuration = Date.now() - startTime
+    console.error('[CAMPAIGN GEN] AI campaign generation failed after', totalDuration, 'ms:', error)
+    console.error('[CAMPAIGN GEN] Error details:', {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      name: (error as Error).name
+    })
     return NextResponse.json(
       { data: null, error: { message: (error as Error).message || 'Unknown error' } },
       { status: 500 }

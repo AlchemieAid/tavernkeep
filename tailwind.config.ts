@@ -156,7 +156,7 @@ const config = {
         "shimmer": "shimmer 1.5s infinite",
         "slideUp": "slideUp 300ms ease-out",
         "scaleIn": "scaleIn 300ms ease-out",
-        "pulse-slow": "pulse-slow 3s ease-in-out infinite",
+        "pulse-slow": "pulse-slow 6s ease-in-out infinite",
       },
     },
   },

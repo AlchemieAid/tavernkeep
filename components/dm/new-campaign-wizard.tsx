@@ -64,7 +64,8 @@ export function NewCampaignWizard() {
   }
 
   const startGeneration = async () => {
-    console.log('[WIZARD] Starting world generation...')
+    const startTime = Date.now()
+    console.log('[WIZARD] Starting world generation at', new Date().toISOString())
     setIsSubmitting(true)
     goToStep('generating')
     
@@ -89,14 +90,15 @@ export function NewCampaignWizard() {
       }
       console.log('[WIZARD] Campaign payload:', campaignPayload)
 
+      const campaignFetchStart = Date.now()
       const cRes = await fetch('/api/dm/generate-campaign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(campaignPayload),
         signal: AbortSignal.timeout(120000) // 2 minute timeout
       })
-      
-      console.log('[WIZARD] Campaign API response status:', cRes.status)
+      const campaignFetchDuration = Date.now() - campaignFetchStart
+      console.log('[WIZARD] Campaign fetch took', campaignFetchDuration, 'ms, status:', cRes.status)
       
       if (!cRes.ok) {
         const errorData = await cRes.json().catch(() => ({}))
@@ -132,12 +134,15 @@ export function NewCampaignWizard() {
       }
       console.log('[WIZARD] Map payload:', mapPayload)
 
+      const mapFetchStart = Date.now()
       const mRes = await fetch('/api/world/generate-maps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(mapPayload),
         signal: AbortSignal.timeout(180000) // 3 minute timeout for image generation
       })
+      const mapFetchDuration = Date.now() - mapFetchStart
+      console.log('[WIZARD] Map fetch took', mapFetchDuration, 'ms, status:', mRes.status)
       
       console.log('[WIZARD] Map API response status:', mRes.status)
 
@@ -165,12 +170,15 @@ export function NewCampaignWizard() {
       console.log('[WIZARD] Step 3: Selecting first map:', maps[0].id)
       setGenStatus(prev => ({ ...prev, stage: 'finalizing', message: 'Selecting your map and finalizing...' }))
       
+      const selectFetchStart = Date.now()
       const selectRes = await fetch('/api/world/generate-maps', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ map_id: maps[0].id, campaign_id: campaign.id }),
         signal: AbortSignal.timeout(30000) // 30 second timeout
       })
+      const selectFetchDuration = Date.now() - selectFetchStart
+      console.log('[WIZARD] Map selection fetch took', selectFetchDuration, 'ms, status:', selectRes.status)
 
       if (!selectRes.ok) {
         const errorData = await selectRes.json().catch(() => ({}))
@@ -182,16 +190,25 @@ export function NewCampaignWizard() {
 
       // Success!
       setGenStatus(prev => ({ ...prev, stage: 'complete', message: 'World creation complete!' }))
-      console.log('[WIZARD] Generation complete! Redirecting to campaign...')
+      const totalDuration = Date.now() - startTime
+      console.log('[WIZARD] Generation complete! Total duration:', totalDuration, 'ms')
+      console.log('[WIZARD] Redirecting to campaign...')
       goToStep('success')
       
       setTimeout(() => {
+        console.log('[WIZARD] Executing redirect to:', `/dm/campaigns/${campaign.id}/maps/${maps[0].id}`)
         router.push(`/dm/campaigns/${campaign.id}/maps/${maps[0].id}`)
       }, 2000)
       
     } catch (err) {
+      const totalDuration = Date.now() - startTime
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
-      console.error('[WIZARD] Generation failed:', errorMessage, err)
+      console.error('[WIZARD] Generation failed after', totalDuration, 'ms:', errorMessage, err)
+      console.error('[WIZARD] Error details:', {
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : 'No stack trace',
+        name: err instanceof Error ? err.name : 'Unknown error type'
+      })
       setError(errorMessage)
       setGenStatus(prev => ({ ...prev, stage: 'error', error: errorMessage }))
       setIsSubmitting(false)
