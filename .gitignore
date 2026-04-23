@@ -44,4 +44,7 @@ next-env.d.ts
 # testing/debug scripts
 /testing
 
+# build info
+.build-info.json
+
 .vercel
