@@ -49,7 +49,7 @@ export function NewCampaignWizard() {
   const handleGenerate = async () => {
     setIsSubmitting(true); goToStep('generating')
     try {
-      const cRes = await fetch('/api/dm/create-campaign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: data.name, description: data.description, currency: data.currency, setting: data.settingTheme }) })
+      const cRes = await fetch('/api/dm/generate-campaign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: data.settingTheme, ruleset: '5e', setting: data.name }) })
       if (!cRes.ok) throw new Error('Failed to create campaign')
       const { data: campaign } = await cRes.json()
       const mRes = await fetch('/api/world/generate-maps', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ campaign_id: campaign.id, map_size: data.mapSize, map_style: data.mapStyle, biome_profile: data.biomeProfile, dm_description: data.settingTheme }) })
