@@ -5,3 +5,10 @@ import '@testing-library/jest-dom'
 if (typeof global.fetch === 'undefined') {
   global.fetch = require('node-fetch')
 }
+
+// Polyfill TextEncoder/TextDecoder for AI generation tests
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util')
+  global.TextEncoder = TextEncoder
+  global.TextDecoder = TextDecoder
+}
