@@ -5,6 +5,53 @@
  * Ensures progress percentages are accurate and don't regress.
  */
 
+// Mock environment variables before any imports
+process.env.GEMINI_API_KEY = 'test-gemini-key'
+process.env.OPENAI_API_KEY = 'test-openai-key'
+process.env.AI_PROVIDER = 'openai'
+
+// Mock AI module to prevent API key validation errors
+jest.mock('@/lib/ai', () => ({
+  createAIClient: jest.fn().mockReturnValue({
+    generateCampaign: jest.fn().mockResolvedValue({
+      campaign: {
+        name: 'Test Campaign',
+        description: 'A test campaign',
+        ruleset: '5e',
+        currency: 'gp',
+      },
+      town: {
+        name: 'Test Town',
+        description: 'A test town',
+        population: 1000,
+        size: 'small',
+      },
+      shop: {
+        name: 'Test Shop',
+        shop_type: 'general',
+        economic_tier: 'modest',
+        keeper_name: 'Test Keeper',
+        keeper_race: 'Human',
+      },
+    }),
+    generateTown: jest.fn().mockResolvedValue({
+      name: 'Test Town',
+      description: 'A test town',
+      population: 1000,
+      size: 'small',
+    }),
+    generateShop: jest.fn().mockResolvedValue({
+      name: 'Test Shop',
+      shop_type: 'general',
+      economic_tier: 'modest',
+      keeper_name: 'Test Keeper',
+      keeper_race: 'Human',
+    }),
+  }),
+  getConfiguredProvider: jest.fn().mockReturnValue('openai'),
+  getConfiguredModel: jest.fn().mockReturnValue('gpt-4o-mini'),
+}))
+
 import { GenerationOrchestrator } from '@/lib/generation/orchestrator'
 import { GenerationEvent, GenerationProgress } from '@/lib/generation/types'
 

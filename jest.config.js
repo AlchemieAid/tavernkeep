@@ -12,6 +12,7 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@google/genai$': '<rootDir>/__mocks__/google-genai.ts',
+    '^nanoid$': '<rootDir>/__mocks__/nanoid.ts',
   },
   transformIgnorePatterns: [
     '/node_modules/(?!(uuid|@google|p-retry|eventemitter3|nanoid)/)',
