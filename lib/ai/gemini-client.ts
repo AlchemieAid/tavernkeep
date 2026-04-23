@@ -53,10 +53,38 @@ export class GeminiClient implements AIClient {
   }
 
   async generateImage(request: AIImageGenerationRequest): Promise<AIImageGenerationResponse> {
-    // Gemini image generation requires a different API call
-    // TODO: Implement using Gemini's Imagen API
-    // This requires researching the exact API format in @google/genai SDK
-    throw new Error('Gemini image generation not yet implemented. Use OpenAI for image generation or implement Gemini Imagen API.')
+    const size = request.size || '1024x1024'
+    const count = request.count || 1
+    
+    // Gemini Imagen for image generation
+    const response = await this.ai.models.generateImages({
+      model: 'imagen-3.0-generate-001', // Using Imagen 3 for now
+      prompt: request.prompt,
+      config: {
+        numberOfImages: count,
+        aspectRatio: size === '1024x1024' ? '1:1' : size === '512x512' ? '1:1' : '1:1'
+      }
+    })
+
+    // Gemini returns image bytes, not URLs
+    // Convert to data URLs for now (in production, upload to storage)
+    const urls: string[] = []
+    if (response.generatedImages) {
+      for (const generatedImage of response.generatedImages) {
+        const imageBytes = generatedImage.image?.imageBytes
+        if (imageBytes) {
+          // Convert base64 bytes to data URL
+          const base64 = Buffer.from(imageBytes, 'base64').toString('base64')
+          urls.push(`data:image/png;base64,${base64}`)
+        }
+      }
+    }
+
+    return {
+      urls,
+      model: 'imagen-3.0-generate-001',
+      provider: 'gemini'
+    }
   }
 
   getProvider() {
