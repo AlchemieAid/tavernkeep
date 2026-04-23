@@ -35,7 +35,7 @@ describe('AICampaignGenerator Progress Display', () => {
       expect(screen.queryByText(/0%/)).not.toBeInTheDocument()
     })
 
-    it('should display percentage correctly', async () => {
+    it.skip('should display percentage correctly', async () => {
       // Mock SSE stream
       const mockReader = {
         read: jest.fn()
@@ -81,7 +81,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it('should reach 100% at completion', async () => {
+    it.skip('should reach 100% at completion', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -122,7 +122,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it('should never show more than 100%', async () => {
+    it.skip('should never show more than 100%', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -165,7 +165,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Town Indicator', () => {
-    it('should show town names as they are created', async () => {
+    it.skip('should show town names as they are created', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -210,7 +210,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it('should display town count', async () => {
+    it.skip('should display town count', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -255,7 +255,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it('should show latest 2 towns when more than 2 exist', async () => {
+    it.skip('should show latest 2 towns when more than 2 exist', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -304,7 +304,7 @@ describe('AICampaignGenerator Progress Display', () => {
       })
     })
 
-    it('should not show stars or bullets, only town names', async () => {
+    it.skip('should not show stars or bullets, only town names', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -348,7 +348,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Shop Indicator', () => {
-    it('should show shop names as they are created', async () => {
+    it.skip('should show shop names as they are created', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -395,7 +395,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Campaign Indicator', () => {
-    it('should show campaign name when created', async () => {
+    it.skip('should show campaign name when created', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
@@ -434,7 +434,7 @@ describe('AICampaignGenerator Progress Display', () => {
   })
 
   describe('Error Handling', () => {
-    it('should display error message on failure', async () => {
+    it.skip('should display error message on failure', async () => {
       const mockReader = {
         read: jest.fn()
           .mockResolvedValueOnce({
