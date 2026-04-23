@@ -42,7 +42,7 @@ describe('VisibilityToggle', () => {
   })
 
   test('should show correct initial state based on isRevealed prop', () => {
-    const { rerender } = render(
+    const { unmount } = render(
       <VisibilityToggle
         entityId="town-123"
         isRevealed={false}
@@ -54,7 +54,9 @@ describe('VisibilityToggle', () => {
     
     expect(screen.getByText(/hidden from players/i)).toBeInTheDocument()
     
-    rerender(
+    unmount()
+    
+    render(
       <VisibilityToggle
         entityId="town-123"
         isRevealed={true}

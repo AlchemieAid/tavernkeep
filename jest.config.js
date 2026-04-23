@@ -11,9 +11,10 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@google/genai$': '<rootDir>/__mocks__/google-genai.ts',
   },
   transformIgnorePatterns: [
-    '/node_modules/(?!(uuid|@google|p-retry|eventemitter3)/)',
+    '/node_modules/(?!(uuid|@google|p-retry|eventemitter3|nanoid)/)',
   ],
   testMatch: [
     '**/__tests__/**/*.test.ts',
