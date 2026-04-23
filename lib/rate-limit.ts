@@ -251,15 +251,15 @@ export async function checkRateLimit(
     }
   }
 
-  // Slow path: check DB with 2 second timeout (fail open fast to prevent blocking)
-  console.log('[RATE-LIMIT] Cache miss, checking database with 2000ms timeout')
+  // Slow path: check DB with 5 second timeout (fail open to prevent blocking)
+  console.log('[RATE-LIMIT] Cache miss, checking database with 5000ms timeout')
   const timeoutPromise = new Promise<{ allowed: boolean; remaining: number; message: string }>((resolve) => {
     setTimeout(() => {
-      console.warn('[RATE-LIMIT] Database check timed out after 2000ms, failing open')
+      console.warn('[RATE-LIMIT] Database check timed out after 5000ms, failing open')
       console.warn('[RATE-LIMIT] This may indicate: 1) Supabase cold start, 2) Network latency, 3) Missing index')
       console.warn('[RATE-LIMIT] Check that idx_ai_usage_rate_limit index exists on ai_usage table')
       resolve({ allowed: true, remaining: 999, message: 'Rate limit check skipped (timeout)' })
-    }, 2000)
+    }, 5000)
   })
 
   const checkStart = Date.now()

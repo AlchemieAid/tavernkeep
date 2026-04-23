@@ -236,9 +236,24 @@ export function NewCampaignWizard() {
           <CardHeader><CardTitle className="font-noto-serif text-xl">{step === 'form' ? 'Campaign Configuration' : step === 'generating' ? 'Creating Your World...' : 'World Created!'}</CardTitle></CardHeader>
           <CardContent className="space-y-6">
             {step === 'form' && <div className="space-y-6">
-              {/* Campaign Basics */}
+              {/* Required fields at top */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-on-surface">Campaign Basics</h3>
+                <div className="space-y-2">
+                  <Label>Setting Theme *</Label>
+                  <Textarea value={data.settingTheme} onChange={e => updateData({ settingTheme: e.target.value })} placeholder="Coastal merchant republic with smuggling guilds..." className="bg-[#1a1c1f] border-[#282a2d] min-h-[100px]" />
+                </div>
+                <div className="space-y-3">
+                  <Label>Map Size *</Label>
+                  {([['region', 'Region', '50-100', '80-160', Flag, 'A county or small province'], ['kingdom', 'Kingdom', '200-400', '320-640', Castle, 'A full nation with multiple cities'], ['continent', 'Continent', '1000-2000', '1600-3200', Globe, 'A vast landmass with diverse biomes']] as [string, string, string, string, LucideIcon, string][]).map(([val, label, mi, km, IconComp, desc]) => {
+                    const isSel = data.mapSize === val
+                    return <button key={val} onClick={() => updateData({ mapSize: val as any })} className={cn('w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left', isSel ? 'border-primary bg-primary/5' : 'border-[#282a2d] bg-[#1a1c1f]')}><div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', isSel ? 'bg-primary/20' : 'bg-[#282a2d]')}><IconComp className={cn('w-6 h-6', isSel ? 'text-primary' : 'text-on-surface-variant')} /></div><div className="flex-1"><h3 className={cn('font-semibold', isSel ? 'text-primary' : 'text-on-surface')}>{label}</h3><p className="text-sm text-on-surface-variant">{desc}</p><p className="text-xs text-on-surface-variant/60 mt-1">{data.unitSystem === 'metric' ? km + ' km' : mi + ' miles'}</p></div>{isSel && <CheckCircle2 className="w-5 h-5 text-primary" />}</button>
+                  })}
+                  <div className="flex items-center gap-2"><Label className="text-xs">Units:</Label><div className="flex bg-[#1a1c1f] rounded-lg p-0.5"><button onClick={() => updateData({ unitSystem: 'imperial' })} className={cn('px-3 py-1 text-xs rounded-md', data.unitSystem === 'imperial' ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant')}>Miles</button><button onClick={() => updateData({ unitSystem: 'metric' })} className={cn('px-3 py-1 text-xs rounded-md', data.unitSystem === 'metric' ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant')}>km</button></div></div>
+                </div>
+              </div>
+
+              {/* Optional fields */}
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Campaign Name <span className="text-on-surface-variant/60 font-normal">(optional - AI will generate if empty)</span></Label>
                   <Input value={data.name} onChange={e => updateData({ name: e.target.value })} placeholder="Leave empty for AI-generated name" className="bg-[#1a1c1f] border-[#282a2d]" />
@@ -252,31 +267,9 @@ export function NewCampaignWizard() {
                   <Input value={data.currency} onChange={e => updateData({ currency: e.target.value })} placeholder="e.g., 'Gold Pieces (gp)' or leave empty" className="bg-[#1a1c1f] border-[#282a2d]" />
                   <p className="text-xs text-on-surface-variant/50">If empty, AI will create a thematic multi-currency system</p>
                 </div>
-              </div>
-
-              {/* Setting & Theme */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-on-surface">Setting & Theme</h3>
-                <div className="space-y-2">
-                  <Label>Setting Theme *</Label>
-                  <Textarea value={data.settingTheme} onChange={e => updateData({ settingTheme: e.target.value })} placeholder="Coastal merchant republic with smuggling guilds..." className="bg-[#1a1c1f] border-[#282a2d] min-h-[100px]" />
-                </div>
                 <div className="space-y-2">
                   <Label>Campaign Tone</Label>
                   <Select value={data.mapStyle} onValueChange={v => updateData({ mapStyle: v })}><SelectTrigger className="bg-[#1a1c1f] border-[#282a2d]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#1a1c1f] border-[#282a2d]"><SelectItem value="fantasy_illustrated">Fantasy Illustrated</SelectItem><SelectItem value="aged_parchment">Aged Parchment</SelectItem><SelectItem value="satellite">Satellite View</SelectItem><SelectItem value="ink_drawn">Ink Drawn</SelectItem></SelectContent></Select>
-                </div>
-              </div>
-
-              {/* Map Configuration */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-on-surface">Map Configuration</h3>
-                <div className="space-y-3">
-                  <Label>Map Size *</Label>
-                  {([['region', 'Region', '50-100', '80-160', Flag, 'A county or small province'], ['kingdom', 'Kingdom', '200-400', '320-640', Castle, 'A full nation with multiple cities'], ['continent', 'Continent', '1000-2000', '1600-3200', Globe, 'A vast landmass with diverse biomes']] as [string, string, string, string, LucideIcon, string][]).map(([val, label, mi, km, IconComp, desc]) => {
-                    const isSel = data.mapSize === val
-                    return <button key={val} onClick={() => updateData({ mapSize: val as any })} className={cn('w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left', isSel ? 'border-primary bg-primary/5' : 'border-[#282a2d] bg-[#1a1c1f]')}><div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', isSel ? 'bg-primary/20' : 'bg-[#282a2d]')}><IconComp className={cn('w-6 h-6', isSel ? 'text-primary' : 'text-on-surface-variant')} /></div><div className="flex-1"><h3 className={cn('font-semibold', isSel ? 'text-primary' : 'text-on-surface')}>{label}</h3><p className="text-sm text-on-surface-variant">{desc}</p><p className="text-xs text-on-surface-variant/60 mt-1">{data.unitSystem === 'metric' ? km + ' km' : mi + ' miles'}</p></div>{isSel && <CheckCircle2 className="w-5 h-5 text-primary" />}</button>
-                  })}
-                  <div className="flex items-center gap-2"><Label className="text-xs">Units:</Label><div className="flex bg-[#1a1c1f] rounded-lg p-0.5"><button onClick={() => updateData({ unitSystem: 'imperial' })} className={cn('px-3 py-1 text-xs rounded-md', data.unitSystem === 'imperial' ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant')}>Miles</button><button onClick={() => updateData({ unitSystem: 'metric' })} className={cn('px-3 py-1 text-xs rounded-md', data.unitSystem === 'metric' ? 'bg-primary text-primary-foreground' : 'text-on-surface-variant')}>km</button></div></div>
                 </div>
                 <div className="space-y-2">
                   <Label>Biome Profile</Label>
@@ -318,7 +311,7 @@ export function NewCampaignWizard() {
                     genStatus.campaignCreated 
                       ? 'bg-amber-500/10 border-amber-500/50' 
                       : genStatus.stage === 'creating_campaign'
-                        ? 'bg-amber-500/5 border-amber-500/30 animate-pulse-slow'
+                        ? 'bg-amber-500/5 border-amber-500/30'
                         : 'bg-[#1a1c1f] border-[#282a2d]'
                   )}>
                     <div className="flex items-center gap-2 text-sm font-medium mb-2">
@@ -342,7 +335,7 @@ export function NewCampaignWizard() {
                           </span>
                         </div>
                       ) : genStatus.stage === 'creating_campaign' ? (
-                        <span className="text-amber-500/80 animate-pulse-slow">AI is writing your lore...</span>
+                        <span className="text-amber-500/80">AI is writing your lore...</span>
                       ) : (
                         <span className="text-on-surface-variant/50">Waiting...</span>
                       )}
@@ -355,7 +348,7 @@ export function NewCampaignWizard() {
                     genStatus.mapsGenerated > 0
                       ? 'bg-emerald-500/10 border-emerald-500/50'
                       : genStatus.stage === 'generating_maps'
-                        ? 'bg-emerald-500/5 border-emerald-500/30 animate-pulse-slow'
+                        ? 'bg-emerald-500/5 border-emerald-500/30'
                         : 'bg-[#1a1c1f] border-[#282a2d]'
                   )}>
                     <div className="flex items-center gap-2 text-sm font-medium mb-2">

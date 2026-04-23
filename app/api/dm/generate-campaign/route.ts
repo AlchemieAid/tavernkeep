@@ -159,7 +159,7 @@ export async function POST(request: Request) {
       ruleset: campaign.ruleset || ruleset || '5e',
       setting: campaign.setting || setting,
       history: campaign.history,
-      currency_name: campaign.currency_name || 'gp',
+      currency_name: campaign.currency_name || null,
       currency_description: campaign.currency_description,
       pantheon: campaign.pantheon,
       invite_token: inviteToken,
