@@ -6,12 +6,13 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import { NavigationDropdowns } from '@/components/shared/navigation-dropdowns'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 
 // Mock Next.js navigation
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
   usePathname: jest.fn(),
+  useSearchParams: jest.fn(),
 }))
 
 // Mock Supabase client
@@ -38,6 +39,7 @@ describe('NavigationDropdowns', () => {
     jest.clearAllMocks()
     ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
     ;(usePathname as jest.Mock).mockReturnValue('/dm/dashboard')
+    ;(useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams())
     
     // Setup default mock responses
     mockSupabase.auth.getUser.mockResolvedValue({
@@ -213,7 +215,7 @@ describe('NavigationDropdowns', () => {
       render(<NavigationDropdowns />)
 
       await waitFor(() => {
-        expect(mockSupabase.channel).toHaveBeenCalledWith('navigation-campaigns')
+        expect(mockSupabase.channel).toHaveBeenCalledWith('navigation-campaigns-test-user-id')
       })
 
       // Verify subscription setup
