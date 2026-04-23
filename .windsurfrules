@@ -109,7 +109,46 @@ export default function ShopPage() {
 
 ---
 
-## 6. Data Fetching Rules
+## 6. Testing Rules (CRITICAL — MUST FOLLOW)
+
+**Every feature must have tests. No exceptions.** The project just spent hours fixing 75+ broken tests. This must never happen again.
+
+### Test-First Development
+1. **Write tests BEFORE or WITH the feature** — never after
+2. **Run `npm test` before EVERY commit** — all tests must pass
+3. **Run `npm run build` before pushing** — build must succeed
+4. **Never push broken tests to GitHub**
+
+### What Requires Tests
+| Feature Type | Test Type | Location |
+|--------------|-----------|----------|
+| New component | Unit test with `@testing-library/react` | `__tests__/components/[name].test.tsx` |
+| API route | Unit test mocking dependencies | `__tests__/api/[route].test.ts` |
+| Server action | Unit test with mocked Supabase | `__tests__/actions/[name].test.ts` |
+| Database logic | Integration test (or RLS policy test) | `__tests__/security/[name].test.ts` |
+| Utility function | Unit test with edge cases | `__tests__/utils/[name].test.ts` |
+| Complex flow (e.g., SSE streaming) | E2E test for Playwright | `e2e/[name].e2e.test.ts` |
+
+### Test Quality Standards
+- **Mock external dependencies** — Supabase, OpenAI, fetch, etc.
+- **Test behavior, not implementation** — don't test internal state
+- **Include error cases** — not just happy paths
+- **Use `describe` blocks** for logical grouping
+- **Skip complex integration tests gracefully** — use `if (!envVar) return` or move to `e2e/`
+
+### Jest Configuration
+- **Jest is the SOLE testing framework** — no Vitest, no Mocha
+- All tests in `__tests__/**/*.test.{ts,tsx}`
+- E2E tests in `e2e/**/*.e2e.test.{ts,tsx}` (excluded from Jest)
+- Use `__mocks__/` for module mocks (e.g., `nanoid.ts`, `google-genai.ts`)
+- Add `transformIgnorePatterns` for ES modules in `jest.config.js`
+
+### The Golden Rule
+> If you can't test it easily, your code is too complex. Simplify it.
+
+---
+
+## 8. Data Fetching Rules
 
 - Server-side data fetching via `createServerClient` from `@supabase/ssr`
 - Client-side mutations via Supabase browser client in custom hooks
@@ -145,7 +184,7 @@ if (error) throw new Error(`Failed to load shop: ${error.message}`);
 
 ---
 
-## 8. Database & Supabase Rules
+## 9. Database & Supabase Rules
 
 - RLS enabled on every table — policies written before any data access code
 - Only the **anon key** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) is used — there is no service role key
@@ -157,7 +196,7 @@ if (error) throw new Error(`Failed to load shop: ${error.message}`);
 
 ---
 
-## 9. Authentication Rules
+## 10. Authentication Rules
 
 - Google OAuth only via Supabase Auth
 - **Google OAuth is deferred until a Vercel deployment URL exists.** Scaffold and wire it up with clear comments, but do not block other features.
@@ -168,7 +207,7 @@ if (error) throw new Error(`Failed to load shop: ${error.message}`);
 
 ---
 
-## 10. AI Integration Rules
+## 11. AI Integration Rules
 
 All AI prompt strings live in `/lib/prompts/` as named exports. Never write prompts inline.
 
@@ -190,7 +229,7 @@ You are a D&D 5e item generator. Return only valid JSON...
 
 ---
 
-## 11. UI / Design System Rules
+## 12. UI / Design System Rules
 
 **Always defer to `DESIGN.md` for exact values.** The following are fallback defaults only.
 
