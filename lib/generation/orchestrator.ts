@@ -64,10 +64,16 @@ import { checkRateLimit, skipChildRateLimits } from '@/lib/rate-limit'
 import { nanoid } from 'nanoid'
 import { SLUG_LENGTH } from '@/lib/constants'
 
-// Create AI client based on environment configuration
+// Lazy-load AI client to avoid build-time validation
 // Defaults to Gemini 1.5 Flash for speed
 // Can be changed via AI_PROVIDER env var (openai, gemini, claude)
-const aiClient = createAIClient()
+let aiClient: AIClient | null = null
+function getAIClient(): AIClient {
+  if (!aiClient) {
+    aiClient = createAIClient()
+  }
+  return aiClient
+}
 
 /**
  * Result wrapper for generator methods
@@ -434,7 +440,7 @@ export class GenerationOrchestrator {
     }
 
     // AI call with timeout
-    const aiPromise = aiClient.generate({
+    const aiPromise = getAIClient().generate({
       messages: [
         { role: 'system', content: CAMPAIGN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildCampaignGenerationPrompt(prompt, ruleset, setting) },
@@ -448,7 +454,7 @@ export class GenerationOrchestrator {
       aiPromise,
       new Promise<never>((_, reject) => 
         setTimeout(() => {
-          console.error(`[CAMPAIGN] AI timeout after 120 seconds (provider: ${aiClient.getProvider()})`)
+          console.error(`[CAMPAIGN] AI timeout after 120 seconds (provider: ${getAIClient().getProvider()})`)
           reject(new Error('AI generation timeout - AI took too long. Try a shorter prompt or try again later.'))
         }, 120000)
       )
@@ -637,7 +643,7 @@ export class GenerationOrchestrator {
     const campaignContext = contextBuilder.buildTownContext()
     
     // AI call with timeout
-    const aiPromise = aiClient.generate({
+    const aiPromise = getAIClient().generate({
       messages: [
         { role: 'system', content: TOWN_GENERATION_SYSTEM_PROMPT },
         { role: 'user', content: buildTownGenerationPrompt(prompt, campaignContext) },
@@ -651,7 +657,7 @@ export class GenerationOrchestrator {
       aiPromise,
       new Promise<never>((_, reject) => 
         setTimeout(() => {
-          console.error(`[TOWN] AI timeout after 90 seconds (provider: ${aiClient.getProvider()})`)
+          console.error(`[TOWN] AI timeout after 90 seconds (provider: ${getAIClient().getProvider()})`)
           reject(new Error('Town generation timeout - AI took too long.'))
         }, 90000)
       )
@@ -856,7 +862,7 @@ CRITICAL:
 - Shop type, items, and atmosphere should match the campaign theme`
 
       // AI call with timeout
-      const aiPromise = aiClient.generate({
+      const aiPromise = getAIClient().generate({
         messages: [
           { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
           { role: 'user', content: buildShopGenerationPrompt(shopPrompt) },
@@ -870,7 +876,7 @@ CRITICAL:
         aiPromise,
         new Promise<never>((_, reject) => 
           setTimeout(() => {
-            console.error(`[SHOP] AI timeout after 90 seconds (provider: ${aiClient.getProvider()})`)
+            console.error(`[SHOP] AI timeout after 90 seconds (provider: ${getAIClient().getProvider()})`)
             reject(new Error('Shop generation timeout - AI took too long.'))
           }, 90000)
         )
@@ -1343,7 +1349,7 @@ CRITICAL:
       const context = contextBuilder.buildShopContext()
       const shopPrompt = `Generate a shop that fits in this setting. ${prompt}`
       
-      const response = await aiClient.generate({
+      const response = await getAIClient().generate({
         messages: [
           { role: 'system', content: SHOP_GENERATION_SYSTEM_PROMPT },
           { role: 'user', content: buildShopGenerationPrompt(shopPrompt) },
