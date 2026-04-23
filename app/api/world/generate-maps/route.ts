@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
 import { createClient } from '@/lib/supabase/server'
+import { createAIClient } from '@/lib/ai'
 import { GenerateMapsSchema } from '@/lib/validators/world'
 import { buildMapGenerationPrompt } from '@/lib/prompts/mapGeneration'
 
@@ -28,13 +28,19 @@ export async function POST(request: Request) {
     }
     const { campaign_id, map_size, map_style, biome_profile, dm_description } = parsed.data
 
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
+    // Create AI client using unified interface
+    let aiClient
+    try {
+      aiClient = createAIClient()
+    } catch (error) {
+      console.error('[MAP GEN] Failed to create AI client:', error)
       return NextResponse.json(
-        { data: null, error: { message: 'AI image service not configured' } },
+        { data: null, error: { message: 'AI service not configured' } },
         { status: 503 }
       )
     }
+
+    console.log('[MAP GEN] Using AI provider:', aiClient.getProvider(), 'model:', aiClient.getModel())
 
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
@@ -63,22 +69,21 @@ export async function POST(request: Request) {
       )
     }
 
-    const openai = new OpenAI({ apiKey })
     const prompt = buildMapGenerationPrompt({ map_size, map_style, biome_profile, dm_description })
 
+    console.log('[MAP GEN] Generating 3 map images with prompt:', prompt.substring(0, 100))
     const imageResults = await Promise.all(
       Array.from({ length: 3 }, () =>
-        openai.images.generate({
-          model: 'dall-e-3',
+        aiClient.generateImage({
           prompt,
-          n: 1,
           size: '1024x1024',
-          response_format: 'url',
+          count: 1,
+          style: 'vivid'
         })
       )
     )
 
-    const image_urls = imageResults.map(r => r.data?.[0]?.url).filter(Boolean) as string[]
+    const image_urls = imageResults.flatMap(r => r.urls).filter(Boolean) as string[]
 
     const insertRows = image_urls.map(image_url => ({
       campaign_id,

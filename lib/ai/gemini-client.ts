@@ -6,7 +6,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai'
-import { AIClient, AIGenerationRequest, AIGenerationResponse } from './types'
+import { AIClient, AIGenerationRequest, AIGenerationResponse, AIImageGenerationRequest, AIImageGenerationResponse } from './types'
 
 export class GeminiClient implements AIClient {
   private ai: GoogleGenAI
@@ -50,6 +50,13 @@ export class GeminiClient implements AIClient {
       model: this.modelName,
       provider: 'gemini'
     }
+  }
+
+  async generateImage(request: AIImageGenerationRequest): Promise<AIImageGenerationResponse> {
+    // Gemini image generation requires a different API call
+    // TODO: Implement using Gemini's Imagen API
+    // This requires researching the exact API format in @google/genai SDK
+    throw new Error('Gemini image generation not yet implemented. Use OpenAI for image generation or implement Gemini Imagen API.')
   }
 
   getProvider() {

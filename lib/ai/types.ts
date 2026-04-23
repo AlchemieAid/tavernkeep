@@ -45,6 +45,16 @@ export interface AIGenerationRequest {
 }
 
 /**
+ * AI image generation request
+ */
+export interface AIImageGenerationRequest {
+  prompt: string
+  size?: '256x256' | '512x512' | '1024x1024'
+  count?: number
+  style?: 'natural' | 'vivid'
+}
+
+/**
  * AI generation response
  */
 export interface AIGenerationResponse {
@@ -59,11 +69,23 @@ export interface AIGenerationResponse {
 }
 
 /**
+ * AI image generation response
+ */
+export interface AIImageGenerationResponse {
+  urls: string[]
+  model: string
+  provider: AIProvider
+}
+
+/**
  * Unified AI client interface
  */
 export interface AIClient {
   /** Generate content from messages */
   generate(request: AIGenerationRequest): Promise<AIGenerationResponse>
+  
+  /** Generate images from prompt */
+  generateImage(request: AIImageGenerationRequest): Promise<AIImageGenerationResponse>
   
   /** Get the provider name */
   getProvider(): AIProvider
