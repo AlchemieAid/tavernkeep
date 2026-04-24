@@ -59,7 +59,7 @@ export default async function NewCampaignPage() {
 
     const name = formData.get('name') as string
     const description = formData.get('description') as string
-    const currency = formData.get('currency') as string || 'gp'
+    const currency = formData.get('currency') as string
 
     // Generate invite token and slug
     const inviteToken = crypto.randomUUID()
@@ -146,11 +146,10 @@ export default async function NewCampaignPage() {
                     id="currency"
                     name="currency"
                     placeholder="e.g., gp, sh, drakes"
-                    defaultValue="gp"
                     maxLength={20}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Currency abbreviation used in this campaign (defaults to &ldquo;gp&rdquo;)
+                    Currency abbreviation used in this campaign (leave empty for AI-generated thematic currency)
                   </p>
                 </div>
 

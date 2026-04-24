@@ -38,6 +38,8 @@ import { CAMPAIGN_GENERATION_SYSTEM_PROMPT, buildCampaignGenerationPrompt } from
 import { checkRateLimit, recordUsage } from '@/lib/rate-limit'
 import { truncateFields, CAMPAIGN_FIELD_MAP } from '@/lib/utils/truncate-fields'
 
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   const startTime = Date.now()
   console.log('[CAMPAIGN GEN] API call started at', new Date().toISOString())

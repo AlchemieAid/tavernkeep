@@ -39,7 +39,7 @@ export function NewCampaignWizard() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('form')
   const [progress, setProgress] = useState(0)
-  const [data, setData] = useState<FormData>({ name: '', description: '', currency: 'gp', settingTheme: '', mapSize: '', mapStyle: 'fantasy_painted', biomeProfile: 'temperate', unitSystem: 'imperial' })
+  const [data, setData] = useState<FormData>({ name: '', description: '', currency: '', settingTheme: '', mapSize: '', mapStyle: 'fantasy_painted', biomeProfile: 'temperate', unitSystem: 'imperial' })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [genStatus, setGenStatus] = useState<GenerationStatus>({
@@ -209,10 +209,10 @@ export function NewCampaignWizard() {
         stack: err instanceof Error ? err.stack : 'No stack trace',
         name: err instanceof Error ? err.name : 'Unknown error type'
       })
-      setError(errorMessage)
       setGenStatus(prev => ({ ...prev, stage: 'error', error: errorMessage }))
       setIsSubmitting(false)
       goToStep('form')
+      setError(errorMessage) // Must be AFTER goToStep — goToStep clears error state
     }
   }
 

@@ -4,6 +4,8 @@ import { createAIClient } from '@/lib/ai'
 import { GenerateMapsSchema } from '@/lib/validators/world'
 import { buildMapGenerationPrompt } from '@/lib/prompts/mapGeneration'
 
+export const maxDuration = 60
+
 const MAX_GENERATIONS_PER_CAMPAIGN = 3
 
 export async function POST(request: Request) {

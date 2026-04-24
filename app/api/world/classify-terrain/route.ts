@@ -9,6 +9,8 @@ import {
 import { TERRAIN_ELEVATION_RANGES, terrainMidpointElevation } from '@/lib/world/elevation'
 import type { Json } from '@/lib/supabase/database.types'
 
+export const maxDuration = 60
+
 export async function POST(request: Request) {
   const startTime = Date.now()
   console.log('[TERRAIN] classify-terrain called at', new Date().toISOString())
