@@ -47,21 +47,16 @@ export function MapSetupWizard({
         const res = await fetch('/api/world/classify-terrain', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ map_id: map.id, campaign_id: campaignId }),
+          body: JSON.stringify({ map_id: map.id, image_url: map.image_url }),
         })
         const json = await res.json()
         if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Terrain classification failed')
-
-        await fetch('/api/world/generate-maps', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ map_id: map.id, campaign_id: campaignId, stage: 'terrain_classified' }),
-        })
+        // classify-terrain already sets setup_stage = 'terrain_classified' — no further call needed
       } else if (currentStage === 'terrain_classified') {
         const res = await fetch('/api/world/place-resources', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ map_id: map.id, campaign_id: campaignId }),
+          body: JSON.stringify({ map_id: map.id, image_url: map.image_url }),
         })
         const json = await res.json()
         if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Resource placement failed')
