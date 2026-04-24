@@ -101,9 +101,27 @@ export async function POST(request: Request) {
       max_tokens: 8192,
     })
     const aiDuration = Date.now() - aiStart
-    console.log('[RESOURCES] AI response took', aiDuration, 'ms | tokens:', completion.usage?.total_tokens)
+    const choice = completion.choices[0]
+    console.log('[RESOURCES] AI response took', aiDuration, 'ms | tokens:', completion.usage?.total_tokens, '| finish_reason:', choice.finish_reason)
 
-    const rawContent = completion.choices[0].message.content || ''
+    if (!choice.message.content) {
+      const reason = choice.finish_reason
+      const isFilter = reason === 'content_filter'
+      console.error('[RESOURCES] AI returned null content. finish_reason:', reason)
+      return NextResponse.json(
+        {
+          data: null,
+          error: {
+            message: isFilter
+              ? 'The AI declined to analyze this image due to content policy. Try regenerating the map with different settings.'
+              : `AI returned no content (finish_reason: ${reason}). Try again.`,
+          },
+        },
+        { status: 502 }
+      )
+    }
+
+    const rawContent = choice.message.content
     console.log('[RESOURCES] Raw AI response length:', rawContent.length, '| preview:', rawContent.slice(0, 200))
 
     let resourcePoints: unknown[]
@@ -116,7 +134,7 @@ export async function POST(request: Request) {
     } catch (parseErr) {
       console.error('[RESOURCES] Failed to parse AI response:', parseErr, '| raw:', rawContent.slice(0, 500))
       return NextResponse.json(
-        { data: null, error: { message: 'AI returned invalid resource data' } },
+        { data: null, error: { message: 'AI returned invalid resource data — please try again' } },
         { status: 502 }
       )
     }

@@ -6,7 +6,12 @@ import { ATMOSPHERE_SYSTEM_PROMPT, buildAtmospherePrompt } from '@/lib/prompts/g
 import { deriveEcosystem } from '@/lib/world/ecosystem'
 import type { ClimateZone } from '@/lib/world/climate'
 
+export const maxDuration = 60
+
 export async function POST(request: Request) {
+  const startTime = Date.now()
+  console.log('[ATMOSPHERE] generate-atmosphere called at', new Date().toISOString())
+
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -79,6 +84,8 @@ export async function POST(request: Request) {
     const hazardLabels = (hazards ?? []).map(h => h.type)
 
     const ai = createAIClient()
+    console.log('[ATMOSPHERE] Calling AI for terrain_type:', area.terrain_type, 'elevation:', elevation_m, 'm')
+    const aiStart = Date.now()
     const aiResponse = await ai.generate({
       messages: [
         { role: 'system', content: ATMOSPHERE_SYSTEM_PROMPT },
@@ -99,8 +106,18 @@ export async function POST(request: Request) {
       ],
       temperature: 0.9,
     })
+    console.log('[ATMOSPHERE] AI response took', Date.now() - aiStart, 'ms')
+
+    if (!aiResponse.content) {
+      console.error('[ATMOSPHERE] AI returned empty content')
+      return NextResponse.json(
+        { data: null, error: { message: 'AI returned no atmosphere text — please try again' } },
+        { status: 502 }
+      )
+    }
 
     const atmosphere_text = aiResponse.content.trim()
+    console.log('[ATMOSPHERE] Generated atmosphere text length:', atmosphere_text.length)
 
     await supabase
       .from('terrain_areas')
@@ -110,9 +127,11 @@ export async function POST(request: Request) {
       })
       .eq('id', terrain_area_id)
 
+    console.log('[ATMOSPHERE] Complete in', Date.now() - startTime, 'ms')
     return NextResponse.json({ data: { atmosphere_text }, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[ATMOSPHERE] Unhandled error after', Date.now() - startTime, 'ms:', message)
     return NextResponse.json(
       { data: null, error: { message } },
       { status: 500 }

@@ -6,6 +6,48 @@ Complete administrative interface for managing application configuration, users,
 
 The admin system provides a secure, full-featured interface for managing all aspects of the TavernKeep application without touching code or database directly.
 
+## 🏗️ Architecture
+
+The admin layer is built around four small, composable modules in `lib/admin/`:
+
+| Module | Responsibility |
+| --- | --- |
+| `auth.ts` | Role check (`requireAdmin`, `checkAdminStatus`). All routes call this **first**. |
+| `supabase-admin.ts` | Service-role Supabase client. Bypasses RLS so admins can see/edit data across all users. Used **only after** an auth check. |
+| `schema-registry.ts` | Single source of truth for tables exposed in the data browser. Curated entries + auto-discovery via the `admin_list_public_tables()` RPC. New tables appear automatically. |
+| `config-schemas.ts` | Per-key Zod schemas. Drives both server-side validation in the config API and client-side widget selection (boolean / number / string / json). |
+| `audit.ts` | Records every admin action (success **and** failure). Uses the service-role client so RLS can never silently drop a log entry. |
+| `config.ts` | Cached, typed `getConfig` plus `updateConfig`. `getConfigRaw` reads bypass cache for capturing pre-change values for the audit log. |
+
+### Required environment variable
+
+```
+SUPABASE_SERVICE_ROLE_KEY=...   # server-only, never NEXT_PUBLIC_
+```
+
+If absent, the data browser renders a "Configuration required" notice and audit log writes silently fall back to the user-session client. See `.env.example`.
+
+### Adding a new table to the data browser
+
+Either:
+1. Add an entry to `TABLE_REGISTRY` in `lib/admin/schema-registry.ts` for a curated label / icon / category, or
+2. Do nothing — the table appears under "Other" automatically via `discoverTables()`.
+
+### Adding a new app-config key
+
+1. Insert the row into `app_config` (migration or via the admin UI).
+2. Add a schema entry in `lib/admin/config-schemas.ts` so writes are validated and the editor renders the right widget.
+
+### Tests
+
+| File | What it covers |
+| --- | --- |
+| `__tests__/admin/schema-registry.test.ts` | Registry shape, fallback resolution, category grouping. |
+| `__tests__/admin/config-schemas.test.ts` | Per-key validation, widget kinds, defaults. |
+| `__tests__/admin/supabase-admin.test.ts` | Service-role client guard rails (missing env vars, singleton). |
+| `__tests__/admin/security.test.ts` | RLS enforcement on admin tables for non-admin users. |
+| `__tests__/security/env-vars.test.ts` | Service-role key never reaches client bundles. |
+
 ## 🔐 Access Levels
 
 ### Super Admin (`super_admin`)
@@ -414,6 +456,7 @@ await logAdminAction(
 - [Admin System Proposal](./ADMIN_SYSTEM_PROPOSAL.md) - Full technical spec
 - [Migration File](./supabase/migrations/20260416000000_create_admin_system.sql) - Database schema
 - [Supabase Docs](https://supabase.com/docs) - Supabase documentation
+
 
 ## ✅ Checklist
 

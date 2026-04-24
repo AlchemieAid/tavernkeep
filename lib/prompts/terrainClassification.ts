@@ -19,16 +19,18 @@ ELEVATION RULES:
 - Ocean and coast must be the lowest features (0–15m)
 - Mountain ranges should have realistic elevation gradients
 
-OUTPUT FORMAT — respond ONLY with a JSON array, no prose:
-[
-  {
-    "terrain_type": "mountains",
-    "polygon": [{"x": 0.15, "y": 0.08}, {"x": 0.45, "y": 0.05}, ...],
-    "elevation_min_m": 800,
-    "elevation_max_m": 3200,
-    "computed_elevation_m": 2000
-  }
-]
+OUTPUT FORMAT — respond ONLY with a JSON object containing a "terrain_areas" array, no prose:
+{
+  "terrain_areas": [
+    {
+      "terrain_type": "mountains",
+      "polygon": [{"x": 0.15, "y": 0.08}, {"x": 0.45, "y": 0.05}],
+      "elevation_min_m": 800,
+      "elevation_max_m": 3200,
+      "computed_elevation_m": 2000
+    }
+  ]
+}
 
 Rules:
 - Cover the entire map with non-overlapping polygons (ocean fills remaining space)

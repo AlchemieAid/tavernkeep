@@ -122,7 +122,7 @@ export function MapSetupWizard({
         <img
           src={map.image_url}
           alt="Campaign map"
-          className="w-full max-h-64 object-cover opacity-70"
+          className="w-full max-h-48 object-contain bg-[#0d0e10] opacity-90"
         />
       </div>
 
