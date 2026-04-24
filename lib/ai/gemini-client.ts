@@ -53,36 +53,32 @@ export class GeminiClient implements AIClient {
   }
 
   async generateImage(request: AIImageGenerationRequest): Promise<AIImageGenerationResponse> {
-    const size = request.size || '1024x1024'
     const count = request.count || 1
-    
-    // Gemini Imagen for image generation
+    const imageModel = 'imagen-4.0-generate-001'
+
     const response = await this.ai.models.generateImages({
-      model: 'imagen-3.0-generate-001', // Using Imagen 3 for now
+      model: imageModel,
       prompt: request.prompt,
       config: {
         numberOfImages: count,
-        aspectRatio: size === '1024x1024' ? '1:1' : size === '512x512' ? '1:1' : '1:1'
+        aspectRatio: '1:1',
       }
     })
 
-    // Gemini returns image bytes, not URLs
-    // Convert to data URLs for now (in production, upload to storage)
+    // Gemini returns base64 image bytes; convert to data URLs
     const urls: string[] = []
     if (response.generatedImages) {
       for (const generatedImage of response.generatedImages) {
         const imageBytes = generatedImage.image?.imageBytes
         if (imageBytes) {
-          // Convert base64 bytes to data URL
-          const base64 = Buffer.from(imageBytes, 'base64').toString('base64')
-          urls.push(`data:image/png;base64,${base64}`)
+          urls.push(`data:image/png;base64,${imageBytes}`)
         }
       }
     }
 
     return {
       urls,
-      model: 'imagen-3.0-generate-001',
+      model: imageModel,
       provider: 'gemini'
     }
   }

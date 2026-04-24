@@ -1,13 +1,13 @@
 /**
  * Build-time constants
- * Uses Vercel's VERCEL_BUILD_TIME environment variable which is set at build time.
- * In production (Vercel), this is locked to the deployment time.
- * In development, shows when the dev server started.
+ * Imports BUILD_TIME from auto-generated lib/build-time.ts which is
+ * regenerated on every build by scripts/generate-build-time.js.
+ * The timestamp is baked into the bundled code, so it's locked to deployment.
  */
 
-// In Vercel, VERCEL_BUILD_TIME is set at build time and doesn't change on server restart
-// In development, use current time (when dev server started)
-const BUILD_TIME_ISO = process.env.VERCEL_BUILD_TIME || new Date().toISOString()
+import { BUILD_TIME } from './build-time'
+
+const BUILD_TIME_ISO = BUILD_TIME
 
 interface VersionInfo {
   version: string
