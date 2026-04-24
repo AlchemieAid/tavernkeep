@@ -25,7 +25,7 @@ export const ClassifyTerrainSchema = z.object({
 
 export const PlaceResourcesSchema = z.object({
   map_id: z.string().uuid(),
-  image_url: ImageUrlSchema,
+  image_url: ImageUrlSchema.optional(), // accepted for backward compat but not used in AI call
 })
 
 export const PlaceTownSchema = z.object({
