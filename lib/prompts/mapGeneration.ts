@@ -57,11 +57,12 @@ export function buildMapGenerationPrompt(params: MapGenerationParams): string {
     customPart,
     ``,
     `Requirements:`,
+    `- Fill the ENTIRE image edge-to-edge with terrain — no white space, no borders, no margins, no vignette`,
+    `- Terrain must reach every corner and every edge of the image`,
     `- Clear geographic features: rivers, coastlines, mountain ranges, forests, settlements`,
     `- No text labels or legends overlaid on the map`,
     `- High contrast between terrain types for easy classification`,
     `- Natural-looking terrain distribution (not symmetrical or repeating)`,
-    `- Leave white/neutral margin of at most 2% around edges`,
   ]
     .join('\n')
     .trim()

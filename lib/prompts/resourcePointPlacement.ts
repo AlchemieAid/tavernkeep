@@ -30,17 +30,19 @@ PLACEMENT RULES (earth-like realism):
 - Volcanic: sulfur_vent, volcanic_soil, hot_springs near volcanic features
 - Points should cluster in rich areas and thin out in barren ones
 
-OUTPUT FORMAT — respond ONLY with a JSON array:
-[
-  {
-    "x_pct": 0.42,
-    "y_pct": 0.31,
-    "resource_type": "iron_deposit",
-    "richness": 0.75,
-    "name": "The Ironwall Seam",
-    "influence_radius_pct": 0.08
-  }
-]
+OUTPUT FORMAT — respond ONLY with a JSON object containing a "resource_points" array, no prose:
+{
+  "resource_points": [
+    {
+      "x_pct": 0.42,
+      "y_pct": 0.31,
+      "resource_type": "iron_deposit",
+      "richness": 0.75,
+      "name": "The Ironwall Seam",
+      "influence_radius_pct": 0.08
+    }
+  ]
+}
 
 Rules:
 - richness in [0.1, 1.0] — reflect local abundance realistically
@@ -59,6 +61,6 @@ export function buildResourcePlacementUserPrompt(input: ResourcePlacementInput):
     `Terrain on this map:`,
     terrain_summary,
     ``,
-    `Place resources realistically according to the terrain. Return only the JSON array.`,
+    `Place resources realistically according to the terrain. Return only the JSON object with a resource_points array.`,
   ].join('\n')
 }
