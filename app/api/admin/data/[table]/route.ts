@@ -1,79 +1,90 @@
+/**
+ * Admin Data Browser API
+ *
+ * Returns rows from any table whose metadata is resolvable via the
+ * schema registry. Uses the service-role client to bypass RLS — admin
+ * authentication is enforced first via `requireAdmin`.
+ */
 import { NextRequest, NextResponse } from 'next/server'
-import { checkAdminStatus } from '@/lib/admin/auth'
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/admin/auth'
+import { createAdminClient } from '@/lib/admin/supabase-admin'
+import {
+  resolveTableMetadata,
+  TABLE_REGISTRY,
+} from '@/lib/admin/schema-registry'
 
-// Map of table names to their timestamp column for ordering
-const TABLE_TIMESTAMP_COLUMNS: Record<string, string> = {
-  campaigns: 'created_at',
-  towns: 'created_at',
-  shops: 'created_at',
-  items: 'added_at', // items uses added_at, not created_at
-  item_library: 'created_at',
-  notable_people: 'created_at',
-  characters: 'created_at',
-  players: 'created_at',
-  profiles: 'created_at',
-  campaign_members: 'joined_at',
-  cart_items: 'added_at',
-  party_access: 'last_seen_at',
-  ai_usage: 'created_at',
-  usage_logs: 'created_at',
-  app_config: 'created_at',
-  admin_users: 'granted_at',
-  admin_audit_log: 'created_at',
-  app_config_history: 'created_at',
-  ai_cache: 'created_at',
-  catalog_items: 'created_at',
-}
+const MAX_LIMIT = 500
+const DEFAULT_LIMIT = 100
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { table: string } }
+  context: { params: Promise<{ table: string }> | { table: string } }
 ) {
   try {
-    const adminStatus = await checkAdminStatus()
+    // Authorization: any admin role can read.
+    await requireAdmin()
 
-    if (!adminStatus) {
+    // Next.js 15: params may be a Promise.
+    const { table: tableName } = await Promise.resolve(context.params)
+
+    const meta = resolveTableMetadata(tableName)
+    if (!meta) {
       return NextResponse.json(
-        { error: 'Unauthorized - Admin access required' },
-        { status: 403 }
-      )
-    }
-
-    const tableName = params.table
-
-    const timestampColumn = TABLE_TIMESTAMP_COLUMNS[tableName]
-
-    if (!timestampColumn) {
-      return NextResponse.json(
-        { error: 'Invalid table name' },
+        { error: `Table "${tableName}" is not exposed to the admin browser.` },
         { status: 400 }
       )
     }
 
-    const supabase = await createClient()
+    // Lightweight defence-in-depth: only allow safe identifier characters.
+    if (!/^[a-z_][a-z0-9_]*$/.test(tableName)) {
+      return NextResponse.json(
+        { error: 'Invalid table identifier' },
+        { status: 400 }
+      )
+    }
 
-    // Build query dynamically based on timestamp column
-    const { data, error } = await supabase
-      .from(tableName as any)
-      .select('*')
-      .limit(100)
-      .order(timestampColumn, { ascending: false })
+    const url = new URL(request.url)
+    const limitParam = Number.parseInt(url.searchParams.get('limit') ?? '', 10)
+    const limit = Number.isFinite(limitParam)
+      ? Math.min(Math.max(limitParam, 1), MAX_LIMIT)
+      : DEFAULT_LIMIT
+
+    const admin = createAdminClient()
+
+    // Dynamic table access: cast the client to a permissive shape because
+    // the generated Database types only allow literal table names.
+    // Identifier safety is enforced above by the regex + registry lookup.
+    let query: ReturnType<typeof admin.from> = admin
+      .from(tableName as never)
+      .select('*', { count: 'exact' })
+      .limit(limit)
+
+    if (meta.timestampColumn) {
+      query = query.order(meta.timestampColumn, { ascending: false })
+    }
+
+    const { data, error, count } = await query
 
     if (error) {
-      console.error('[API] Data fetch error:', error)
+      console.error('[API] Data fetch error for', tableName, error)
       return NextResponse.json(
-        { error: 'Failed to fetch data' },
+        { error: error.message ?? 'Failed to fetch data' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ records: data || [] })
+    return NextResponse.json({
+      records: data ?? [],
+      total: count ?? null,
+      limit,
+      curated: Boolean(TABLE_REGISTRY[tableName]),
+      table: meta,
+    })
   } catch (error) {
     console.error('[API] Data browser error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    const message =
+      error instanceof Error ? error.message : 'Internal server error'
+    // requireAdmin throws redirect() — let those propagate; otherwise 500.
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -109,8 +109,10 @@ export function NewCampaignWizard() {
       const campaignResult = await cRes.json()
       console.log('[WIZARD] Campaign created:', campaignResult)
       
-      const campaign = campaignResult.data
+      // API returns { data: { campaign, suggestedTowns, usage } }
+      const campaign = campaignResult.data?.campaign ?? campaignResult.data
       if (!campaign?.id) {
+        console.error('[WIZARD] Unexpected response shape — no campaign.id found in:', JSON.stringify(campaignResult).slice(0, 300))
         throw new Error('Campaign was created but no ID was returned')
       }
 

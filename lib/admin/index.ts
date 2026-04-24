@@ -24,11 +24,13 @@ export {
 // Configuration management
 export {
   getConfig,
+  getConfigRaw,
   getConfigsByCategory,
   updateConfig,
   createConfig,
   deleteConfig,
   invalidateConfigCache,
+  invalidateAllConfigCache,
   getConfigHistory,
   rollbackConfig,
   getCacheStats,
@@ -41,3 +43,29 @@ export {
   getAuditLog,
   getAuditStats,
 } from './audit'
+
+// Service-role client + schema registry
+export {
+  createAdminClient,
+  isAdminClientConfigured,
+} from './supabase-admin'
+export {
+  type TableCategory,
+  type TableMetadata,
+  TABLE_REGISTRY,
+  getTableMetadata,
+  resolveTableMetadata,
+  discoverTables,
+  groupByCategory,
+} from './schema-registry'
+
+// Config schemas
+export {
+  type ConfigWidgetKind,
+  type KnownConfigKey,
+  type ConfigValue,
+  CONFIG_SCHEMAS,
+  validateConfigValue,
+  getConfigWidgetKind,
+  getConfigDefault,
+} from './config-schemas'

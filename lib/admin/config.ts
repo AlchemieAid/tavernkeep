@@ -283,6 +283,36 @@ export function invalidateConfigCache(key?: string): void {
 }
 
 /**
+ * Clear the entire in-memory config cache on this instance.
+ *
+ * Convenience alias used by the admin "Refresh cache" endpoint.
+ * Cross-instance propagation in serverless deployments still relies on
+ * the per-key TTL elapsing.
+ */
+export function invalidateAllConfigCache(): void {
+  configCache.clear()
+}
+
+/**
+ * Read a config value directly from the database (no caching).
+ *
+ * Used by the admin write path to capture the previous value for audit
+ * logging without polluting the cache with possibly-about-to-be-stale
+ * data.
+ *
+ * @returns The stored value, or `null` if the key does not exist.
+ */
+export async function getConfigRaw(key: string): Promise<unknown> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('app_config')
+    .select('value')
+    .eq('key', key)
+    .maybeSingle()
+  return (data?.value as unknown) ?? null
+}
+
+/**
  * Get config change history
  * 
  * @param key - Configuration key

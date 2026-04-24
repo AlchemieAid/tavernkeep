@@ -1,24 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { 
-  Search, 
+import {
+  Search,
   Database,
   ChevronRight,
   Table as TableIcon,
-  RefreshCw
+  RefreshCw,
+  ShieldAlert,
+  AlertTriangle,
 } from 'lucide-react'
+import type { TableCategory } from '@/lib/admin/schema-registry'
 
 interface TableInfo {
   name: string
   label: string
   icon: string
   count: number
+  category: TableCategory
+  sensitive?: boolean
+  description?: string
+  error?: string | null
+  timestampColumn?: string | null
 }
+
+const CATEGORY_ORDER: TableCategory[] = [
+  'Campaigns',
+  'World',
+  'Commerce',
+  'Players',
+  'AI',
+  'Admin',
+  'Other',
+]
 
 interface DataBrowserProps {
   tables: TableInfo[]
@@ -30,10 +48,25 @@ export function DataBrowser({ tables }: DataBrowserProps) {
   const [tableData, setTableData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
-  const filteredTables = tables.filter(table =>
-    table.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    table.name.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredTables = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim()
+    if (!q) return tables
+    return tables.filter(table =>
+      table.label.toLowerCase().includes(q) ||
+      table.name.toLowerCase().includes(q)
+    )
+  }, [tables, searchTerm])
+
+  const groupedTables = useMemo(() => {
+    const groups = new Map<TableCategory, TableInfo[]>()
+    for (const cat of CATEGORY_ORDER) groups.set(cat, [])
+    for (const t of filteredTables) {
+      const list = groups.get(t.category) ?? []
+      list.push(t)
+      groups.set(t.category, list)
+    }
+    return Array.from(groups.entries()).filter(([, list]) => list.length > 0)
+  }, [filteredTables])
 
   const loadTableData = async (table: TableInfo) => {
     setLoading(true)
@@ -86,30 +119,51 @@ export function DataBrowser({ tables }: DataBrowserProps) {
               />
             </div>
 
-            <div className="space-y-1 max-h-[600px] overflow-y-auto">
-              {filteredTables.map((table) => (
-                <button
-                  key={table.name}
-                  onClick={() => loadTableData(table)}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-                    selectedTable?.name === table.name
-                      ? 'bg-gold/20 border-2 border-gold'
-                      : 'hover:bg-surface-container border-2 border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{table.icon}</span>
-                    <div className="text-left">
-                      <div className="font-medium text-on-surface">{table.label}</div>
-                      <div className="text-xs text-on-surface-variant">{table.name}</div>
-                    </div>
+            <div className="space-y-4 max-h-[700px] overflow-y-auto">
+              {groupedTables.map(([category, items]) => (
+                <div key={category} className="space-y-1">
+                  <div className="px-2 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/70">
+                    {category}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{table.count.toLocaleString()}</Badge>
-                    <ChevronRight className="h-4 w-4 text-on-surface-variant" />
-                  </div>
-                </button>
+                  {items.map(table => (
+                    <button
+                      key={table.name}
+                      onClick={() => loadTableData(table)}
+                      title={table.description}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
+                        selectedTable?.name === table.name
+                          ? 'bg-gold/20 border-2 border-gold'
+                          : 'hover:bg-surface-container border-2 border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-2xl shrink-0">{table.icon}</span>
+                        <div className="text-left min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-on-surface truncate">{table.label}</span>
+                            {table.sensitive && (
+                              <ShieldAlert className="h-3.5 w-3.5 text-rose-400 shrink-0" />
+                            )}
+                            {table.error && (
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                            )}
+                          </div>
+                          <div className="text-xs text-on-surface-variant truncate">{table.name}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="secondary">{table.count.toLocaleString()}</Badge>
+                        <ChevronRight className="h-4 w-4 text-on-surface-variant" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
               ))}
+              {groupedTables.length === 0 && (
+                <div className="text-center text-sm text-on-surface-variant py-6">
+                  No tables match “{searchTerm}”
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

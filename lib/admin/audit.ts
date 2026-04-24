@@ -14,6 +14,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, isAdminClientConfigured } from './supabase-admin'
 import { headers } from 'next/headers'
 
 /**
