@@ -39,7 +39,7 @@ export function NewCampaignWizard() {
   const router = useRouter()
   const [step, setStep] = useState<Step>('form')
   const [progress, setProgress] = useState(0)
-  const [data, setData] = useState<FormData>({ name: '', description: '', currency: 'gp', settingTheme: '', mapSize: '', mapStyle: 'fantasy_illustrated', biomeProfile: 'temperate', unitSystem: 'imperial' })
+  const [data, setData] = useState<FormData>({ name: '', description: '', currency: 'gp', settingTheme: '', mapSize: '', mapStyle: 'fantasy_painted', biomeProfile: 'temperate', unitSystem: 'imperial' })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [genStatus, setGenStatus] = useState<GenerationStatus>({
@@ -268,12 +268,12 @@ export function NewCampaignWizard() {
                   <p className="text-xs text-on-surface-variant/50">If empty, AI will create a thematic multi-currency system</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Campaign Tone</Label>
-                  <Select value={data.mapStyle} onValueChange={v => updateData({ mapStyle: v })}><SelectTrigger className="bg-[#1a1c1f] border-[#282a2d]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#1a1c1f] border-[#282a2d]"><SelectItem value="fantasy_illustrated">Fantasy Illustrated</SelectItem><SelectItem value="aged_parchment">Aged Parchment</SelectItem><SelectItem value="satellite">Satellite View</SelectItem><SelectItem value="ink_drawn">Ink Drawn</SelectItem></SelectContent></Select>
+                  <Label>Map Style</Label>
+                  <Select value={data.mapStyle} onValueChange={v => updateData({ mapStyle: v })}><SelectTrigger className="bg-[#1a1c1f] border-[#282a2d]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#1a1c1f] border-[#282a2d]"><SelectItem value="fantasy_painted">Fantasy Painted</SelectItem><SelectItem value="parchment">Aged Parchment</SelectItem><SelectItem value="topographic">Topographic</SelectItem><SelectItem value="hand_drawn">Hand Drawn (Ink)</SelectItem></SelectContent></Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Biome Profile</Label>
-                  <Select value={data.biomeProfile} onValueChange={v => updateData({ biomeProfile: v })}><SelectTrigger className="bg-[#1a1c1f] border-[#282a2d]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#1a1c1f] border-[#282a2d]"><SelectItem value="temperate">Temperate (forests, grasslands)</SelectItem><SelectItem value="coastal">Coastal (oceans, ports)</SelectItem><SelectItem value="mountainous">Mountainous (peaks, valleys)</SelectItem><SelectItem value="desert">Desert (wastelands, oases)</SelectItem><SelectItem value="tropical">Tropical (jungles, beaches)</SelectItem><SelectItem value="arctic">Arctic (tundra, glaciers)</SelectItem><SelectItem value="varied">Varied/Mixed</SelectItem></SelectContent></Select>
+                  <Select value={data.biomeProfile} onValueChange={v => updateData({ biomeProfile: v })}><SelectTrigger className="bg-[#1a1c1f] border-[#282a2d]"><SelectValue /></SelectTrigger><SelectContent className="bg-[#1a1c1f] border-[#282a2d]"><SelectItem value="temperate">Temperate (forests, grasslands)</SelectItem><SelectItem value="tropical">Tropical (jungles, beaches)</SelectItem><SelectItem value="arid">Arid (deserts, wastelands)</SelectItem><SelectItem value="arctic">Arctic (tundra, glaciers)</SelectItem><SelectItem value="archipelago">Archipelago (islands, coastal)</SelectItem><SelectItem value="volcanic">Volcanic (mountains, magma)</SelectItem></SelectContent></Select>
                 </div>
               </div>
             </div>}
@@ -367,7 +367,7 @@ export function NewCampaignWizard() {
                           {genStatus.mapsGenerated} image{genStatus.mapsGenerated !== 1 ? 's' : ''} generated
                         </span>
                       ) : genStatus.stage === 'generating_maps' ? (
-                        <span className="text-emerald-500/80 animate-pulse-slow">DALL-E is drawing...</span>
+                        <span className="text-emerald-500/80 animate-pulse-slow">AI is drawing your maps...</span>
                       ) : (
                         <span className="text-on-surface-variant/50">Waiting...</span>
                       )}
@@ -402,14 +402,14 @@ export function NewCampaignWizard() {
                           'w-1.5 h-1.5 rounded-full',
                           genStatus.stage === 'creating_campaign' ? 'bg-blue-500 animate-pulse-slow' : genStatus.campaignCreated ? 'bg-emerald-500' : 'bg-muted'
                         )} />
-                        <span className="text-on-surface-variant">Campaign: {genStatus.campaignCreated ? 'GPT-4 ✓' : genStatus.stage === 'creating_campaign' ? 'Working...' : 'Queued'}</span>
+                        <span className="text-on-surface-variant">Campaign: {genStatus.campaignCreated ? 'AI ✓' : genStatus.stage === 'creating_campaign' ? 'Working...' : 'Queued'}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className={cn(
                           'w-1.5 h-1.5 rounded-full',
                           genStatus.stage === 'generating_maps' ? 'bg-purple-500 animate-pulse-slow' : genStatus.mapsGenerated > 0 ? 'bg-emerald-500' : 'bg-muted'
                         )} />
-                        <span className="text-on-surface-variant">Maps: {genStatus.mapsGenerated > 0 ? `DALL-E ✓ (${genStatus.mapsGenerated})` : genStatus.stage === 'generating_maps' ? 'Generating...' : 'Queued'}</span>
+                        <span className="text-on-surface-variant">Maps: {genStatus.mapsGenerated > 0 ? `AI ✓ (${genStatus.mapsGenerated})` : genStatus.stage === 'generating_maps' ? 'Generating...' : 'Queued'}</span>
                       </div>
                     </div>
                   </div>

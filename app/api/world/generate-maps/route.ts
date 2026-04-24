@@ -7,11 +7,15 @@ import { buildMapGenerationPrompt } from '@/lib/prompts/mapGeneration'
 const MAX_GENERATIONS_PER_CAMPAIGN = 3
 
 export async function POST(request: Request) {
+  const startTime = Date.now()
+  console.log('[MAP GEN] generate-maps POST called at', new Date().toISOString())
+
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      console.warn('[MAP GEN] Unauthorized request')
       return NextResponse.json(
         { data: null, error: { message: 'Unauthorized' } },
         { status: 401 }
@@ -19,14 +23,18 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
+    console.log('[MAP GEN] Request body:', { ...body, dm_description: body.dm_description?.slice(0, 50) })
+
     const parsed = GenerateMapsSchema.safeParse(body)
     if (!parsed.success) {
+      console.error('[MAP GEN] Validation failed:', parsed.error.issues)
       return NextResponse.json(
         { data: null, error: { message: parsed.error.issues[0].message } },
         { status: 400 }
       )
     }
     const { campaign_id, map_size, map_style, biome_profile, dm_description } = parsed.data
+    console.log('[MAP GEN] Validated params:', { campaign_id, map_size, map_style, biome_profile })
 
     // Create AI client using unified interface
     let aiClient
@@ -72,6 +80,7 @@ export async function POST(request: Request) {
     const prompt = buildMapGenerationPrompt({ map_size, map_style, biome_profile, dm_description })
 
     console.log('[MAP GEN] Generating 3 map images with prompt:', prompt.substring(0, 100))
+    const imgStart = Date.now()
     const imageResults = await Promise.all(
       Array.from({ length: 3 }, () =>
         aiClient.generateImage({
@@ -82,8 +91,10 @@ export async function POST(request: Request) {
         })
       )
     )
+    console.log('[MAP GEN] Image generation took', Date.now() - imgStart, 'ms | results:', imageResults.length)
 
     const image_urls = imageResults.flatMap(r => r.urls).filter(Boolean) as string[]
+    console.log('[MAP GEN] Got', image_urls.length, 'image URLs | types:', image_urls.map(u => u.startsWith('data:') ? 'data-url' : 'http-url'))
 
     const insertRows = image_urls.map(image_url => ({
       campaign_id,
@@ -104,15 +115,18 @@ export async function POST(request: Request) {
       .select()
 
     if (insertError) {
+      console.error('[MAP GEN] DB insert failed:', insertError)
       return NextResponse.json(
         { data: null, error: { message: `Failed to save maps: ${insertError.message}` } },
         { status: 500 }
       )
     }
 
+    console.log('[MAP GEN] Saved', maps?.length, 'maps to DB in', Date.now() - startTime, 'ms total')
     return NextResponse.json({ data: maps, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[MAP GEN] Unhandled error after', Date.now() - startTime, 'ms:', message, err)
     return NextResponse.json(
       { data: null, error: { message } },
       { status: 500 }

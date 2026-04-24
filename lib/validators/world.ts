@@ -12,14 +12,20 @@ export const GenerateMapsSchema = z.object({
   dm_description: z.string().max(500).optional(),
 })
 
+// Accepts both HTTP/HTTPS URLs and data URIs (base64 images from AI providers like Gemini)
+const ImageUrlSchema = z.string().refine(
+  (val) => val.startsWith('data:') || val.startsWith('http://') || val.startsWith('https://'),
+  { message: 'Must be a valid URL or data URI' }
+)
+
 export const ClassifyTerrainSchema = z.object({
   map_id: z.string().uuid(),
-  image_url: z.string().url(),
+  image_url: ImageUrlSchema,
 })
 
 export const PlaceResourcesSchema = z.object({
   map_id: z.string().uuid(),
-  image_url: z.string().url(),
+  image_url: ImageUrlSchema,
 })
 
 export const PlaceTownSchema = z.object({

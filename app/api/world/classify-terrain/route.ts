@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ClassifyTerrainSchema } from '@/lib/validators/world'
-import { createAIClient } from '@/lib/ai'
+import OpenAI from 'openai'
 import {
   TERRAIN_SYSTEM_PROMPT,
   buildTerrainClassificationUserPrompt,
@@ -10,11 +10,15 @@ import { TERRAIN_ELEVATION_RANGES, terrainMidpointElevation } from '@/lib/world/
 import type { Json } from '@/lib/supabase/database.types'
 
 export async function POST(request: Request) {
+  const startTime = Date.now()
+  console.log('[TERRAIN] classify-terrain called at', new Date().toISOString())
+
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      console.warn('[TERRAIN] Unauthorized request')
       return NextResponse.json(
         { data: null, error: { message: 'Unauthorized' } },
         { status: 401 }
@@ -22,14 +26,19 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
+    console.log('[TERRAIN] Request body keys:', Object.keys(body), '| image_url length:', (body.image_url as string)?.length)
+
     const parsed = ClassifyTerrainSchema.safeParse(body)
     if (!parsed.success) {
+      console.error('[TERRAIN] Validation failed:', parsed.error.issues)
       return NextResponse.json(
         { data: null, error: { message: parsed.error.issues[0].message } },
         { status: 400 }
       )
     }
     const { map_id, image_url } = parsed.data
+    const isDataUrl = image_url.startsWith('data:')
+    console.log('[TERRAIN] map_id:', map_id, '| image_url type:', isDataUrl ? 'data-url' : 'http-url', '| length:', image_url.length)
 
     const { data: map, error: mapError } = await supabase
       .from('campaign_maps')
@@ -39,39 +48,71 @@ export async function POST(request: Request) {
       .single()
 
     if (mapError || !map) {
+      console.error('[TERRAIN] Map not found:', mapError?.message)
       return NextResponse.json(
         { data: null, error: { message: 'Map not found' } },
         { status: 404 }
       )
     }
 
-    const ai = createAIClient('openai')
+    console.log('[TERRAIN] Map found:', { map_size: map.map_size, biome_profile: map.biome_profile, setup_stage: map.setup_stage })
+
+    // Terrain classification requires vision (image analysis).
+    // Always use OpenAI GPT-4o which has proven vision support for this structured task.
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.error('[TERRAIN] OPENAI_API_KEY not configured')
+      return NextResponse.json(
+        { data: null, error: { message: 'AI vision service not configured (missing OPENAI_API_KEY)' } },
+        { status: 503 }
+      )
+    }
+
+    const openai = new OpenAI({ apiKey })
+    console.log('[TERRAIN] Using OpenAI GPT-4o for vision-based terrain classification')
 
     const userPrompt = buildTerrainClassificationUserPrompt(
       (map.map_size as 'region' | 'kingdom' | 'continent') ?? 'region',
       map.biome_profile ?? undefined
     )
+    console.log('[TERRAIN] User prompt length:', userPrompt.length)
 
-    const response = await (ai as { generate: (params: object) => Promise<{ content: string }> }).generate({
+    // OpenAI accepts both HTTP URLs and data URLs (base64 inline) for vision
+    // Gemini images arrive as data: URIs, which OpenAI handles natively
+    console.log('[TERRAIN] Sending image to GPT-4o vision:', isDataUrl ? `data URI (${image_url.length} chars)` : image_url)
+
+    const aiStart = Date.now()
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: TERRAIN_SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
             { type: 'text', text: userPrompt },
-            { type: 'image_url', image_url: { url: image_url } },
+            { type: 'image_url', image_url: { url: image_url, detail: 'high' } },
           ],
         },
       ],
-      responseFormat: 'json',
+      response_format: { type: 'json_object' },
       temperature: 0.3,
+      max_tokens: 4096,
     })
+    const aiDuration = Date.now() - aiStart
+    console.log('[TERRAIN] AI response took', aiDuration, 'ms | tokens used:', completion.usage?.total_tokens)
+
+    const rawContent = completion.choices[0].message.content || ''
+    console.log('[TERRAIN] Raw AI response length:', rawContent.length, '| preview:', rawContent.slice(0, 200))
 
     let terrainAreas: unknown[]
     try {
-      terrainAreas = JSON.parse(response.content)
-      if (!Array.isArray(terrainAreas)) throw new Error('Expected array')
-    } catch {
+      const parsed = JSON.parse(rawContent)
+      // AI may return { terrain_areas: [...] } or directly [...]
+      terrainAreas = Array.isArray(parsed) ? parsed : (parsed.terrain_areas ?? parsed.areas ?? parsed.zones ?? [])
+      if (!Array.isArray(terrainAreas)) throw new Error('No array found in response')
+      console.log('[TERRAIN] Parsed', terrainAreas.length, 'terrain areas')
+    } catch (parseErr) {
+      console.error('[TERRAIN] Failed to parse AI response:', parseErr, '| raw:', rawContent.slice(0, 500))
       return NextResponse.json(
         { data: null, error: { message: 'AI returned invalid terrain data' } },
         { status: 502 }
@@ -97,14 +138,17 @@ export async function POST(request: Request) {
       }
     })
 
+    console.log('[TERRAIN] Deleting existing AI terrain areas for map:', map_id)
     await supabase.from('terrain_areas').delete().eq('map_id', map_id).eq('placed_by', 'ai')
 
+    console.log('[TERRAIN] Inserting', insertRows.length, 'terrain rows')
     const { data: inserted, error: insertError } = await supabase
       .from('terrain_areas')
       .insert(insertRows)
       .select()
 
     if (insertError) {
+      console.error('[TERRAIN] DB insert failed:', insertError)
       return NextResponse.json(
         { data: null, error: { message: `Failed to save terrain: ${insertError.message}` } },
         { status: 500 }
@@ -116,9 +160,13 @@ export async function POST(request: Request) {
       .update({ setup_stage: 'terrain_classified' })
       .eq('id', map_id)
 
+    const totalDuration = Date.now() - startTime
+    console.log('[TERRAIN] Complete. Inserted', inserted?.length, 'terrain areas in', totalDuration, 'ms')
+
     return NextResponse.json({ data: inserted, error: null })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[TERRAIN] Unhandled error after', Date.now() - startTime, 'ms:', message, err)
     return NextResponse.json(
       { data: null, error: { message } },
       { status: 500 }
