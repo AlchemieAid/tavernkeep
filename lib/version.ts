@@ -1,22 +1,13 @@
 /**
  * Build-time constants
- * The timestamp is captured during the build process via build script
- * and written to .build-info.json. This ensures the timestamp is locked to deployment.
+ * Uses Vercel's VERCEL_BUILD_TIME environment variable which is set at build time.
+ * In production (Vercel), this is locked to the deployment time.
+ * In development, shows when the dev server started.
  */
 
-import fs from 'fs'
-import path from 'path'
-
-// Read build timestamp from .build-info.json (generated during build)
-let BUILD_TIME_ISO: string
-try {
-  const buildInfoPath = path.join(process.cwd(), '.build-info.json')
-  const buildInfo = JSON.parse(fs.readFileSync(buildInfoPath, 'utf-8'))
-  BUILD_TIME_ISO = buildInfo.timestamp
-} catch {
-  // Fallback to current time if build info doesn't exist (development)
-  BUILD_TIME_ISO = new Date().toISOString()
-}
+// In Vercel, VERCEL_BUILD_TIME is set at build time and doesn't change on server restart
+// In development, use current time (when dev server started)
+const BUILD_TIME_ISO = process.env.VERCEL_BUILD_TIME || new Date().toISOString()
 
 interface VersionInfo {
   version: string
