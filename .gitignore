@@ -46,6 +46,5 @@ next-env.d.ts
 
 # build info
 .build-info.json
-lib/build-time.ts
 
 .vercel
