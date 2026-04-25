@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Sparkles, Check, Loader2 } from 'lucide-react'
+import { ChevronLeft, Sparkles, Check, Loader2, X, Maximize2 } from 'lucide-react'
 
 interface MapGenerateWizardProps {
   campaignId: string
@@ -64,6 +64,7 @@ export function MapGenerateWizard({ campaignId, campaignName, existingAiMapCount
   })
   const [generatedMaps, setGeneratedMaps] = useState<GeneratedMap[]>([])
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null)
+  const [previewMap, setPreviewMap] = useState<GeneratedMap | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selecting, setSelecting] = useState(false)
 
@@ -318,35 +319,41 @@ export function MapGenerateWizard({ campaignId, campaignName, existingAiMapCount
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {generatedMaps.map((m, i) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setSelectedMapId(m.id)}
-                className={`relative rounded-xl overflow-hidden aspect-square transition-all group ${
-                  selectedMapId === m.id
-                    ? 'ring-2 ring-primary scale-[1.02]'
-                    : 'ring-1 ring-transparent hover:ring-[#4d4635]'
-                }`}
-                style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={m.image_url}
-                  alt={`Generated map variant ${i + 1}`}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e11]/80 via-transparent to-transparent" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                  <span className="text-xs font-manrope font-semibold text-on-surface">
-                    Variant {i + 1}
-                  </span>
-                  {selectedMapId === m.id && (
-                    <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check className="w-3.5 h-3.5 text-[#3f2e00]" />
+              <div key={m.id} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMap(m)}
+                  className={`relative w-full rounded-xl overflow-hidden aspect-square transition-all group ${
+                    selectedMapId === m.id
+                      ? 'ring-2 ring-primary'
+                      : 'ring-1 ring-transparent hover:ring-[#4d4635]'
+                  }`}
+                  style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.4)' }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={m.image_url}
+                    alt={`Generated map variant ${i + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0c0e11]/80 via-transparent to-transparent" />
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="w-7 h-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                      <Maximize2 className="w-3.5 h-3.5 text-white" />
                     </span>
-                  )}
-                </div>
-              </button>
+                  </div>
+                  <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                    <span className="text-xs font-manrope font-semibold text-on-surface">
+                      Variant {i + 1} · Click to preview
+                    </span>
+                    {selectedMapId === m.id && (
+                      <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-[#3f2e00]" />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </div>
             ))}
           </div>
 
@@ -368,6 +375,52 @@ export function MapGenerateWizard({ campaignId, campaignName, existingAiMapCount
               {selecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               Use This Map
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen preview modal */}
+      {previewMap && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.92)' }}
+          onClick={() => setPreviewMap(null)}
+        >
+          <div
+            className="relative max-w-4xl w-full"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewMap.image_url}
+              alt="Map preview"
+              className="w-full rounded-xl"
+              style={{ maxHeight: '80vh', objectFit: 'contain' }}
+            />
+            <button
+              type="button"
+              onClick={() => setPreviewMap(null)}
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-[#282a2d] flex items-center justify-center hover:bg-[#3a3d42] transition-colors"
+            >
+              <X className="w-4 h-4 text-on-surface" />
+            </button>
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-sm font-manrope text-on-surface-variant">
+                Variant {generatedMaps.findIndex(m => m.id === previewMap.id) + 1} — {previewMap.map_style?.replace(/_/g, ' ')} · {previewMap.map_size}
+              </p>
+              <button
+                type="button"
+                onClick={() => { setSelectedMapId(previewMap.id); setPreviewMap(null) }}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-lg font-manrope font-semibold text-sm text-[#3f2e00] transition-opacity hover:opacity-90"
+                style={{ background: selectedMapId === previewMap.id ? 'rgba(255,198,55,0.5)' : 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
+              >
+                {selectedMapId === previewMap.id ? (
+                  <><Check className="w-4 h-4" /> Selected</>
+                ) : (
+                  <><Check className="w-4 h-4" /> Select this map</>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

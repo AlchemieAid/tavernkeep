@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { PlaceResourcesSchema } from '@/lib/validators/world'
-import { createAIClient } from '@/lib/ai'
+import OpenAI from 'openai'
 import {
   RESOURCE_PLACEMENT_SYSTEM_PROMPT,
   buildResourcePlacementUserPrompt,
 } from '@/lib/prompts/resourcePointPlacement'
 
-export const maxDuration = 60
+export const maxDuration = 120
 
 export async function POST(request: Request) {
   const startTime = Date.now()
@@ -71,37 +71,35 @@ export async function POST(request: Request) {
     const terrain_summary = terrainDetail.join('\n')
     console.log('[RESOURCES] Terrain detail from', terrainAreas?.length ?? 0, 'areas (first 3):', terrainDetail.slice(0, 3).join(' | '))
 
-    const ai = createAIClient()
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
     const userPrompt = buildResourcePlacementUserPrompt({
       map_size: (map.map_size as 'region' | 'kingdom' | 'continent') ?? 'region',
       terrain_summary: terrain_summary || 'mixed terrain',
     })
-    console.log('[RESOURCES] User prompt length:', userPrompt.length, '| calling AI text-only')
+    console.log('[RESOURCES] User prompt length:', userPrompt.length, '| calling gpt-4o-mini')
 
     const aiStart = Date.now()
-    const aiResponse = await ai.generate({
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      temperature: 0.4,
       messages: [
         { role: 'system', content: RESOURCE_PLACEMENT_SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
       ],
-      responseFormat: 'json',
-      temperature: 0.4,
     })
     const aiDuration = Date.now() - aiStart
-    console.log('[RESOURCES] AI response took', aiDuration, 'ms | content length:', aiResponse.content?.length)
+    const rawContent = completion.choices[0]?.message?.content ?? ''
+    console.log('[RESOURCES] gpt-4o-mini took', aiDuration, 'ms | finish_reason:', completion.choices[0]?.finish_reason, '| content length:', rawContent.length)
 
-    if (!aiResponse.content) {
+    if (!rawContent) {
       console.error('[RESOURCES] AI returned empty content')
       return NextResponse.json(
         { data: null, error: { message: 'AI returned no content — please try again' } },
         { status: 502 }
       )
     }
-
-    // Strip markdown code fences if present (some models wrap JSON in ```json ... ```)
-    const stripped = aiResponse.content.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim()
-    const rawContent = stripped
     console.log('[RESOURCES] Raw AI response length:', rawContent.length, '| preview:', rawContent.slice(0, 200))
 
     let resourcePoints: unknown[]

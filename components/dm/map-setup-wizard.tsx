@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, Layers, TreePine, Check, MapPin } from 'lucide-react'
+import { ChevronLeft, Loader2, Layers, TreePine, Check, MapPin, Maximize2, X } from 'lucide-react'
 
 interface MapSetupWizardProps {
   map: {
@@ -37,6 +37,7 @@ export function MapSetupWizard({
   const currentStage = map.setup_stage as Stage
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showFullMap, setShowFullMap] = useState(false)
 
   async function runStage() {
     setRunning(true)
@@ -117,14 +118,50 @@ export function MapSetupWizard({
         })}
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
+      <div
+        className="rounded-xl overflow-hidden relative group cursor-pointer"
+        style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+        onClick={() => setShowFullMap(true)}
+        role="button"
+        aria-label="View full map"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={map.image_url}
           alt="Campaign map"
           className="w-full max-h-48 object-contain bg-[#0d0e10] opacity-90"
         />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
+            <Maximize2 className="w-5 h-5 text-white" />
+          </span>
+        </div>
       </div>
+
+      {showFullMap && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.92)' }}
+          onClick={() => setShowFullMap(false)}
+        >
+          <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={map.image_url}
+              alt="Campaign map — full size"
+              className="w-full rounded-xl"
+              style={{ maxHeight: '85vh', objectFit: 'contain' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowFullMap(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-[#282a2d] flex items-center justify-center hover:bg-[#3a3d42] transition-colors"
+            >
+              <X className="w-4 h-4 text-on-surface" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 space-y-4">
         {STAGES.map((s, i) => {

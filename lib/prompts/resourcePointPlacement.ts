@@ -4,9 +4,9 @@ export interface ResourcePlacementInput {
 }
 
 const DENSITY: Record<string, { min: number; max: number }> = {
-  region:    { min: 30,  max: 60  },
-  kingdom:   { min: 80,  max: 140 },
-  continent: { min: 200, max: 350 },
+  region:    { min: 15,  max: 30  },
+  kingdom:   { min: 30,  max: 60  },
+  continent: { min: 60,  max: 100 },
 }
 
 export const RESOURCE_PLACEMENT_SYSTEM_PROMPT = `You are a world-building assistant placing resource points on a fantasy map for a D&D campaign management system.
