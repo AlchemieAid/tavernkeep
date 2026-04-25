@@ -170,7 +170,7 @@ export function MapSetupWizard({
   }
 
   return (
-    <div className="min-h-screen bg-[#111316] px-6 py-8 max-w-3xl mx-auto">
+    <div className="bg-[#111316] px-6 py-8 max-w-3xl mx-auto">
       <Link
         href={`/dm/campaigns/${campaignId}/maps`}
         className="inline-flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-primary transition-colors mb-8 font-manrope"
