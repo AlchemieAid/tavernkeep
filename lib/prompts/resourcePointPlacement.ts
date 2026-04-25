@@ -1,12 +1,24 @@
 export interface ResourcePlacementInput {
   map_size: 'region' | 'kingdom' | 'continent'
   terrain_summary: string
+  terrain_blob_count?: number
 }
 
-const DENSITY: Record<string, { min: number; max: number }> = {
-  region:    { min: 15,  max: 30  },
-  kingdom:   { min: 30,  max: 60  },
-  continent: { min: 60,  max: 100 },
+/**
+ * Per-blob multipliers: how many resource points to target per classified terrain area.
+ * Larger map scales need more points per blob to adequately cover the area.
+ */
+const PER_BLOB: Record<string, { min: number; max: number }> = {
+  region:    { min: 1.5, max: 2.5 },
+  kingdom:   { min: 2.5, max: 4.0 },
+  continent: { min: 3.5, max: 5.5 },
+}
+
+/** Absolute floor/ceiling so degenerate terrain counts stay sane */
+const ABSOLUTE: Record<string, { min: number; max: number }> = {
+  region:    { min: 10, max: 35  },
+  kingdom:   { min: 20, max: 65  },
+  continent: { min: 40, max: 110 },
 }
 
 export const RESOURCE_PLACEMENT_SYSTEM_PROMPT = `You are a world-building assistant placing resource points on a fantasy map for a D&D campaign management system.
@@ -52,12 +64,16 @@ Rules:
 - Never place ocean/deep_sea resources inland or freshwater resources in salt water`
 
 export function buildResourcePlacementUserPrompt(input: ResourcePlacementInput): string {
-  const { map_size, terrain_summary } = input
-  const { min, max } = DENSITY[map_size] ?? DENSITY.region
+  const { map_size, terrain_summary, terrain_blob_count } = input
+  const pb = PER_BLOB[map_size] ?? PER_BLOB.region
+  const abs = ABSOLUTE[map_size] ?? ABSOLUTE.region
+  const n = terrain_blob_count ?? 10
+  const min = Math.round(Math.max(abs.min, n * pb.min))
+  const max = Math.round(Math.min(abs.max, n * pb.max))
 
   return [
     `Place resource points on this ${map_size}-scale fantasy map.`,
-    `Target ${min}–${max} total resource points.`,
+    `This map has ${n} terrain areas. Target ${min}–${max} total resource points (proportional to terrain variety).`,
     ``,
     `Terrain on this map:`,
     terrain_summary,

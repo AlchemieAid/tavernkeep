@@ -76,6 +76,7 @@ export async function POST(request: Request) {
     const userPrompt = buildResourcePlacementUserPrompt({
       map_size: (map.map_size as 'region' | 'kingdom' | 'continent') ?? 'region',
       terrain_summary: terrain_summary || 'mixed terrain',
+      terrain_blob_count: terrainAreas?.length ?? 0,
     })
     console.log('[RESOURCES] User prompt length:', userPrompt.length, '| calling gpt-4o-mini')
 

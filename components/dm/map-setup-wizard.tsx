@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Loader2, Layers, TreePine, Check, MapPin, Maximize2, X } from 'lucide-react'
+import {
+  ChevronLeft, Loader2, Layers, TreePine, Check, MapPin,
+  Maximize2, X, AlertTriangle, SkipForward, RefreshCw,
+} from 'lucide-react'
 
 interface MapSetupWizardProps {
   map: {
@@ -21,10 +24,31 @@ interface MapSetupWizardProps {
 type Stage = 'created' | 'terrain_classified' | 'resources_placed'
 
 const STAGES: { key: Stage; label: string; desc: string; icon: React.ReactNode }[] = [
-  { key: 'created', label: 'Classify Terrain', desc: 'AI reads the map image and identifies terrain polygons (plains, mountains, rivers, etc.)', icon: <Layers className="w-5 h-5" /> },
+  { key: 'created', label: 'Classify Terrain', desc: 'AI reads the map image and identifies terrain blobs — plains, mountains, rivers, cities, and more.', icon: <Layers className="w-5 h-5" /> },
   { key: 'terrain_classified', label: 'Place Resources', desc: 'AI places resource points based on terrain — iron in mountains, fish at coasts, farmland in valleys.', icon: <TreePine className="w-5 h-5" /> },
   { key: 'resources_placed', label: 'Generate Atmosphere', desc: 'AI writes sensory read-aloud text for each terrain area. Your DM read-aloud is ready.', icon: <MapPin className="w-5 h-5" /> },
 ]
+
+type SubStepStatus = 'pending' | 'running' | 'done' | 'skipped'
+interface SubStep {
+  label: string
+  status: SubStepStatus
+  message: string
+}
+
+const TERRAIN_SUBSTEPS: SubStep[] = [
+  { label: 'Reading map style and visual language', status: 'pending', message: '' },
+  { label: 'Identifying terrain zones', status: 'pending', message: '' },
+  { label: 'Tracing rivers and coastlines', status: 'pending', message: '' },
+  { label: 'Spotting landmarks and settlements', status: 'pending', message: '' },
+]
+
+type PipelineEvent =
+  | { type: 'progress';      layer: number; message: string }
+  | { type: 'layer_success'; layer: number; message: string }
+  | { type: 'layer_failed';  layer: number; message: string }
+  | { type: 'complete'; terrain_count: number; poi_count: number; skipped: string[] }
+  | { type: 'error'; message: string }
 
 export function MapSetupWizard({
   map,
@@ -37,22 +61,80 @@ export function MapSetupWizard({
   const currentStage = map.setup_stage as Stage
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
   const [showFullMap, setShowFullMap] = useState(false)
+  const [subSteps, setSubSteps] = useState<SubStep[]>(TERRAIN_SUBSTEPS.map(s => ({ ...s })))
+  const [showSubSteps, setShowSubSteps] = useState(false)
+  const [skippedLayers, setSkippedLayers] = useState<string[]>([])
+
+  function updateSubStep(layer: number, status: SubStepStatus, message: string) {
+    setSubSteps(prev => {
+      const next = [...prev]
+      if (next[layer]) next[layer] = { ...next[layer], status, message }
+      return next
+    })
+  }
+
+  async function runTerrainClassification() {
+    setSubSteps(TERRAIN_SUBSTEPS.map(s => ({ ...s })))
+    setShowSubSteps(true)
+    setSkippedLayers([])
+
+    const res = await fetch('/api/world/classify-terrain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ map_id: map.id, image_url: map.image_url }),
+    })
+
+    if (!res.body) throw new Error('No stream received from terrain classifier')
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    const newSkipped: string[] = []
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n\n')
+      buffer = lines.pop() ?? ''
+
+      for (const chunk of lines) {
+        const line = chunk.startsWith('data: ') ? chunk.slice(6) : chunk
+        if (!line.trim()) continue
+
+        let event: PipelineEvent
+        try { event = JSON.parse(line) } catch { continue }
+
+        if (event.type === 'progress') {
+          updateSubStep(event.layer, 'running', event.message)
+        } else if (event.type === 'layer_success') {
+          updateSubStep(event.layer, 'done', event.message)
+        } else if (event.type === 'layer_failed') {
+          updateSubStep(event.layer, 'skipped', event.message)
+        } else if (event.type === 'complete') {
+          newSkipped.push(...(event.skipped ?? []))
+          setSkippedLayers(newSkipped)
+          if (newSkipped.length > 0) {
+            setWarning(`${newSkipped.length} analysis step${newSkipped.length > 1 ? 's' : ''} skipped — map is usable, retry to improve`)
+          }
+        } else if (event.type === 'error') {
+          throw new Error(event.message)
+        }
+      }
+    }
+  }
 
   async function runStage() {
     setRunning(true)
     setError(null)
+    setWarning(null)
 
     try {
       if (currentStage === 'created') {
-        const res = await fetch('/api/world/classify-terrain', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ map_id: map.id, image_url: map.image_url }),
-        })
-        const json = await res.json()
-        if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Terrain classification failed')
-        // classify-terrain already sets setup_stage = 'terrain_classified' — no further call needed
+        await runTerrainClassification()
       } else if (currentStage === 'terrain_classified') {
         const res = await fetch('/api/world/place-resources', {
           method: 'POST',
@@ -80,12 +162,11 @@ export function MapSetupWizard({
   }
 
   const stageIndex = STAGES.findIndex(s => s.key === currentStage)
-  const currentStageDef = STAGES[stageIndex]
 
   const stageButtonLabel: Record<Stage, string> = {
-    created: `Classify Terrain with AI`,
-    terrain_classified: `Place ${terrainAreaCount} Terrain Areas — Generate Resources`,
-    resources_placed: `Generate Atmosphere & Finish Setup`,
+    created: 'Analyze Map with AI',
+    terrain_classified: `Place Resources (${terrainAreaCount} terrain areas)`,
+    resources_placed: 'Generate Atmosphere & Finish Setup',
   }
 
   return (
@@ -171,11 +252,7 @@ export function MapSetupWizard({
             <div
               key={s.key}
               className={`rounded-xl p-5 flex items-start gap-4 transition-all ${
-                active
-                  ? 'bg-[#1e2023] ring-1 ring-primary/30'
-                  : done
-                  ? 'bg-[#1a1c1f] opacity-70'
-                  : 'bg-[#1a1c1f] opacity-40'
+                active ? 'bg-[#1e2023] ring-1 ring-primary/30' : done ? 'bg-[#1a1c1f] opacity-70' : 'bg-[#1a1c1f] opacity-40'
               }`}
             >
               <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -183,7 +260,7 @@ export function MapSetupWizard({
               }`}>
                 {done ? <Check className="w-4 h-4" /> : s.icon}
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <div className="text-sm font-manrope font-semibold text-on-surface">{s.label}</div>
                 <div className="text-xs font-manrope text-on-surface-variant mt-0.5">{s.desc}</div>
                 {done && i === 0 && (
@@ -192,11 +269,54 @@ export function MapSetupWizard({
                 {done && i === 1 && (
                   <div className="text-xs font-manrope text-primary mt-1">{resourcePointCount} resource points placed</div>
                 )}
+
+                {/* Sub-step progress — shown while terrain classification is running */}
+                {active && showSubSteps && i === 0 && (
+                  <div className="mt-3 space-y-2">
+                    {subSteps.map((step, si) => (
+                      <div key={si} className="flex items-start gap-2">
+                        <div className="mt-0.5 flex-shrink-0">
+                          {step.status === 'done' && <Check className="w-3.5 h-3.5 text-primary" />}
+                          {step.status === 'running' && <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />}
+                          {step.status === 'skipped' && <SkipForward className="w-3.5 h-3.5 text-on-surface-variant" />}
+                          {step.status === 'pending' && <div className="w-3.5 h-3.5 rounded-full border border-[#3a3d42]" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className={`text-xs font-manrope ${step.status === 'done' ? 'text-primary' : step.status === 'skipped' ? 'text-on-surface-variant' : step.status === 'running' ? 'text-on-surface' : 'text-on-surface-variant opacity-50'}`}>
+                            {step.label}
+                          </div>
+                          {step.message && step.status !== 'pending' && (
+                            <div className={`text-xs font-manrope mt-0.5 ${step.status === 'skipped' ? 'text-on-surface-variant' : 'text-on-surface-variant'}`}>
+                              {step.message}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )
         })}
       </div>
+
+      {warning && !running && (
+        <div className="mt-4 rounded-lg bg-[#332200]/60 border border-[#ffc637]/20 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-manrope text-on-surface">{warning}</p>
+            <button
+              type="button"
+              onClick={runStage}
+              className="mt-2 inline-flex items-center gap-1.5 text-xs font-manrope font-semibold text-primary hover:opacity-80 transition-opacity"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry skipped steps
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mt-6 rounded-lg bg-[#93000a]/20 px-4 py-3 text-sm font-manrope text-[#ffb4ab]">
@@ -213,7 +333,7 @@ export function MapSetupWizard({
           style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
         >
           {running ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Working&hellip; This may take 30–60 seconds</>
+            <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing map&hellip; This may take up to 60 seconds</>
           ) : (
             stageButtonLabel[currentStage]
           )}

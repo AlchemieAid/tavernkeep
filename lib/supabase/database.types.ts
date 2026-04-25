@@ -253,6 +253,7 @@ export type Database = {
           id: string
           image_url: string
           is_selected: boolean | null
+          map_grammar: Json | null
           map_size: string
           map_style: string | null
           original_filename: string | null
@@ -270,6 +271,7 @@ export type Database = {
           id?: string
           image_url: string
           is_selected?: boolean | null
+          map_grammar?: Json | null
           map_size: string
           map_style?: string | null
           original_filename?: string | null
@@ -287,6 +289,7 @@ export type Database = {
           id?: string
           image_url?: string
           is_selected?: boolean | null
+          map_grammar?: Json | null
           map_size?: string
           map_style?: string | null
           original_filename?: string | null
