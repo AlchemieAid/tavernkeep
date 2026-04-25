@@ -24,6 +24,7 @@ export interface TerrainArea {
   terrain_type: string
   polygon: Array<{ x: number; y: number }>
   computed_elevation_m?: number | null
+  intensity?: number | null
   climate_zone?: string | null
   temp_summer_high_c?: number | null
   temp_winter_low_c?: number | null
@@ -57,17 +58,31 @@ function polygonCentroid(polygon: Array<{ x: number; y: number }>): { x: number;
   return { x: sum.x / polygon.length, y: sum.y / polygon.length }
 }
 
-function pointInPolygon(px: number, py: number, polygon: Array<{ x: number; y: number }>): boolean {
-  let inside = false
-  const n = polygon.length
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = polygon[i].x, yi = polygon[i].y
-    const xj = polygon[j].x, yj = polygon[j].y
-    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
-      inside = !inside
-    }
-  }
-  return inside
+/**
+ * Mean distance from centroid to all polygon vertices — used as the Gaussian sigma
+ * for the terrain influence blob. Works for any polygon shape.
+ */
+function polygonMeanRadius(polygon: Array<{ x: number; y: number }>): number {
+  if (polygon.length === 0) return 0.25
+  const c = polygonCentroid(polygon)
+  const sum = polygon.reduce((s, p) => s + euclideanDistance(p.x, p.y, c.x, c.y), 0)
+  return Math.max(0.04, sum / polygon.length)
+}
+
+/**
+ * Gaussian influence weight for a terrain blob at query point (qx, qy).
+ * Returns 0 beyond 2.5 sigma to avoid computing over the entire map for
+ * each terrain area.
+ */
+function terrainGaussianWeight(
+  qx: number, qy: number,
+  centroid: { x: number; y: number },
+  sigma: number,
+  intensity: number,
+): number {
+  const dist = euclideanDistance(qx, qy, centroid.x, centroid.y)
+  if (dist > sigma * 2.5) return 0
+  return intensity * Math.exp(-(dist * dist) / (2 * sigma * sigma))
 }
 
 export function buildResourceIndex(points: ResourcePoint[]): SpatialIndex {
@@ -133,14 +148,42 @@ export function computeIDW(
   // ── Phase 1: normalise resource-point IDW or fall back to terrain ─────────
   let dominantTerrain = 'plains'
 
+  // Compute Gaussian soft-blend weights for every terrain blob.
+  // Terrains CAN overlap — the scores at any point are a weighted average
+  // of all nearby terrain types, smoothly blending across boundaries.
+  const terrainContribs = terrainAreas.map(area => {
+    const centroid = polygonCentroid(area.polygon)
+    const sigma = polygonMeanRadius(area.polygon)
+    const intensity = area.intensity ?? 1.0
+    const w = terrainGaussianWeight(qx, qy, centroid, sigma, intensity)
+    return { area, centroid, sigma, weight: w }
+  }).filter(tc => tc.weight > 1e-4)
+
+  const totalTerrainWeight = terrainContribs.reduce((s, tc) => s + tc.weight, 0)
+
   if (totalWeight > 0) {
     for (const dim of Object.keys(scores) as Array<keyof ResourceScores>) {
       scores[dim] = dimensionWeightedSums[dim] / totalWeight
     }
+  } else if (totalTerrainWeight > 0) {
+    // Blend terrain base scores proportionally to Gaussian weights
+    for (const { area, weight } of terrainContribs) {
+      const base = TERRAIN_BASE_SCORES[area.terrain_type]
+      if (!base) continue
+      const w = weight / totalTerrainWeight
+      for (const dim of Object.keys(scores) as Array<keyof ResourceScores>) {
+        scores[dim] += base[dim] * w
+      }
+    }
   } else {
-    // No resource points in range — use terrain base scores
+    // Query point is beyond every terrain blob's 2.5-sigma radius — fall back
+    // to the nearest centroid (should be rare for well-covering blob sets)
+    let minDist = Infinity
     for (const area of terrainAreas) {
-      if (pointInPolygon(qx, qy, area.polygon)) {
+      const c = polygonCentroid(area.polygon)
+      const d = euclideanDistance(qx, qy, c.x, c.y)
+      if (d < minDist) {
+        minDist = d
         dominantTerrain = area.terrain_type
         const base = TERRAIN_BASE_SCORES[area.terrain_type]
         if (base) {
@@ -148,37 +191,18 @@ export function computeIDW(
             scores[dim] = base[dim]
           }
         }
-        break
-      }
-    }
-    if (totalWeight === 0 && scores.agriculture === 0 && scores.mining === 0) {
-      // Not inside any polygon — find nearest terrain centroid
-      let minDist = Infinity
-      for (const area of terrainAreas) {
-        const c = polygonCentroid(area.polygon)
-        const d = euclideanDistance(qx, qy, c.x, c.y)
-        if (d < minDist) {
-          minDist = d
-          dominantTerrain = area.terrain_type
-          const base = TERRAIN_BASE_SCORES[area.terrain_type]
-          if (base) {
-            for (const dim of Object.keys(scores) as Array<keyof ResourceScores>) {
-              scores[dim] = base[dim]
-            }
-          }
-        }
       }
     }
   }
 
-  // ── Determine dominant terrain for label ─────────────────────────────────
-  {
+  // ── Determine dominant terrain label (highest Gaussian weight) ────────────
+  if (terrainContribs.length > 0) {
+    dominantTerrain = terrainContribs.reduce(
+      (best, tc) => tc.weight > best.weight ? tc : best
+    ).area.terrain_type
+  } else if (terrainAreas.length > 0) {
     let minDist = Infinity
     for (const area of terrainAreas) {
-      if (pointInPolygon(qx, qy, area.polygon)) {
-        dominantTerrain = area.terrain_type
-        break
-      }
       const c = polygonCentroid(area.polygon)
       const d = euclideanDistance(qx, qy, c.x, c.y)
       if (d < minDist) { minDist = d; dominantTerrain = area.terrain_type }
@@ -198,7 +222,7 @@ export function computeIDW(
     }
   }
 
-  // ── Elevation IDW from terrain area centroids ─────────────────────────────
+  // ── Elevation: Gaussian-weighted blend from terrain blob centroids ──────────
   let elevWeightedSum = 0
   let elevTotalWeight = 0
 
@@ -206,8 +230,9 @@ export function computeIDW(
     const elev = area.computed_elevation_m
     if (elev == null) continue
     const c = polygonCentroid(area.polygon)
-    const dist = euclideanDistance(qx, qy, c.x, c.y)
-    const w = dist < 1e-10 ? 1e6 : 1 / (dist * dist)
+    const sigma = polygonMeanRadius(area.polygon)
+    const intensity = area.intensity ?? 1.0
+    const w = terrainGaussianWeight(qx, qy, c, sigma, intensity) || (1e-6)
     elevWeightedSum += elev * w
     elevTotalWeight += w
   }

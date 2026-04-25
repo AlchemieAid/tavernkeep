@@ -1304,6 +1304,7 @@ export type Database = {
           growing_season_months: number | null
           hazards: Json | null
           id: string
+          intensity: number
           map_id: string
           pass_open_months: number | null
           placed_by: string | null
@@ -1328,6 +1329,7 @@ export type Database = {
           growing_season_months?: number | null
           hazards?: Json | null
           id?: string
+          intensity?: number
           map_id: string
           pass_open_months?: number | null
           placed_by?: string | null
@@ -1352,6 +1354,7 @@ export type Database = {
           growing_season_months?: number | null
           hazards?: Json | null
           id?: string
+          intensity?: number
           map_id?: string
           pass_open_months?: number | null
           placed_by?: string | null
@@ -1637,6 +1640,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_public_tables: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
+      }
       clean_expired_cache: {
         Args: { older_than_hours?: number }
         Returns: number
@@ -1956,3 +1965,4 @@ export const Constants = {
     },
   },
 } as const
+

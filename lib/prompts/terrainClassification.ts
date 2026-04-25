@@ -1,12 +1,8 @@
-export const TERRAIN_SYSTEM_PROMPT = `You are a terrain classifier for a tabletop RPG map system. Analyze a fantasy map image and return terrain areas as organic polygons with normalized coordinates.
+export const TERRAIN_SYSTEM_PROMPT = `You are a terrain analyst for a tabletop RPG map system. Study the fantasy map image and describe each terrain feature as an elliptic influence blob. Terrain blobs CAN and SHOULD overlap — a coastal forest is BOTH a "coast" blob AND a "forest" blob. Overlapping is natural and expected.
 
-COORDINATE SYSTEM:
-- All x and y values are floats in range [0.0, 1.0]
-- (0,0) = top-left corner, (1,1) = bottom-right corner
-- Polygons must trace actual terrain boundaries — use 8–20 vertices per polygon for smooth organic shapes
-- DO NOT produce rectangular or square polygons — trace the actual visual edges of each terrain feature
+COORDINATE SYSTEM: all values normalized [0.0, 1.0], (0,0) = top-left.
 
-TERRAIN TYPES (use exact strings):
+TERRAIN TYPES (use exact strings only):
 ocean, deep_sea, coast, river, lake,
 plains, grassland, farmland,
 forest, deep_forest, jungle,
@@ -14,26 +10,40 @@ hills, highlands, mountains, high_mountains,
 swamp, wetlands, desert, badlands,
 tundra, arctic, volcanic
 
-POLYGON TRACING RULES:
-- Coastlines: trace the exact shoreline with enough points to follow its curves and bays
-- Forests: follow the irregular forest edge — no rectangles, use organic curved outlines
-- Mountains: trace the mountain range silhouette with the ridgeline shape
-- Rivers: use a thin elongated polygon following the river course with 8+ points
-- Lakes/Water bodies: trace the actual shoreline shape closely
-- Each polygon must genuinely encompass the correct visual terrain on the map, not a bounding box
+BLOB PARAMETERS:
+- center_x, center_y: where the terrain feature is centred [0,1]
+- radius_x, radius_y: semi-axes — how far the feature extends horizontally/vertically [0.04, 0.55]
+- rotation_deg: orientation of the major axis, 0–360
+- irregularity: how organically deformed the boundary is — 0.0 = smooth ellipse, 0.9 = very jagged/coastal
+  · ocean/coast/river: 0.4–0.8 (irregular shorelines)
+  · mountains/hills: 0.3–0.6 (ridge variation)
+  · plains/desert: 0.1–0.3 (gradual transitions)
+  · forest: 0.4–0.7 (organic canopy edge)
+- intensity: how strongly this terrain dominates at its centre [0.5, 1.0]
+  · primary/distinct biomes: 0.85–1.0
+  · transitional/mixed zones: 0.5–0.75
 
 ELEVATION RULES:
-- Assign elevation_min_m and elevation_max_m for each polygon based on terrain type
-- Rivers must be lower than surrounding terrain
-- Ocean and coast must be the lowest features (0–15m)
-- Mountain ranges should have realistic elevation gradients
+- ocean/deep_sea: 0–10m
+- coast/river/lake: 5–20m
+- plains/grassland/farmland: 30–200m
+- hills/highlands: 200–800m
+- mountains: 800–3000m
+- high_mountains: 2000–4500m
+- Match visible terrain features in the image
 
-OUTPUT FORMAT — respond ONLY with a JSON object containing a "terrain_areas" array, no prose:
+OUTPUT FORMAT — respond ONLY with this JSON object, no prose:
 {
   "terrain_areas": [
     {
       "terrain_type": "mountains",
-      "polygon": [{"x": 0.15, "y": 0.08}, {"x": 0.22, "y": 0.05}, {"x": 0.31, "y": 0.04}, {"x": 0.40, "y": 0.06}, {"x": 0.45, "y": 0.10}, {"x": 0.43, "y": 0.18}, {"x": 0.35, "y": 0.22}, {"x": 0.24, "y": 0.20}, {"x": 0.16, "y": 0.14}],
+      "center_x": 0.25,
+      "center_y": 0.18,
+      "radius_x": 0.22,
+      "radius_y": 0.10,
+      "rotation_deg": 35,
+      "irregularity": 0.45,
+      "intensity": 0.90,
       "elevation_min_m": 800,
       "elevation_max_m": 3200,
       "computed_elevation_m": 2000
@@ -41,12 +51,12 @@ OUTPUT FORMAT — respond ONLY with a JSON object containing a "terrain_areas" a
   ]
 }
 
-Rules:
-- Cover the entire map with non-overlapping polygons (ocean fills remaining space)
-- Place rivers as thin elongated polygons following their visual course
-- Identify distinct terrain regions — do not merge different biomes
-- Coastlines and water bodies must use enough vertices to closely follow the visual shape
-- Return 8–25 polygons for a typical map (more for continent scale)`
+COVERAGE RULES:
+- Always include at least one ocean or plains blob covering most of the map as a base layer
+- Identify every distinct visible terrain type — typically 8–20 blobs per map
+- Rivers: use a very elongated blob (radius_x ≈ 0.30–0.45, radius_y ≈ 0.02–0.04) along the river course
+- Multiple overlapping blobs of the same type are allowed for large features (e.g., two mountain blobs for a long range)
+- Continent maps may need 18–30 blobs`
 
 export function buildTerrainClassificationUserPrompt(
   map_size: 'region' | 'kingdom' | 'continent',

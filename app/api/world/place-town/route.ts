@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       terrain_type: ta.terrain_type,
       polygon: ta.polygon as { x: number; y: number }[],
       computed_elevation_m: ta.computed_elevation_m ?? 0,
+      intensity: ta.intensity ?? 1.0,
     }))
 
     const pois: PlacedPoI[] = (rawPois ?? []).map(poi => ({
