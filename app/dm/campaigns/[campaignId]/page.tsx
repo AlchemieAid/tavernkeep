@@ -50,7 +50,7 @@ export default async function CampaignPage({
 
   const { data: campaignMaps } = await supabase
     .from('campaign_maps')
-    .select('id, image_url, map_size, map_style, setup_stage, creation_method')
+    .select('id, image_url, map_size, map_style, setup_stage, creation_method, is_selected')
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: false })
 
@@ -211,36 +211,64 @@ export default async function CampaignPage({
                 </Button>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {campaignMaps.map(m => (
+          ) : (() => {
+            const selectedMap = campaignMaps.find(m => m.is_selected) ?? campaignMaps[0]
+            const otherMaps = campaignMaps.filter(m => m.id !== selectedMap.id)
+            return (
+              <div className="space-y-3">
+                {/* Featured map */}
                 <Link
-                  key={m.id}
-                  href={`/dm/campaigns/${campaignId}/maps/${m.id}`}
-                  className="group relative rounded-xl overflow-hidden border border-border hover:border-primary/40 transition-all"
-                  style={{ aspectRatio: '16/9' }}
+                  href={`/dm/campaigns/${campaignId}/maps/${selectedMap.id}`}
+                  className="group relative block rounded-xl overflow-hidden border border-primary/30 hover:border-primary/60 transition-all"
+                  style={{ aspectRatio: '16/7' }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m.image_url} alt="Map" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 p-3 flex items-center gap-2">
-                    {m.setup_stage !== 'ready' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-black font-semibold uppercase tracking-wide">Setup</span>
+                  <img src={selectedMap.image_url} alt="Selected map" className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                  <div className="absolute top-3 left-3">
+                    <span className="text-[10px] px-2 py-1 rounded-full bg-primary text-[#3f2e00] font-bold uppercase tracking-wider">Active Map</span>
+                  </div>
+                  <div className="absolute bottom-0 left-0 p-4 flex items-center gap-2">
+                    {selectedMap.setup_stage !== 'ready' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500 text-black font-semibold uppercase tracking-wide">Setup Required</span>
                     )}
-                    <span className="text-xs font-semibold text-white capitalize">{m.map_style?.replace(/_/g,' ') ?? m.map_size}</span>
+                    <span className="text-sm font-semibold text-white capitalize">{selectedMap.map_style?.replace(/_/g,' ') ?? selectedMap.map_size}</span>
                   </div>
                 </Link>
-              ))}
-              <Link
-                href={`/dm/campaigns/${campaignId}/maps`}
-                className="rounded-xl border border-dashed border-border hover:border-primary/40 transition-all flex items-center justify-center gap-2 text-sm text-on-surface-variant hover:text-primary"
-                style={{ aspectRatio: '16/9', minHeight: '80px' }}
-              >
-                <Plus className="w-4 h-4" />
-                Add Map
-              </Link>
-            </div>
-          )}
+
+                {/* Other maps as compact tabs + add button */}
+                {(otherMaps.length > 0 || true) && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {otherMaps.map(m => (
+                      <Link
+                        key={m.id}
+                        href={`/dm/campaigns/${campaignId}/maps/${m.id}`}
+                        className="group relative flex-shrink-0 rounded-lg overflow-hidden border border-border hover:border-primary/40 transition-all"
+                        style={{ width: 120, height: 68 }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={m.image_url} alt="Map variant" className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
+                        {m.setup_stage !== 'ready' && (
+                          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400" />
+                        )}
+                        <div className="absolute bottom-1 left-1.5">
+                          <span className="text-[9px] font-semibold text-white/80 capitalize leading-none">{m.map_size}</span>
+                        </div>
+                      </Link>
+                    ))}
+                    <Link
+                      href={`/dm/campaigns/${campaignId}/maps`}
+                      className="flex-shrink-0 rounded-lg border border-dashed border-border hover:border-primary/40 transition-all flex items-center justify-center gap-1 text-xs text-on-surface-variant hover:text-primary"
+                      style={{ width: 68, height: 68 }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Town Creation Section */}

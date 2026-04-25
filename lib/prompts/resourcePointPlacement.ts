@@ -29,6 +29,7 @@ PLACEMENT RULES (earth-like realism):
 - Desert: salt_flat in dry lake beds; oasis at prominent landscape features; gem_cluster in rocky desert
 - Volcanic: sulfur_vent, volcanic_soil, hot_springs near volcanic features
 - Points should cluster in rich areas and thin out in barren ones
+- CRITICAL: Do NOT place resources in geometric patterns — no straight lines, no diagonals, no X-shapes, no W-shapes, no grid patterns, no radial symmetry. Scatter them organically following the terrain contours, rivers, and coastlines.
 
 OUTPUT FORMAT — respond ONLY with a JSON object containing a "resource_points" array, no prose:
 {

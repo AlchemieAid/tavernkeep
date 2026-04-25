@@ -212,6 +212,21 @@ export function MapCanvas({
     const rect = el.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
+
+    // Use SVG coordinate transform so clicks align with the SVG overlay even when the
+    // map image uses object-contain (which letterboxes the image inside the container).
+    // Without this, clicks in the letterbox margin are offset from where dots appear.
+    const svgEl = el.querySelector('svg') as SVGSVGElement | null
+    if (svgEl?.getScreenCTM) {
+      const ctm = svgEl.getScreenCTM()
+      if (ctm) {
+        const pt = svgEl.createSVGPoint()
+        pt.x = e.clientX
+        pt.y = e.clientY
+        const svgPt = pt.matrixTransform(ctm.inverse())
+        return { x, y, xPct: Math.max(0, Math.min(1, svgPt.x)), yPct: Math.max(0, Math.min(1, svgPt.y)) }
+      }
+    }
     return { x, y, xPct: x / rect.width, yPct: y / rect.height }
   }
 

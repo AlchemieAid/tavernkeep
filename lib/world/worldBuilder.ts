@@ -1,4 +1,4 @@
-import { computeIDW, type ResourcePoint, type TerrainArea, type PlacedPoI } from './resourceInterpolation'
+import { computeIDWWithTerrain, type ResourcePoint, type TerrainArea, type PlacedPoI } from './resourceInterpolation'
 import { computeWealthScore, wealthLabel, estimatePopulation } from './wealthField'
 import { findTradePartners, type TownNode } from './gravityModel'
 import { deriveTownProfile } from './centralPlace'
@@ -63,7 +63,7 @@ export function buildWorldContext(input: WorldBuilderInput): WorldBuilderResult 
   const { qx, qy, resourcePoints, terrainAreas, pois = [], existingTowns = [], biome_profile } = input
 
   // ── 1. IDW: resource scores + elevation ──────────────────────────────────
-  const idw = computeIDW(qx, qy, resourcePoints, terrainAreas, pois)
+  const idw = computeIDWWithTerrain(qx, qy, resourcePoints, terrainAreas, pois)
   const { scores, elevation_m, dominantTerrain } = idw
 
   const resource: ResourceSnapshot = {
