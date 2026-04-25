@@ -61,8 +61,11 @@ describe('RLS Security Audit', () => {
           .limit(1)
 
         // If we can read without authentication, RLS is likely disabled
-        // This is a simplified check - the real check is in the RLS audit migration
-        expect(readError?.message).not.toContain('does not exist')
+        // This is a simplified check - the real check is in the RLS audit migration.
+        // Only assert on the message when an error actually occurred.
+        if (readError) {
+          expect(readError.message).not.toContain('does not exist')
+        }
       } else {
         expect(data).toBe(true)
       }
@@ -125,13 +128,17 @@ describe('RLS Security Audit', () => {
 
   describe('Admin Tables', () => {
     it('admin_users table should have RLS enabled', async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('admin_users')
-        .select('count')
+        .select('id')
         .limit(1)
 
-      // Admin table should require admin role - regular users should be denied
-      expect(error?.code).toBe('PGRST301') // Permission denied expected
+      // RLS is enabled with a policy that only matches authenticated users.
+      // Anon client (no signed-in user) gets 0 rows and no error.
+      // PGRST301 would only occur if the SQL GRANT itself were revoked — that
+      // is a different mechanism from RLS and we don't need it here.
+      expect(error).toBeNull()
+      expect(data).toHaveLength(0)
     })
 
     it('app_config should be readable by authenticated users', async () => {
@@ -177,9 +184,12 @@ describe('RLS Security Audit', () => {
       }
 
       // Should have policies that enforce dm_id = auth.uid()
-      const hasUserIsolation = policies?.some((p: { definition: string }) => 
-        p.definition?.includes('auth.uid()') || 
-        p.definition?.includes('dm_id')
+      // Note: get_table_policies RPC returns 'qual' and 'with_check', not 'definition'
+      const hasUserIsolation = policies?.some((p: { qual: string; with_check: string }) =>
+        p.qual?.includes('auth.uid()') ||
+        p.qual?.includes('dm_id') ||
+        p.with_check?.includes('auth.uid()') ||
+        p.with_check?.includes('dm_id')
       )
 
       expect(hasUserIsolation).toBe(true)
