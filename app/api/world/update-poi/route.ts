@@ -8,6 +8,7 @@ const schema = z.object({
   is_discovered: z.boolean().optional(),
   is_visible_to_players: z.boolean().optional(),
   name: z.string().max(120).optional(),
+  description: z.string().max(1000).nullable().optional(),
   player_hint: z.string().max(500).nullable().optional(),
 })
 
@@ -39,7 +40,7 @@ export async function PATCH(req: Request) {
     .update(updates)
     .eq('id', poiId)
     .eq('map_id', mapId)
-    .select('id, is_discovered, is_visible_to_players, name, player_hint')
+    .select('id, is_discovered, is_visible_to_players, name, description, player_hint')
     .single()
 
   if (error) return NextResponse.json({ data: null, error: { message: error.message } }, { status: 500 })

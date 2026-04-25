@@ -2,7 +2,7 @@
 
 import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen, Route, Layers, Gem } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, MapPin, Castle, Crosshair, Shield, BookOpen, Route, Layers, Gem, Filter, ChevronDown, Type } from 'lucide-react'
 import { computeIDW, type IDWResult, type ResourcePoint, type TerrainArea, type PlacedPoI } from '@/lib/world/resourceInterpolation'
 import { MapHoverTooltip } from './map-hover-tooltip'
 import { MapPoIPanel, type PlacedPoIResult } from './map-poi-panel'
@@ -52,6 +52,14 @@ const RESOURCE_COLORS: Record<string, string> = {
 
 function getResourceColor(type: string): string {
   return RESOURCE_COLORS[type] ?? '#9e9e9e'
+}
+
+const RESOURCE_GROUPS: Record<string, string[]> = {
+  Minerals: ['iron_deposit','copper_deposit','gold_vein','silver_vein','gem_cluster','coal_seam','stone_quarry','salt_flat','sulfur_vent'],
+  'Food & Water': ['fertile_farmland','grazing_land','orchard','deep_fishery','coastal_fishery','river_fishery'],
+  Nature: ['ancient_forest','managed_woodland','rare_herbs'],
+  Trade: ['natural_harbor','river_ford','mountain_pass','trade_crossroads','oasis','river_confluence'],
+  Special: ['arcane_nexus','ancient_ruins','volcanic_soil','hot_springs'],
 }
 
 type Mode = 'view' | 'town' | 'poi' | 'territory' | 'history' | 'trade_route' | 'terrain' | 'resource'
@@ -189,12 +197,15 @@ export function MapCanvas({
   const [showTerritories, setShowTerritories] = useState(true)
   const [showHistory, setShowHistory] = useState(true)
   const [showTerrainAreas, setShowTerrainAreas] = useState(false)
+  const [showNames, setShowNames] = useState(false)
   const [mutableTerrainAreas, setMutableTerrainAreas] = useState(terrainAreas)
   const [drawingTerrainType, setDrawingTerrainType] = useState('forest')
   const [terrainFormPolygon, setTerrainFormPolygon] = useState<Array<{ x: number; y: number }> | null>(null)
   const [resourcePanelOpen, setResourcePanelOpen] = useState(false)
   const [resourceClickPos, setResourceClickPos] = useState<{ xPct: number; yPct: number } | null>(null)
   const [mobileModal, setMobileModal] = useState<{ result: IDWResult; terrainType: string | null } | null>(null)
+  const [hiddenResourceTypes, setHiddenResourceTypes] = useState<Set<string>>(new Set())
+  const [showResourceFilter, setShowResourceFilter] = useState(false)
 
   const placedPoIs = useMemo<PlacedPoI[]>(() =>
     pois.map(p => ({ id: p.id, x_pct: p.x_pct, y_pct: p.y_pct, poi_type: p.poi_type })),
@@ -206,7 +217,7 @@ export function MapCanvas({
     return mutableTerrainAreas.find(a => a.terrain_type === idwResult.dominantTerrain) ?? null
   }, [idwResult, mutableTerrainAreas])
 
-  function getCanvasCoords(e: React.MouseEvent): { x: number; y: number; xPct: number; yPct: number } | null {
+  function getCanvasCoords(e: React.MouseEvent): { x: number; y: number; xPct: number; yPct: number; inBounds: boolean } | null {
     const el = containerRef.current
     if (!el) return null
     const rect = el.getBoundingClientRect()
@@ -224,10 +235,11 @@ export function MapCanvas({
         pt.x = e.clientX
         pt.y = e.clientY
         const svgPt = pt.matrixTransform(ctm.inverse())
-        return { x, y, xPct: Math.max(0, Math.min(1, svgPt.x)), yPct: Math.max(0, Math.min(1, svgPt.y)) }
+        const inBounds = svgPt.x >= 0 && svgPt.x <= 1 && svgPt.y >= 0 && svgPt.y <= 1
+        return { x, y, xPct: Math.max(0, Math.min(1, svgPt.x)), yPct: Math.max(0, Math.min(1, svgPt.y)), inBounds }
       }
     }
-    return { x, y, xPct: x / rect.width, yPct: y / rect.height }
+    return { x, y, xPct: x / rect.width, yPct: y / rect.height, inBounds: true }
   }
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -237,6 +249,11 @@ export function MapCanvas({
 
     const coords = getCanvasCoords(e)
     if (!coords) return
+    if (!coords.inBounds) {
+      setHoverPos(null)
+      setIdwResult(null)
+      return
+    }
     setHoverPos(coords)
 
     if (frameRef.current) cancelAnimationFrame(frameRef.current)
@@ -255,8 +272,19 @@ export function MapCanvas({
     const touch = e.changedTouches[0]
     if (!touch || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const xPct = (touch.clientX - rect.left) / rect.width
-    const yPct = (touch.clientY - rect.top) / rect.height
+    let xPct = (touch.clientX - rect.left) / rect.width
+    let yPct = (touch.clientY - rect.top) / rect.height
+    const svgEl = containerRef.current.querySelector('svg') as SVGSVGElement | null
+    if (svgEl?.getScreenCTM) {
+      const ctm = svgEl.getScreenCTM()
+      if (ctm) {
+        const pt = svgEl.createSVGPoint()
+        pt.x = touch.clientX; pt.y = touch.clientY
+        const svgPt = pt.matrixTransform(ctm.inverse())
+        xPct = Math.max(0, Math.min(1, svgPt.x))
+        yPct = Math.max(0, Math.min(1, svgPt.y))
+      }
+    }
     const result = computeIDW(xPct, yPct, resourcePoints, mutableTerrainAreas, placedPoIs)
     const terrain = mutableTerrainAreas.find(a => a.terrain_type === result.dominantTerrain)
     setMobileModal({ result, terrainType: terrain?.terrain_type ?? null })
@@ -341,126 +369,137 @@ export function MapCanvas({
   const containerDims = containerRef.current?.getBoundingClientRect()
 
   return (
-    <div className="flex flex-col h-screen bg-[#111316] overflow-hidden">
-      <div
-        className="flex items-center gap-4 px-4 py-2.5 border-b border-[#282a2d] shrink-0 flex-wrap"
-        style={{ background: 'rgba(14,16,19,0.95)', backdropFilter: 'blur(8px)' }}
+    <div className="flex h-screen bg-[#111316] overflow-hidden">
+
+      {/* ── Left sidebar (desktop) ────────────────────────────── */}
+      <aside
+        className="hidden md:flex flex-col w-52 shrink-0 border-r border-[#282a2d] overflow-y-auto"
+        style={{ background: 'rgba(11,12,16,0.98)' }}
       >
-        <Link
-          href={`/dm/campaigns/${campaignId}/maps`}
-          className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors font-manrope"
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          {campaignName}
-        </Link>
-
-        <div className="h-4 w-px bg-[#282a2d]" />
-
-        <div className="flex items-center gap-1 flex-wrap">
-          <ToolbarToggle
-            active={showResources}
-            onToggle={() => setShowResources(v => !v)}
-            label="Resources"
-            icon={showResources ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-          />
-          <ToolbarToggle
-            active={showPois}
-            onToggle={() => setShowPois(v => !v)}
-            label="PoIs"
-            icon={<MapPin className="w-3.5 h-3.5" />}
-          />
-          <ToolbarToggle
-            active={showTowns}
-            onToggle={() => setShowTowns(v => !v)}
-            label="Towns"
-            icon={<Castle className="w-3.5 h-3.5" />}
-          />
-          <ToolbarToggle
-            active={showTerritories}
-            onToggle={() => setShowTerritories(v => !v)}
-            label="Territories"
-            icon={<Shield className="w-3.5 h-3.5" />}
-          />
-          <ToolbarToggle
-            active={showHistory}
-            onToggle={() => setShowHistory(v => !v)}
-            label="History"
-            icon={<BookOpen className="w-3.5 h-3.5" />}
-          />
-          <ToolbarToggle
-            active={showTradeRoutes}
-            onToggle={() => setShowTradeRoutes(v => !v)}
-            label="Routes"
-            icon={<Route className="w-3.5 h-3.5" />}
-          />
-          <ToolbarToggle
-            active={showTerrainAreas}
-            onToggle={() => setShowTerrainAreas(v => !v)}
-            label="Terrain"
-            icon={<Layers className="w-3.5 h-3.5" />}
-          />
+        <div className="px-3 py-3 border-b border-[#282a2d]">
+          <Link
+            href={`/dm/campaigns/${campaignId}/maps`}
+            className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-primary transition-colors font-manrope"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            {campaignName}
+          </Link>
         </div>
 
-        <div className="h-4 w-px bg-[#282a2d]" />
+        <div className="px-2 pt-3 pb-2 border-b border-[#282a2d]">
+          <p className="px-1 mb-1.5 text-[10px] uppercase tracking-widest text-on-surface-variant/40 font-manrope">Show</p>
+          <SidebarToggle active={showResources} onToggle={() => setShowResources(v => !v)} label="Resources" icon={showResources ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} />
+          {showResources && (
+            <div className="ml-3 mt-0.5 mb-0.5">
+              <button
+                type="button"
+                onClick={() => setShowResourceFilter(v => !v)}
+                className="flex items-center gap-1 text-[10px] text-on-surface-variant hover:text-primary transition-colors py-0.5"
+              >
+                <Filter className="w-2.5 h-2.5" />
+                Filter types
+                <ChevronDown className={`w-2.5 h-2.5 transition-transform ${showResourceFilter ? 'rotate-180' : ''}`} />
+              </button>
+              {showResourceFilter && (
+                <div className="mt-1.5 space-y-2 pr-1 max-h-64 overflow-y-auto">
+                  {Object.entries(RESOURCE_GROUPS).map(([group, types]) => (
+                    <div key={group}>
+                      <p className="text-[9px] uppercase tracking-widest text-on-surface-variant/40 mb-1">{group}</p>
+                      <div className="space-y-0.5">
+                        {types.map(rt => (
+                          <label key={rt} className="flex items-center gap-1.5 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={!hiddenResourceTypes.has(rt)}
+                              onChange={() => {
+                                setHiddenResourceTypes(prev => {
+                                  const next = new Set(prev)
+                                  if (next.has(rt)) next.delete(rt); else next.add(rt)
+                                  return next
+                                })
+                              }}
+                              className="accent-primary w-2.5 h-2.5 shrink-0"
+                            />
+                            <span className="text-[10px] text-on-surface-variant group-hover:text-on-surface capitalize truncate">
+                              {rt.replace(/_/g, ' ')}
+                            </span>
+                            <span className="w-2 h-2 rounded-full shrink-0 ml-auto" style={{ background: getResourceColor(rt) }} />
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          <SidebarToggle active={showPois} onToggle={() => setShowPois(v => !v)} label="PoIs" icon={<MapPin className="w-3.5 h-3.5" />} />
+          <SidebarToggle active={showTowns} onToggle={() => setShowTowns(v => !v)} label="Towns" icon={<Castle className="w-3.5 h-3.5" />} />
+          <SidebarToggle active={showTerritories} onToggle={() => setShowTerritories(v => !v)} label="Territories" icon={<Shield className="w-3.5 h-3.5" />} />
+          <SidebarToggle active={showHistory} onToggle={() => setShowHistory(v => !v)} label="History" icon={<BookOpen className="w-3.5 h-3.5" />} />
+          <SidebarToggle active={showTradeRoutes} onToggle={() => setShowTradeRoutes(v => !v)} label="Routes" icon={<Route className="w-3.5 h-3.5" />} />
+          <SidebarToggle active={showTerrainAreas} onToggle={() => setShowTerrainAreas(v => !v)} label="Terrain" icon={<Layers className="w-3.5 h-3.5" />} />
+          <SidebarToggle active={showNames} onToggle={() => setShowNames(v => !v)} label="Names" icon={<Type className="w-3.5 h-3.5" />} />
+        </div>
 
-        <div className="flex items-center gap-1">
-          <ModeButton
-            active={mode === 'town'}
-            onClick={() => setMode(mode === 'town' ? 'view' : 'town')}
-            label="Add Town"
-            icon={<Castle className="w-3.5 h-3.5" />}
-          />
-          <ModeButton
-            active={mode === 'poi'}
-            onClick={() => { setMode(mode === 'poi' ? 'view' : 'poi'); if (mode !== 'poi') setPoiPanelOpen(true) }}
-            label="Add PoI"
-            icon={<MapPin className="w-3.5 h-3.5" />}
-          />
-          <ModeButton
-            active={mode === 'territory'}
-            onClick={() => { setMode(mode === 'territory' ? 'view' : 'territory'); setDrawingPolygon([]) }}
-            label="Draw Territory"
-            icon={<Shield className="w-3.5 h-3.5" />}
-          />
-          <ModeButton
-            active={mode === 'history'}
-            onClick={() => setMode(mode === 'history' ? 'view' : 'history')}
-            label="Add Event"
-            icon={<BookOpen className="w-3.5 h-3.5" />}
-          />
-          <ModeButton
-            active={mode === 'trade_route'}
-            onClick={() => { setMode(mode === 'trade_route' ? 'view' : 'trade_route'); setRouteSourceTown(null); setRouteTargetTown(null) }}
-            label="Trade Route"
-            icon={<Route className="w-3.5 h-3.5" />}
-          />
-          <ModeButton
-            active={mode === 'terrain'}
-            onClick={() => { setMode(mode === 'terrain' ? 'view' : 'terrain'); setDrawingPolygon([]) }}
-            label="Paint Terrain"
-            icon={<Layers className="w-3.5 h-3.5" />}
-          />
-          <ModeButton
-            active={mode === 'resource'}
-            onClick={() => { setMode(mode === 'resource' ? 'view' : 'resource'); setResourcePanelOpen(true) }}
-            label="Place Resource"
-            icon={<Gem className="w-3.5 h-3.5" />}
-          />
+        <div className="px-2 pt-3 pb-3">
+          <p className="px-1 mb-1.5 text-[10px] uppercase tracking-widest text-on-surface-variant/40 font-manrope">Add</p>
+          <SidebarModeButton active={mode === 'town'} onClick={() => setMode(mode === 'town' ? 'view' : 'town')} label="Town" icon={<Castle className="w-3.5 h-3.5" />} />
+          <SidebarModeButton active={mode === 'poi'} onClick={() => { setMode(mode === 'poi' ? 'view' : 'poi'); if (mode !== 'poi') setPoiPanelOpen(true) }} label="Point of Interest" icon={<MapPin className="w-3.5 h-3.5" />} />
+          <SidebarModeButton active={mode === 'territory'} onClick={() => { setMode(mode === 'territory' ? 'view' : 'territory'); setDrawingPolygon([]) }} label="Territory" icon={<Shield className="w-3.5 h-3.5" />} />
+          <SidebarModeButton active={mode === 'history'} onClick={() => setMode(mode === 'history' ? 'view' : 'history')} label="Historical Event" icon={<BookOpen className="w-3.5 h-3.5" />} />
+          <SidebarModeButton active={mode === 'trade_route'} onClick={() => { setMode(mode === 'trade_route' ? 'view' : 'trade_route'); setRouteSourceTown(null); setRouteTargetTown(null) }} label="Trade Route" icon={<Route className="w-3.5 h-3.5" />} />
+          <SidebarModeButton active={mode === 'terrain'} onClick={() => { setMode(mode === 'terrain' ? 'view' : 'terrain'); setDrawingPolygon([]) }} label="Paint Terrain" icon={<Layers className="w-3.5 h-3.5" />} />
+          <SidebarModeButton active={mode === 'resource'} onClick={() => { setMode(mode === 'resource' ? 'view' : 'resource'); setResourcePanelOpen(true) }} label="Place Resource" icon={<Gem className="w-3.5 h-3.5" />} />
         </div>
 
         {mode !== 'view' && (
-          <div className="flex items-center gap-1.5 ml-auto text-xs font-manrope text-primary animate-pulse">
-            <Crosshair className="w-3.5 h-3.5" />
-            {mode === 'town' && 'Click map to place a town'}
-            {mode === 'poi' && 'Click map to place a PoI'}
-            {mode === 'territory' && (drawingPolygon.length < 3 ? `Drawing… (${drawingPolygon.length} pts, need 3+)` : `${drawingPolygon.length} pts · double-click to finish`)}
-            {mode === 'history' && 'Click map to record a historical event'}
-            {mode === 'trade_route' && (!routeSourceTown ? 'Click a town pin to start the route' : `From: ${routeSourceTown.name ?? 'Town'} — click another town to complete`)}
-            {mode === 'terrain' && (drawingPolygon.length < 3 ? `Painting ${drawingTerrainType.replace(/_/g,' ')} — click to add points` : `${drawingPolygon.length} pts · double-click to close`)}
-            {mode === 'resource' && 'Click map to place a resource point'}
+          <div className="px-3 py-3 mt-auto border-t border-[#282a2d] flex items-start gap-2 text-xs font-manrope text-primary">
+            <Crosshair className="w-3.5 h-3.5 mt-0.5 shrink-0 animate-pulse" />
+            <span className="leading-relaxed">
+              {mode === 'town' && 'Click map to place a town'}
+              {mode === 'poi' && 'Click map to place a PoI'}
+              {mode === 'territory' && (drawingPolygon.length < 3 ? `Drawing… (${drawingPolygon.length} pts, need 3+)` : `${drawingPolygon.length} pts · double-click to finish`)}
+              {mode === 'history' && 'Click map to record a historical event'}
+              {mode === 'trade_route' && (!routeSourceTown ? 'Click a town pin to start' : `From: ${routeSourceTown.name ?? 'Town'} — click another town`)}
+              {mode === 'terrain' && (drawingPolygon.length < 3 ? `Painting ${drawingTerrainType.replace(/_/g,' ')} — click to add points` : `${drawingPolygon.length} pts · double-click to close`)}
+              {mode === 'resource' && 'Click map to place a resource'}
+            </span>
           </div>
         )}
-      </div>
+      </aside>
+
+      {/* ── Right column ─────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Mobile strip */}
+        <div
+          className="md:hidden flex items-center gap-1 px-3 py-2 border-b border-[#282a2d] shrink-0 overflow-x-auto"
+          style={{ background: 'rgba(14,16,19,0.95)' }}
+        >
+          <Link href={`/dm/campaigns/${campaignId}/maps`} className="inline-flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors font-manrope shrink-0 mr-1">
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </Link>
+          <ToolbarToggle active={showResources} onToggle={() => setShowResources(v => !v)} label="Res" icon={showResources ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} />
+          <ToolbarToggle active={showPois} onToggle={() => setShowPois(v => !v)} label="PoIs" icon={<MapPin className="w-3.5 h-3.5" />} />
+          <ToolbarToggle active={showTowns} onToggle={() => setShowTowns(v => !v)} label="Towns" icon={<Castle className="w-3.5 h-3.5" />} />
+          <ToolbarToggle active={showNames} onToggle={() => setShowNames(v => !v)} label="Names" icon={<Type className="w-3.5 h-3.5" />} />
+          <div className="w-px h-4 bg-[#282a2d] mx-0.5 shrink-0" />
+          <ModeButton active={mode === 'town'} onClick={() => setMode(mode === 'town' ? 'view' : 'town')} label="Town" icon={<Castle className="w-3.5 h-3.5" />} />
+          <ModeButton active={mode === 'poi'} onClick={() => { setMode(mode === 'poi' ? 'view' : 'poi'); if (mode !== 'poi') setPoiPanelOpen(true) }} label="PoI" icon={<MapPin className="w-3.5 h-3.5" />} />
+          <ModeButton active={mode === 'territory'} onClick={() => { setMode(mode === 'territory' ? 'view' : 'territory'); setDrawingPolygon([]) }} label="Territory" icon={<Shield className="w-3.5 h-3.5" />} />
+          <ModeButton active={mode === 'terrain'} onClick={() => { setMode(mode === 'terrain' ? 'view' : 'terrain'); setDrawingPolygon([]) }} label="Terrain" icon={<Layers className="w-3.5 h-3.5" />} />
+          <ModeButton active={mode === 'resource'} onClick={() => { setMode(mode === 'resource' ? 'view' : 'resource'); setResourcePanelOpen(true) }} label="Resource" icon={<Gem className="w-3.5 h-3.5" />} />
+          {mode !== 'view' && (
+            <span className="ml-auto shrink-0 text-[11px] text-primary animate-pulse font-manrope whitespace-nowrap">
+              <Crosshair className="w-3 h-3 inline mr-1" />
+              {mode === 'town' && 'Tap to place'}
+              {mode === 'poi' && 'Tap to place'}
+              {mode === 'territory' && `${drawingPolygon.length} pts`}
+              {mode === 'terrain' && `${drawingPolygon.length} pts`}
+              {mode === 'resource' && 'Tap to place'}
+            </span>
+          )}
+        </div>
 
       <div className="flex-1 relative overflow-hidden">
         <div
@@ -487,7 +526,7 @@ export function MapCanvas({
             viewBox="0 0 1 1"
             preserveAspectRatio="xMidYMid meet"
           >
-            {showResources && resourcePoints.map(rp => (
+            {showResources && resourcePoints.filter(rp => !hiddenResourceTypes.has(rp.resource_type)).map(rp => (
               <circle
                 key={rp.id}
                 cx={rp.x_pct}
@@ -733,6 +772,23 @@ export function MapCanvas({
                 </text>
               </g>
             )})}
+
+            {/* Name labels */}
+            {showNames && showTowns && worldTowns.map(town => town.name ? (
+              <text key={`nl-t-${town.id}`} x={town.x_pct} y={town.y_pct + 0.022} fontSize={0.011} fill="white" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none' }} stroke="rgba(0,0,0,0.85)" strokeWidth={0.003} paintOrder="stroke" opacity={0.92}>
+                {town.name}
+              </text>
+            ) : null)}
+            {showNames && showPois && pois.map(poi => poi.name ? (
+              <text key={`nl-p-${poi.id}`} x={poi.x_pct} y={poi.y_pct + 0.013} fontSize={0.010} fill="white" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none' }} stroke="rgba(0,0,0,0.85)" strokeWidth={0.003} paintOrder="stroke" opacity={0.85}>
+                {poi.name}
+              </text>
+            ) : null)}
+            {showNames && showHistory && historicalEvents.map(ev => (
+              <text key={`nl-h-${ev.id}`} x={ev.x_pct} y={ev.y_pct + 0.015} fontSize={0.010} fill="#fde68a" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none' }} stroke="rgba(0,0,0,0.85)" strokeWidth={0.003} paintOrder="stroke" opacity={0.8}>
+                {ev.event_name}
+              </text>
+            ))}
           </svg>
         </div>
 
@@ -965,6 +1021,7 @@ export function MapCanvas({
           />
         )}
       </div>
+      </div>
     </div>
   )
 }
@@ -997,6 +1054,42 @@ function ModeButton({ active, onClick, label, icon }: {
         active
           ? 'bg-primary text-[#3f2e00] font-semibold'
           : 'text-on-surface-variant hover:text-on-surface hover:bg-[#282a2d]'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+function SidebarToggle({ active, onToggle, label, icon }: {
+  active: boolean; onToggle: () => void; label: string; icon: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-manrope transition-all ${
+        active ? 'bg-primary/12 text-primary' : 'text-on-surface-variant hover:text-on-surface hover:bg-[#1e2024]'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
+function SidebarModeButton({ active, onClick, label, icon }: {
+  active: boolean; onClick: () => void; label: string; icon: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-manrope transition-all ${
+        active
+          ? 'bg-primary text-[#3f2e00] font-semibold'
+          : 'text-on-surface-variant hover:text-on-surface hover:bg-[#1e2024]'
       }`}
     >
       {icon}
