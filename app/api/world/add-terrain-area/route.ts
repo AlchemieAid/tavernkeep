@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         computed_elevation_m: computed_elevation_m ?? null,
         climate_zone: climate_zone ?? null,
         atmosphere_text: atmosphere_text ?? null,
-        placed_by: 'manual',
+        placed_by: 'dm',
       })
       .select()
       .single()
