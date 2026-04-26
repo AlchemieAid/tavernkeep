@@ -8,13 +8,13 @@
  *
  * Layer 0: Map grammar extraction (gpt-4o) — learns the visual language
  * Layer 1+2: Primary biome zones (gpt-4o-mini) — large area blobs
- * Layer 3: Linear features (gpt-4o-mini) — rivers, coast strips
+ * Layer 3: Water detection (pixel analysis via sharp) — rivers, lakes, ocean, coast
  * Layer 4: Point landmarks (gpt-4o-mini) — cities, volcanoes, ruins → POIs
  *
  * Fallback chain:
  *   L0 fail → use legacy single-prompt system
  *   L1+2 fail → use biome_profile defaults
- *   L3 fail → skip, mark skipped in grammar
+ *   L3 fail → skip (no water regions inserted)
  *   L4 fail → skip, mark skipped in grammar
  */
 
@@ -32,10 +32,7 @@ import {
   TERRAIN_ZONES_SYSTEM_PROMPT,
   buildTerrainZonesPrompt,
 } from '@/lib/prompts/terrainZones'
-import {
-  TERRAIN_LINEAR_SYSTEM_PROMPT,
-  buildTerrainLinearPrompt,
-} from '@/lib/prompts/terrainLinear'
+import { detectWaterRegions } from '@/lib/world/pixelWaterDetection'
 import {
   TERRAIN_LANDMARKS_SYSTEM_PROMPT,
   buildTerrainLandmarksPrompt,
@@ -290,42 +287,38 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
     yield { type: 'layer_failed', layer: 1, message: 'Zone detection used defaults — terrain may be approximate' }
   }
 
-  // ── Layer 3: Linear Features ──────────────────────────────────────────────
-  yield { type: 'progress', layer: 2, message: 'Tracing rivers and coastlines…' }
+  // ── Layer 3: Pixel-Based Water Detection ────────────────────────────────
+  yield { type: 'progress', layer: 2, message: 'Detecting rivers, lakes, and coastlines from image pixels…' }
   try {
-    const l3 = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 2500,
-      messages: [
-        { role: 'system', content: TERRAIN_LINEAR_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: buildTerrainLinearPrompt(grammar) },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
-          ],
-        },
-      ],
-    })
-    const raw = l3.choices[0]?.message?.content ?? ''
-    const blobs = parseJsonArray(raw, ['terrain_areas', 'areas', 'linear_features'])
-    if (blobs && blobs.length > 0) {
-      const rows = (blobs as BlobInput[]).map(b => blobToInsertRow(b, mapId))
+    const waterRegions = await detectWaterRegions(imageUrl, grammar)
+    if (waterRegions.length > 0) {
+      const rows = waterRegions.map(region => ({
+        map_id: mapId,
+        terrain_type: region.terrain_type,
+        polygon: region.polygon as unknown as Json,
+        intensity: region.intensity,
+        elevation_min_m: TERRAIN_ELEVATION_RANGES[region.terrain_type]?.min ?? 0,
+        elevation_max_m: TERRAIN_ELEVATION_RANGES[region.terrain_type]?.max ?? 0,
+        computed_elevation_m: terrainMidpointElevation(region.terrain_type),
+        placed_by: 'ai' as const,
+      }))
       const { data } = await supabase.from('terrain_areas').insert(rows).select()
       terrainCount += data?.length ?? 0
-      yield { type: 'layer_success', layer: 2, message: `${data?.length ?? 0} rivers and coastal features traced` }
+      const riverCount = waterRegions.filter(r => r.terrain_type === 'river').length
+      const lakeCount = waterRegions.filter(r => r.terrain_type === 'lake').length
+      const parts: string[] = []
+      if (waterRegions.some(r => r.terrain_type === 'ocean')) parts.push('ocean')
+      if (riverCount > 0) parts.push(`${riverCount} river${riverCount > 1 ? 's' : ''}`)
+      if (lakeCount > 0) parts.push(`${lakeCount} lake${lakeCount > 1 ? 's' : ''}`)
+      if (waterRegions.some(r => r.terrain_type === 'coast')) parts.push('coastline')
+      yield { type: 'layer_success', layer: 2, message: `Water detected: ${parts.join(', ')}` }
     } else {
-      yield { type: 'layer_success', layer: 2, message: 'No rivers or coastlines detected' }
+      yield { type: 'layer_success', layer: 2, message: 'No water bodies detected on this map' }
     }
   } catch (err) {
-    console.warn('[PIPELINE] Layer 3 failed:', err)
-    skipped.push('linear')
-    if (grammar.layers_skipped) grammar.layers_skipped.push('linear')
-    else grammar.layers_skipped = ['linear']
-    await supabase.from('campaign_maps').update({ map_grammar: grammar as unknown as Json }).eq('id', mapId)
-    yield { type: 'layer_failed', layer: 2, message: 'River detection skipped — add rivers manually if needed' }
+    console.warn('[PIPELINE] Layer 3 (pixel water) failed:', err)
+    skipped.push('water')
+    yield { type: 'layer_failed', layer: 2, message: 'Water detection skipped — add rivers/lakes manually if needed' }
   }
 
   // ── Layer 4: Point Landmarks → POIs ──────────────────────────────────────

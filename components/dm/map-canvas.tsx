@@ -422,6 +422,10 @@ export function MapCanvas({
               </button>
               {showResourceFilter && (
                 <div className="mt-1.5 space-y-2 pr-1 max-h-64 overflow-y-auto">
+                  <div className="flex gap-2 mb-1">
+                    <button type="button" onClick={() => setHiddenResourceTypes(new Set())} className="text-[9px] text-primary hover:underline">All</button>
+                    <button type="button" onClick={() => setHiddenResourceTypes(new Set(Object.values(RESOURCE_GROUPS).flat()))} className="text-[9px] text-on-surface-variant hover:text-primary hover:underline">None</button>
+                  </div>
                   {Object.entries(RESOURCE_GROUPS).map(([group, types]) => (
                     <div key={group}>
                       <p className="text-[9px] uppercase tracking-widest text-on-surface-variant/40 mb-1">{group}</p>
@@ -467,6 +471,10 @@ export function MapCanvas({
               </button>
               {showPoiFilter && (
                 <div className="mt-1 space-y-0.5 pr-1">
+                  <div className="flex gap-2 mb-1">
+                    <button type="button" onClick={() => setHiddenPoiCategories(new Set())} className="text-[9px] text-primary hover:underline">All</button>
+                    <button type="button" onClick={() => setHiddenPoiCategories(new Set(POI_CATEGORIES.map(c => c.id)))} className="text-[9px] text-on-surface-variant hover:text-primary hover:underline">None</button>
+                  </div>
                   {POI_CATEGORIES.map(cat => (
                     <label key={cat.id} className="flex items-center gap-1.5 cursor-pointer group">
                       <input
@@ -509,6 +517,10 @@ export function MapCanvas({
               </button>
               {showTerrainFilter && (
                 <div className="mt-1 space-y-0.5 pr-1 max-h-48 overflow-y-auto">
+                  <div className="flex gap-2 mb-1">
+                    <button type="button" onClick={() => setHiddenTerrainTypes(new Set())} className="text-[9px] text-primary hover:underline">All</button>
+                    <button type="button" onClick={() => setHiddenTerrainTypes(new Set(presentTerrainTypes))} className="text-[9px] text-on-surface-variant hover:text-primary hover:underline">None</button>
+                  </div>
                   {presentTerrainTypes.map(tt => (
                     <label key={tt} className="flex items-center gap-1.5 cursor-pointer group">
                       <input
