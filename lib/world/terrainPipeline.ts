@@ -274,7 +274,10 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
     const raw = l12.choices[0]?.message?.content ?? ''
     const blobs = parseJsonArray(raw, ['terrain_areas', 'areas', 'zones'])
     if (!blobs || blobs.length === 0) throw new Error('No blobs returned')
-    const rows = (blobs as BlobInput[]).map(b => blobToInsertRow(b, mapId))
+    // Safety: strip any water blobs the AI generated despite the prompt — pixel detector owns these
+    const WATER_TYPES = new Set(['ocean', 'deep_sea', 'coast', 'river', 'lake'])
+    const landBlobs = (blobs as BlobInput[]).filter(b => !WATER_TYPES.has(b.terrain_type))
+    const rows = landBlobs.map(b => blobToInsertRow(b, mapId))
     const { data } = await supabase.from('terrain_areas').insert(rows).select()
     terrainCount += data?.length ?? 0
     yield { type: 'layer_success', layer: 1, message: `${data?.length ?? 0} terrain zones identified` }
@@ -289,6 +292,13 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
   }
 
   // ── Layer 3: Pixel-Based Water Detection ────────────────────────────────
+  // Delete only water-type rows so re-running Layer 3 doesn't clobber land terrain.
+  await supabase
+    .from('terrain_areas')
+    .delete()
+    .eq('map_id', mapId)
+    .eq('placed_by', 'ai')
+    .in('terrain_type', ['ocean', 'deep_sea', 'coast', 'river', 'lake'])
   yield { type: 'progress', layer: 2, message: 'Detecting rivers, lakes, and coastlines from image pixels…' }
   try {
     const waterConfig: WaterDetectionConfig = {

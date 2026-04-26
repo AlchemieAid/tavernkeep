@@ -341,16 +341,6 @@ function anyPixelInMask(comp: Component, zoneMask: Uint8Array, width: number): b
   return false
 }
 
-/** Classify a fat (post-erosion) component as ocean or lake. */
-function classifyFatComponent(
-  comp: Component,
-  oceanLabel: number | null,
-): WaterType | null {
-  if (comp.pixels.length < MIN_FAT_PIXEL_COUNT) return null
-  if (comp.label === oceanLabel) return 'ocean'
-  // Any remaining fat isolated component is a lake
-  return 'lake'
-}
 
 /**
  * Classify a thin component (pixels that eroded away) as river or coast.
@@ -385,15 +375,6 @@ function classifyThinComponent(
 
   // Larger thin blobs that passed coast check but aren't rivers — skip
   return null
-}
-
-function findOceanLabel(components: Map<number, Component>): number | null {
-  let ocean: Component | null = null
-  for (const comp of components.values()) {
-    if (!comp.touchesEdge) continue
-    if (!ocean || comp.pixels.length > ocean.pixels.length) ocean = comp
-  }
-  return ocean?.label ?? null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -552,27 +533,31 @@ export async function detectWaterRegions(
     results.push({ terrain_type: waterType, polygon, pixelCount: comp.pixels.length, intensity })
   }
 
-  // ── Step 4: Fat components → identify ocean (coast zone anchor) + store lakes ──
+  // ── Step 4: Fat components → edge-touching = ocean (coast zone), interior = lake ──
+  //
+  // Any fat water component that touches the image edge is ocean — we build the coast
+  // zone from ALL of them combined (not just the largest). Any fat component that is
+  // fully interior to the image is a lake (enclosed on all sides by land).
+  //
+  // We do NOT store ocean polygons — the map background already shows the ocean.
   const fatComponents = labelComponents(fatMask, width, height)
-  const oceanLabel = findOceanLabel(fatComponents)
 
-  // Build coast zone: dilate the fat ocean component outward by RIVER_HALF_WIDTH so
-  // thin-pass pixels just outside the fat ocean are classified as coast, not river.
   let coastZoneMask: Uint8Array = new Uint8Array(totalSize)
   const fatSorted = Array.from(fatComponents.values())
     .sort((a, b) => b.pixels.length - a.pixels.length)
     .slice(0, MAX_COMPONENTS)
 
   for (const comp of fatSorted) {
-    const wt = classifyFatComponent(comp, oceanLabel)
-    if (!wt) continue
-    if (wt === 'ocean') {
-      // Dilate the fat ocean to build coast zone (recover the thin boundary pixels)
+    if (comp.pixels.length < MIN_FAT_PIXEL_COUNT) continue
+    if (comp.touchesEdge) {
+      // Ocean segment — dilate and OR into the shared coast zone mask
       const oceanMask = buildCompMask(comp, totalSize, width)
-      coastZoneMask = dilate(oceanMask, width, height, riverHalfWidth)
-      // Ocean itself: do NOT store a polygon (map background already shows it)
+      const zone = dilate(oceanMask, width, height, riverHalfWidth)
+      for (let i = 0; i < totalSize; i++) { if (zone[i]) coastZoneMask[i] = 1 }
+      // Ocean polygon: skip — map background shows it already
     } else {
-      processComponent(comp, wt)
+      // Interior fat water body = lake
+      processComponent(comp, 'lake')
     }
   }
 
