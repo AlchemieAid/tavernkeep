@@ -76,7 +76,16 @@ export async function checkAdminStatus(
   // Service-role client — bypass RLS for the admin_users lookup.
   // This prevents the self-defeating cycle where a deactivated row becomes
   // invisible to the normal client, locking the admin out permanently.
-  const adminDb = createAdminClient()
+  // Catch configuration errors so a missing env var gives a redirect rather
+  // than a 500 crash — the admin can diagnose via server logs.
+  let adminDb: ReturnType<typeof createAdminClient>
+  try {
+    adminDb = createAdminClient()
+  } catch (err) {
+    console.error('[ADMIN AUTH] Service-role client unavailable — add SUPABASE_SERVICE_ROLE_KEY to environment:', err)
+    return null
+  }
+
   const { data: adminUser, error } = await adminDb
     .from('admin_users')
     .select('user_id, role, granted_at, granted_by, is_active')
