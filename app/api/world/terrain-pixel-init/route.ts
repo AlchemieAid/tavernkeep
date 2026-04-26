@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-import { detectTerrainFromSeeds } from '@/lib/world/terrainSeeds'
+import { buildPixelCache } from '@/lib/world/terrainSeeds'
+import { getPixelCache, setPixelCache } from '@/lib/world/terrainPixelCache'
 
 export const maxDuration = 60
-
-const TerrainSeedSchema = z.object({
-  terrain_type: z.string().min(1).max(60),
-  x_pct: z.number().min(0).max(1),
-  y_pct: z.number().min(0).max(1),
-  gap_bridge: z.enum(['tight', 'medium', 'wide']),
-})
 
 const RequestSchema = z.object({
   map_id: z.string().uuid(),
@@ -18,7 +12,6 @@ const RequestSchema = z.object({
     (v) => v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:'),
     { message: 'image_url must be an HTTP URL or data URI' }
   ),
-  seeds: z.array(TerrainSeedSchema).min(1).max(50),
 })
 
 export async function POST(request: Request) {
@@ -36,11 +29,11 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-  const { map_id, image_url, seeds } = parsed.data
+  const { map_id, image_url } = parsed.data
 
   const { data: map, error: mapError } = await supabase
     .from('campaign_maps')
-    .select('id, dm_id')
+    .select('id')
     .eq('id', map_id)
     .eq('dm_id', user.id)
     .single()
@@ -49,12 +42,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: { message: 'Map not found' } }, { status: 404 })
   }
 
+  const existing = getPixelCache(map_id)
+  if (existing) {
+    return NextResponse.json({ data: { cached: true, warm: true }, error: null })
+  }
+
   try {
-    const regions = await detectTerrainFromSeeds(image_url, seeds, map_id)
-    return NextResponse.json({ data: regions, error: null })
+    const cache = await buildPixelCache(image_url)
+    setPixelCache(map_id, cache)
+    return NextResponse.json({ data: { cached: true, warm: false }, error: null })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Detection failed'
-    console.error('[TERRAIN-SEEDS]', message)
+    const message = err instanceof Error ? err.message : 'Cache build failed'
+    console.error('[TERRAIN-PIXEL-INIT]', message)
     return NextResponse.json({ data: null, error: { message } }, { status: 500 })
   }
 }

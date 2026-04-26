@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Loader2, X, Crosshair, Check, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, Loader2, X, Check, AlertTriangle } from 'lucide-react'
 import { TERRAIN_TYPES, TERRAIN_TYPE_MAP, TERRAIN_GROUPS, type GapBridge } from '@/lib/constants/terrain-types'
 import type { DetectedTerrainRegion } from '@/lib/world/terrainSeeds'
 
@@ -26,19 +26,80 @@ const GAP_OPTIONS: { value: GapBridge; label: string }[] = [
   { value: 'wide', label: 'Wide' },
 ]
 
+const DEBOUNCE_MS = 250
+
 export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: TerrainSeedPainterProps) {
   const router = useRouter()
-  const mapRef = useRef<HTMLDivElement>(null)
 
   const [selectedType, setSelectedType] = useState<string>(TERRAIN_TYPES[0].value)
   const [gapByType, setGapByType] = useState<Record<string, GapBridge>>(
     () => Object.fromEntries(TERRAIN_TYPES.map(t => [t.value, t.defaultGapBridge]))
   )
   const [seeds, setSeeds] = useState<SeedEntry[]>([])
-  const [detectedRegions, setDetectedRegions] = useState<DetectedTerrainRegion[]>([])
-  const [isDetecting, setIsDetecting] = useState(false)
+  const [regionByType, setRegionByType] = useState<Record<string, DetectedTerrainRegion | null>>({})
+  const [detectingTypes, setDetectingTypes] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Refs for latest values inside debounced async callbacks
+  const seedsRef = useRef(seeds)
+  seedsRef.current = seeds
+  const gapRef = useRef(gapByType)
+  gapRef.current = gapByType
+
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  // Warm the pixel cache as soon as the painter opens
+  useEffect(() => {
+    fetch('/api/world/terrain-pixel-init', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ map_id: mapId, image_url: mapImageUrl }),
+    }).catch(() => { /* fallback: terrain-seeds will load fresh */ })
+  }, [mapId, mapImageUrl])
+
+  const runFill = useCallback(async (terrainType: string) => {
+    const typeSeeds = seedsRef.current.filter(s => s.terrain_type === terrainType)
+    if (typeSeeds.length === 0) {
+      setRegionByType(prev => ({ ...prev, [terrainType]: null }))
+      return
+    }
+    setDetectingTypes(prev => new Set([...prev, terrainType]))
+    try {
+      const res = await fetch('/api/world/terrain-seeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          map_id: mapId,
+          image_url: mapImageUrl,
+          seeds: typeSeeds.map(s => ({
+            terrain_type: s.terrain_type,
+            x_pct: s.x_pct,
+            y_pct: s.y_pct,
+            gap_bridge: gapRef.current[s.terrain_type] ?? 'medium',
+          })),
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Detection failed')
+      const regions: DetectedTerrainRegion[] = json.data ?? []
+      setRegionByType(prev => ({ ...prev, [terrainType]: regions.find(r => r.terrain_type === terrainType) ?? null }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Detection failed')
+    } finally {
+      setDetectingTypes(prev => { const s = new Set(prev); s.delete(terrainType); return s })
+    }
+  }, [mapId, mapImageUrl])
+
+  const scheduleFill = useCallback((terrainType: string) => {
+    const existing = debounceTimers.current.get(terrainType)
+    if (existing) clearTimeout(existing)
+    const timer = setTimeout(() => {
+      debounceTimers.current.delete(terrainType)
+      void runFill(terrainType)
+    }, DEBOUNCE_MS)
+    debounceTimers.current.set(terrainType, timer)
+  }, [runFill])
 
   const handleMapClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -50,50 +111,27 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
       x_pct,
       y_pct,
     }])
-    setDetectedRegions([]) // clear old results when seeds change
     setError(null)
-  }, [selectedType])
+    scheduleFill(selectedType)
+  }, [selectedType, scheduleFill])
 
-  const removeSeed = useCallback((id: string) => {
+  const removeSeed = useCallback((id: string, terrainType: string) => {
     setSeeds(prev => prev.filter(s => s.id !== id))
-    setDetectedRegions([])
-  }, [])
+    scheduleFill(terrainType)
+  }, [scheduleFill])
 
-  async function handleDetect() {
-    if (seeds.length === 0) return
-    setIsDetecting(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/world/terrain-seeds', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          map_id: mapId,
-          image_url: mapImageUrl,
-          seeds: seeds.map(s => ({
-            terrain_type: s.terrain_type,
-            x_pct: s.x_pct,
-            y_pct: s.y_pct,
-            gap_bridge: gapByType[s.terrain_type] ?? 'medium',
-          })),
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Detection failed')
-      setDetectedRegions(json.data ?? [])
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
-    } finally {
-      setIsDetecting(false)
-    }
-  }
+  const handleGapChange = useCallback((terrainType: string, gap: GapBridge) => {
+    setGapByType(prev => ({ ...prev, [terrainType]: gap }))
+    scheduleFill(terrainType)
+  }, [scheduleFill])
 
   async function handleSave() {
-    if (detectedRegions.length === 0) return
+    const toSave = Object.values(regionByType).filter(Boolean) as DetectedTerrainRegion[]
+    if (toSave.length === 0) return
     setIsSaving(true)
     setError(null)
     try {
-      for (const region of detectedRegions) {
+      for (const region of toSave) {
         const res = await fetch('/api/world/add-terrain-area', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -120,6 +158,9 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
       setIsSaving(false)
     }
   }
+
+  const typesWithSeeds = useMemo(() => [...new Set(seeds.map(s => s.terrain_type))], [seeds])
+  const savedRegionCount = Object.values(regionByType).filter(Boolean).length
 
   return (
     <div className="min-h-screen bg-[#111316]">
@@ -180,7 +221,7 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
                                 <button
                                   key={opt.value}
                                   type="button"
-                                  onClick={() => setGapByType(prev => ({ ...prev, [tt.value]: opt.value }))}
+                                  onClick={() => handleGapChange(tt.value, opt.value)}
                                   className={`flex-1 text-[10px] font-manrope font-semibold py-1 rounded transition-colors ${
                                     gapByType[tt.value] === opt.value
                                       ? 'bg-primary text-[#3f2e00]'
@@ -202,9 +243,43 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
           </div>
 
           {/* ── Right panel: map + overlay ── */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4">
+          <div className="flex-1 min-w-0 flex flex-col gap-3">
+
+            {/* Focus chips — one per type that has seeds */}
+            {typesWithSeeds.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {typesWithSeeds.map(type => {
+                  const def = TERRAIN_TYPE_MAP[type]
+                  const isFocused = selectedType === type
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setSelectedType(type)}
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-manrope font-semibold transition-all ${
+                        isFocused ? 'ring-1 ring-white/30' : 'opacity-50 hover:opacity-90'
+                      }`}
+                      style={{
+                        backgroundColor: `${def?.color ?? '#888'}22`,
+                        color: def?.color ?? '#888',
+                        border: `1px solid ${def?.color ?? '#888'}44`,
+                      }}
+                    >
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: def?.color ?? '#888' }} />
+                      {def?.label ?? type}
+                      {detectingTypes.has(type) && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
+                      {!detectingTypes.has(type) && regionByType[type] && <Check className="w-2.5 h-2.5" />}
+                    </button>
+                  )
+                })}
+                <span className="self-center text-[10px] font-manrope text-on-surface-variant ml-1 opacity-60">
+                  Viewing: <span className="text-on-surface" style={{ color: TERRAIN_TYPE_MAP[selectedType]?.color }}>{TERRAIN_TYPE_MAP[selectedType]?.label ?? selectedType}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Map + SVG overlay */}
             <div
-              ref={mapRef}
               className="relative rounded-xl overflow-hidden cursor-crosshair"
               style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
               onClick={handleMapClick}
@@ -213,21 +288,23 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
               <img
                 src={mapImageUrl}
                 alt="Campaign map"
-                className="w-full block pointer-events-none"
+                className="w-full block pointer-events-none select-none"
+                draggable={false}
               />
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
               >
-                {/* Detected region overlays */}
-                {detectedRegions.map((region, ri) => {
-                  const def = TERRAIN_TYPE_MAP[region.terrain_type]
+                {/* Only the focused type's region overlay */}
+                {(() => {
+                  const region = regionByType[selectedType]
+                  const def = TERRAIN_TYPE_MAP[selectedType]
                   const color = def?.color ?? '#888'
+                  if (!region) return null
                   const points = region.polygon.map(p => `${p.x * 100},${p.y * 100}`).join(' ')
                   return (
                     <polygon
-                      key={ri}
                       points={points}
                       fill={color}
                       fillOpacity={0.45}
@@ -236,57 +313,73 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
                       strokeOpacity={0.8}
                     />
                   )
-                })}
-                {/* Seed pins */}
-                {seeds.map(seed => {
-                  const def = TERRAIN_TYPE_MAP[seed.terrain_type]
-                  const color = def?.color ?? '#888'
-                  return (
-                    <circle
-                      key={seed.id}
-                      cx={seed.x_pct * 100}
-                      cy={seed.y_pct * 100}
-                      r="1.2"
-                      fill={color}
-                      stroke="white"
-                      strokeWidth="0.4"
-                    />
-                  )
-                })}
+                })()}
+                {/* Seed pins for focused type */}
+                {seeds
+                  .filter(s => s.terrain_type === selectedType)
+                  .map(seed => {
+                    const color = TERRAIN_TYPE_MAP[seed.terrain_type]?.color ?? '#888'
+                    return (
+                      <circle
+                        key={seed.id}
+                        cx={seed.x_pct * 100}
+                        cy={seed.y_pct * 100}
+                        r="1.2"
+                        fill={color}
+                        stroke="white"
+                        strokeWidth="0.4"
+                      />
+                    )
+                  })}
               </svg>
-              {seeds.length === 0 && (
+
+              {seeds.filter(s => s.terrain_type === selectedType).length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-black/60 backdrop-blur-sm rounded-xl px-5 py-3 flex items-center gap-2">
-                    <Crosshair className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-manrope text-on-surface">Click on the map to plant seeds</span>
+                  <div className="bg-black/60 backdrop-blur-sm rounded-xl px-5 py-3 text-center">
+                    <p className="text-sm font-manrope text-on-surface">
+                      Click to seed{' '}
+                      <span className="font-semibold" style={{ color: TERRAIN_TYPE_MAP[selectedType]?.color }}>
+                        {TERRAIN_TYPE_MAP[selectedType]?.label ?? selectedType}
+                      </span>
+                    </p>
+                    <p className="text-xs font-manrope text-on-surface-variant mt-1">Fill appears instantly</p>
+                  </div>
+                </div>
+              )}
+              {detectingTypes.has(selectedType) && (
+                <div className="absolute top-3 left-3 pointer-events-none">
+                  <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                    <span className="text-xs font-manrope text-on-surface">Detecting…</span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Seed list + remove */}
-            {seeds.length > 0 && (
+            {/* Seed pills for focused type */}
+            {seeds.filter(s => s.terrain_type === selectedType).length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {seeds.map(seed => {
-                  const def = TERRAIN_TYPE_MAP[seed.terrain_type]
-                  return (
-                    <div
-                      key={seed.id}
-                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-manrope font-semibold"
-                      style={{ backgroundColor: `${def?.color ?? '#888'}22`, color: def?.color ?? '#888', border: `1px solid ${def?.color ?? '#888'}44` }}
-                    >
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: def?.color ?? '#888' }} />
-                      {def?.label ?? seed.terrain_type}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeSeed(seed.id) }}
-                        className="opacity-60 hover:opacity-100 transition-opacity"
+                {seeds
+                  .filter(s => s.terrain_type === selectedType)
+                  .map((seed, idx) => {
+                    const def = TERRAIN_TYPE_MAP[seed.terrain_type]
+                    return (
+                      <div
+                        key={seed.id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-manrope"
+                        style={{ backgroundColor: `${def?.color ?? '#888'}22`, color: def?.color ?? '#888', border: `1px solid ${def?.color ?? '#888'}44` }}
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )
-                })}
+                        Seed {idx + 1}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeSeed(seed.id, seed.terrain_type) }}
+                          className="opacity-60 hover:opacity-100 transition-opacity ml-0.5"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                    )
+                  })}
               </div>
             )}
 
@@ -297,41 +390,21 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
               </div>
             )}
 
-            {detectedRegions.length > 0 && !error && (
-              <div className="rounded-lg bg-[#0a2a0a]/60 border border-[#2E7D32]/30 px-4 py-3 flex items-center gap-2 text-sm font-manrope text-[#81C784]">
-                <Check className="w-4 h-4 flex-shrink-0" />
-                {detectedRegions.length} terrain region{detectedRegions.length !== 1 ? 's' : ''} detected.
-                Adjust seeds above and re-detect, or save to continue.
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleDetect}
-                disabled={seeds.length === 0 || isDetecting || isSaving}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-manrope font-semibold text-sm bg-[#1e2023] text-on-surface border border-white/10 hover:border-primary/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-              >
-                {isDetecting ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Detecting&hellip;</>
-                ) : (
-                  <><Crosshair className="w-4 h-4" /> Detect Terrain</>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={detectedRegions.length === 0 || isSaving || isDetecting}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-manrope font-semibold text-sm text-[#3f2e00] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
-              >
-                {isSaving ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Saving&hellip;</>
-                ) : (
-                  <><Check className="w-4 h-4" /> Save & Continue</>
-                )}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={savedRegionCount === 0 || isSaving}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl font-manrope font-semibold text-sm text-[#3f2e00] disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
+            >
+              {isSaving ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Saving&hellip;</>
+              ) : savedRegionCount > 0 ? (
+                <><Check className="w-4 h-4" /> Save {savedRegionCount} Region{savedRegionCount !== 1 ? 's' : ''} &amp; Continue</>
+              ) : (
+                'Place seeds on the map to detect terrain'
+              )}
+            </button>
           </div>
         </div>
       </div>

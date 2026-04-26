@@ -32,10 +32,17 @@ export const TERRAIN_TYPES: TerrainTypeDefinition[] = [
   { value: 'badlands',       label: 'Badlands',       color: '#BF360C', defaultGapBridge: 'medium', group: 'Special' },
   { value: 'volcanic',       label: 'Volcanic',       color: '#E53935', defaultGapBridge: 'medium', group: 'Special' },
   { value: 'arctic',         label: 'Arctic',         color: '#90CAF9', defaultGapBridge: 'medium', group: 'Special' },
+  // Settlement
+  { value: 'city',           label: 'City',           color: '#FF8F00', defaultGapBridge: 'tight',  group: 'Settlement' },
+  { value: 'town',           label: 'Town',           color: '#FFB300', defaultGapBridge: 'tight',  group: 'Settlement' },
+  { value: 'ruins',          label: 'Ruins',          color: '#A1887F', defaultGapBridge: 'tight',  group: 'Settlement' },
 ]
 
 export const TERRAIN_TYPE_MAP: Record<string, TerrainTypeDefinition> = Object.fromEntries(
   TERRAIN_TYPES.map(t => [t.value, t])
 )
 
-export const TERRAIN_GROUPS: string[] = ['Water', 'Land', 'Elevation', 'Vegetation', 'Special']
+export const TERRAIN_GROUPS: string[] = ['Water', 'Land', 'Elevation', 'Vegetation', 'Special', 'Settlement']
+
+/** Types that represent thin linear features — use stricter thresholds and zero dilation */
+export const NARROW_TERRAIN_TYPES = new Set(['river', 'stream', 'coast'])

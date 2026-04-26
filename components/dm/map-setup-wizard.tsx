@@ -27,9 +27,9 @@ interface MapSetupWizardProps {
 type Stage = 'created' | 'terrain_classified' | 'resources_placed'
 
 const STAGES: { key: Stage; label: string; desc: string; icon: React.ReactNode }[] = [
-  { key: 'created', label: 'Classify Terrain', desc: 'AI reads the map image and identifies terrain blobs — plains, mountains, rivers, cities, and more.', icon: <Layers className="w-5 h-5" /> },
-  { key: 'terrain_classified', label: 'Place Resources', desc: 'AI places resource points based on terrain — iron in mountains, fish at coasts, farmland in valleys.', icon: <TreePine className="w-5 h-5" /> },
-  { key: 'resources_placed', label: 'Generate Atmosphere', desc: 'AI writes sensory read-aloud text for each terrain area. Your DM read-aloud is ready.', icon: <MapPin className="w-5 h-5" /> },
+  { key: 'created', label: 'Define Terrain', desc: 'Mark terrain areas using seed detection, zone painting, or AI auto-classification.', icon: <Layers className="w-5 h-5" /> },
+  { key: 'terrain_classified', label: 'Place Resources', desc: 'Place resource points across the map — iron in mountains, fish at coasts, crops in valleys.', icon: <TreePine className="w-5 h-5" /> },
+  { key: 'resources_placed', label: 'Generate Atmosphere', desc: 'Write sensory read-aloud text for each terrain area to use at the table.', icon: <MapPin className="w-5 h-5" /> },
 ]
 
 type SubStepStatus = 'pending' | 'running' | 'done' | 'skipped'
@@ -208,7 +208,7 @@ export function MapSetupWizard({
       <div className="mb-8">
         <h1 className="font-noto-serif text-2xl text-on-surface mb-1">Map Setup</h1>
         <p className="text-sm font-manrope text-on-surface-variant">
-          AI is analyzing your map. Complete each step to unlock the full map view.
+          Complete each step to unlock the full map view.
         </p>
       </div>
 
@@ -296,8 +296,8 @@ export function MapSetupWizard({
                   <div className="text-xs font-manrope text-primary mt-1">{resourcePointCount} resource points placed</div>
                 )}
 
-                {/* Sub-step progress — shown while terrain classification is running */}
-                {active && showSubSteps && i === 0 && (
+                {/* Sub-step progress — AI mode only */}
+                {active && terrainMode === 'ai' && showSubSteps && i === 0 && (
                   <div className="mt-3 space-y-2">
                     {subSteps.map((step, si) => (
                       <div key={si} className="flex items-start gap-2">

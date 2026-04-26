@@ -19,6 +19,8 @@
 
 import sharp from 'sharp'
 import type { GapBridge } from '@/lib/constants/terrain-types'
+import { NARROW_TERRAIN_TYPES } from '@/lib/constants/terrain-types'
+import { type PixelCache, getPixelCache, setPixelCache } from '@/lib/world/terrainPixelCache'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -42,10 +44,11 @@ export interface DetectedTerrainRegion {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const GRID_SIZE = 512
-const SCORE_THRESHOLD = 18      // ΔE ≈ 18; tighter than 35 which bled across terrain types
+const SCORE_THRESHOLD = 18          // ΔE ≈ 18 for normal terrain
+const NARROW_SCORE_THRESHOLD = 12   // ΔE ≈ 12 for thin linear features (rivers, coast)
 const MIN_REGION_PIXELS = 40
 const RDP_EPSILON = 3.0
-const PATCH_RADIUS = 4          // 9×9 sample patch (was 15×15 — more representative of click spot)
+const PATCH_RADIUS = 4              // 9×9 sample patch
 const GAP_BRIDGE_RADIUS: Record<GapBridge, number> = { tight: 1, medium: 4, wide: 10 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -134,6 +137,7 @@ function buildMatchMask(
   data: Buffer, stdDevMap: Float32Array,
   width: number, height: number,
   sig: SeedSignature, seedIdx: number,
+  threshold = SCORE_THRESHOLD,
 ): Uint8Array {
   const mask = new Uint8Array(width * height)
   for (let i = 0; i < width * height; i++) {
@@ -142,7 +146,7 @@ function buildMatchMask(
     const dL = L - sig.meanLab[0], dA = A - sig.meanLab[1], dB = B - sig.meanLab[2]
     const colorDist = Math.sqrt(dL * dL + dA * dA + dB * dB)
     const textureDist = Math.abs(stdDevMap[i] - sig.textureStd) * 100
-    if (colorDist + 0.5 * textureDist < SCORE_THRESHOLD) mask[i] = 1
+    if (colorDist + 0.5 * textureDist < threshold) mask[i] = 1
   }
   mask[seedIdx] = 1  // always include the seed pixel itself
   return mask
@@ -259,13 +263,10 @@ function rdpSimplify(pts: Array<{x:number;y:number}>, eps: number): Array<{x:num
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main export
+// Public: build pixel cache from image URL
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function detectTerrainFromSeeds(
-  imageUrl: string,
-  seeds: TerrainSeed[],
-): Promise<DetectedTerrainRegion[]> {
+export async function buildPixelCache(imageUrl: string): Promise<PixelCache> {
   let buf: Buffer
   if (imageUrl.startsWith('data:')) {
     const base64 = imageUrl.split(',')[1]
@@ -276,15 +277,30 @@ export async function detectTerrainFromSeeds(
     if (!response.ok) throw new Error(`Failed to fetch map image: ${response.status}`)
     buf = Buffer.from(await response.arrayBuffer())
   }
-
   const { data, info } = await sharp(buf)
     .resize(GRID_SIZE, GRID_SIZE, { fit: 'fill' })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
-  const { width, height } = info
+  const stdDevMap = buildStdDevMap(data, info.width, info.height)
+  return { data, width: info.width, height: info.height, stdDevMap }
+}
 
-  const stdDevMap = buildStdDevMap(data, width, height)
+// ─────────────────────────────────────────────────────────────────────────────
+// Main export
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function detectTerrainFromSeeds(
+  imageUrl: string,
+  seeds: TerrainSeed[],
+  mapId?: string,
+): Promise<DetectedTerrainRegion[]> {
+  let pixelCache: PixelCache | null = mapId ? getPixelCache(mapId) : null
+  if (!pixelCache) {
+    pixelCache = await buildPixelCache(imageUrl)
+    if (mapId) setPixelCache(mapId, pixelCache)
+  }
+  const { data, width, height, stdDevMap } = pixelCache
 
   // Group seeds by terrain_type
   const byType = new Map<string, TerrainSeed[]>()
@@ -296,22 +312,26 @@ export async function detectTerrainFromSeeds(
   const results: DetectedTerrainRegion[] = []
 
   for (const [terrainType, typeSeeds] of byType) {
+    const isNarrow = NARROW_TERRAIN_TYPES.has(terrainType)
+    const threshold = isNarrow ? NARROW_SCORE_THRESHOLD : SCORE_THRESHOLD
+
     // Union match masks across all seeds of this type
     const unionMask = new Uint8Array(width * height)
     for (const seed of typeSeeds) {
       const px = Math.round(seed.x_pct * (width - 1))
       const py = Math.round(seed.y_pct * (height - 1))
       const sig = sampleSignature(data, stdDevMap, px, py, width, height)
-      const match = buildMatchMask(data, stdDevMap, width, height, sig, py * width + px)
+      const match = buildMatchMask(data, stdDevMap, width, height, sig, py * width + px, threshold)
       for (let i = 0; i < width * height; i++) if (match[i]) unionMask[i] = 1
     }
 
-    // Dilation: use max gap_bridge across seeds of this type
+    // Narrow types (river, coast) get zero dilation to prevent bleeding into ocean/lake
     const gapBridgeOrder: GapBridge[] = ['tight', 'medium', 'wide']
     const maxBridge = typeSeeds.reduce<GapBridge>((best, s) => {
       return gapBridgeOrder.indexOf(s.gap_bridge) > gapBridgeOrder.indexOf(best) ? s.gap_bridge : best
     }, 'tight')
-    const dilated = dilate(unionMask, width, height, GAP_BRIDGE_RADIUS[maxBridge])
+    const dilationRadius = isNarrow ? 0 : GAP_BRIDGE_RADIUS[maxBridge]
+    const dilated = dilationRadius > 0 ? dilate(unionMask, width, height, dilationRadius) : unionMask
 
     // BFS from each seed → union regions
     const regionMask = new Uint8Array(width * height)
