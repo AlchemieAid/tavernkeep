@@ -7,6 +7,9 @@ import {
   ChevronLeft, Loader2, Layers, TreePine, Check, MapPin,
   Maximize2, X, AlertTriangle, SkipForward, RefreshCw,
 } from 'lucide-react'
+import { TerrainModeSelector, type TerrainMode } from '@/components/dm/terrain-mode-selector'
+import { TerrainSeedPainter } from '@/components/dm/terrain-seed-painter'
+import { TerrainZonePainter } from '@/components/dm/terrain-zone-painter'
 
 interface MapSetupWizardProps {
   map: {
@@ -66,6 +69,29 @@ export function MapSetupWizard({
   const [subSteps, setSubSteps] = useState<SubStep[]>(TERRAIN_SUBSTEPS.map(s => ({ ...s })))
   const [showSubSteps, setShowSubSteps] = useState(false)
   const [skippedLayers, setSkippedLayers] = useState<string[]>([])
+  const [terrainMode, setTerrainMode] = useState<TerrainMode | null>(null)
+
+  if (currentStage === 'created' && terrainMode === 'seed') {
+    return (
+      <TerrainSeedPainter
+        mapId={map.id}
+        campaignId={campaignId}
+        mapImageUrl={map.image_url}
+        onBack={() => setTerrainMode(null)}
+      />
+    )
+  }
+
+  if (currentStage === 'created' && terrainMode === 'paint') {
+    return (
+      <TerrainZonePainter
+        mapId={map.id}
+        campaignId={campaignId}
+        mapImageUrl={map.image_url}
+        onBack={() => setTerrainMode(null)}
+      />
+    )
+  }
 
   function updateSubStep(layer: number, status: SubStepStatus, message: string) {
     setSubSteps(prev => {
@@ -164,7 +190,7 @@ export function MapSetupWizard({
   const stageIndex = STAGES.findIndex(s => s.key === currentStage)
 
   const stageButtonLabel: Record<Stage, string> = {
-    created: 'Analyze Map with AI',
+    created: 'Analyze Map with AI (Experimental)',
     terrain_classified: `Place Resources (${terrainAreaCount} terrain areas)`,
     resources_placed: 'Generate Atmosphere & Finish Setup',
   }
@@ -325,19 +351,26 @@ export function MapSetupWizard({
       )}
 
       <div className="mt-8">
-        <button
-          type="button"
-          onClick={runStage}
-          disabled={running}
-          className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-manrope font-semibold text-sm text-[#3f2e00] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
-        >
-          {running ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing map&hellip; This may take up to 60 seconds</>
-          ) : (
-            stageButtonLabel[currentStage]
-          )}
-        </button>
+        {currentStage === 'created' && terrainMode !== 'ai' ? (
+          <TerrainModeSelector onSelect={(mode) => {
+            if (mode === 'ai') setTerrainMode('ai')
+            else setTerrainMode(mode)
+          }} />
+        ) : (
+          <button
+            type="button"
+            onClick={runStage}
+            disabled={running}
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-manrope font-semibold text-sm text-[#3f2e00] disabled:opacity-50 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
+          >
+            {running ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing map&hellip; This may take up to 60 seconds</>
+            ) : (
+              stageButtonLabel[currentStage]
+            )}
+          </button>
+        )}
       </div>
     </div>
   )
