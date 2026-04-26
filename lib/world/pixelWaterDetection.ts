@@ -37,6 +37,17 @@ export interface DetectedWaterRegion {
   intensity: number
 }
 
+/**
+ * Runtime-tunable parameters for water detection.
+ * All fields are optional — module-level constants are used as fallbacks.
+ * Fetch from app_config in terrainPipeline and pass here.
+ */
+export interface WaterDetectionConfig {
+  riverHalfWidth?: number  // default RIVER_HALF_WIDTH (5)
+  minThinPixels?: number   // default MIN_THIN_PIXEL_COUNT (15)
+  rdpEpsilon?: number      // default RDP_EPSILON (3.0)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Color utilities
 // ─────────────────────────────────────────────────────────────────────────────
@@ -306,9 +317,9 @@ function labelComponents(
 // Component classification
 // ─────────────────────────────────────────────────────────────────────────────
 
-const RIVER_HALF_WIDTH = 5      // water pixels with depth ≤ this are "thin" (river/coast)
+const RIVER_HALF_WIDTH = 5      // default: water pixels with depth ≤ this are "thin" (river/coast)
 const MIN_FAT_PIXEL_COUNT = 60  // minimum for ocean/lake components (512px)
-const MIN_THIN_PIXEL_COUNT = 15 // minimum for river/coast components (512px)
+const MIN_THIN_PIXEL_COUNT = 15 // default: minimum thin-component size (river/coast)
 const MAX_COMPONENTS = 50
 
 /** Build a binary mask containing only this component's pixels. */
@@ -492,11 +503,14 @@ function rdpSimplify(
 export async function detectWaterRegions(
   imageUrl: string,
   grammar?: MapGrammar,
+  config?: WaterDetectionConfig,
 ): Promise<DetectedWaterRegion[]> {
   const { data, width, height } = await fetchImagePixels(imageUrl)
   const hueRanges = getWaterHueRanges(grammar)
   const totalSize = width * height
-  const RDP_EPSILON = 3.0 // scaled for 512px
+  const riverHalfWidth = config?.riverHalfWidth ?? RIVER_HALF_WIDTH
+  const minThinPixels  = config?.minThinPixels  ?? MIN_THIN_PIXEL_COUNT
+  const RDP_EPSILON    = config?.rdpEpsilon      ?? 3.0
 
   // ── Step 1: Build full water mask ──────────────────────────────────────────
   const waterMask = new Uint8Array(totalSize)
@@ -507,18 +521,18 @@ export async function detectWaterRegions(
   }
 
   const totalWater = waterMask.reduce((s, v) => s + v, 0)
-  if (totalWater < MIN_THIN_PIXEL_COUNT) return []
+  if (totalWater < minThinPixels) return []
 
   // ── Step 2: Distance transform → each water pixel gets its depth (half-width) ──
-  // d ≤ RIVER_HALF_WIDTH → thin (river/coast);  d > RIVER_HALF_WIDTH → fat (ocean/lake)
-  const distMap = chebyshevDistanceTransform(waterMask, width, height, RIVER_HALF_WIDTH + 1)
+  // d ≤ riverHalfWidth → thin (river/coast);  d > riverHalfWidth → fat (ocean/lake)
+  const distMap = chebyshevDistanceTransform(waterMask, width, height, riverHalfWidth + 1)
 
   // ── Step 3: Split into fat and thin masks using depth threshold ──────────────
   const fatMask = new Uint8Array(totalSize)
   const thinMask = new Uint8Array(totalSize)
   for (let i = 0; i < totalSize; i++) {
     if (!waterMask[i]) continue
-    if (distMap[i] > RIVER_HALF_WIDTH) fatMask[i] = 1
+    if (distMap[i] > riverHalfWidth) fatMask[i] = 1
     else thinMask[i] = 1
   }
 
@@ -555,7 +569,7 @@ export async function detectWaterRegions(
     if (wt === 'ocean') {
       // Dilate the fat ocean to build coast zone (recover the thin boundary pixels)
       const oceanMask = buildCompMask(comp, totalSize, width)
-      coastZoneMask = dilate(oceanMask, width, height, RIVER_HALF_WIDTH)
+      coastZoneMask = dilate(oceanMask, width, height, riverHalfWidth)
       // Ocean itself: do NOT store a polygon (map background already shows it)
     } else {
       processComponent(comp, wt)
@@ -569,6 +583,7 @@ export async function detectWaterRegions(
     .sort((a, b) => b.pixels.length - a.pixels.length)
     .slice(0, MAX_COMPONENTS)
     .forEach(comp => {
+      if (comp.pixels.length < minThinPixels) return
       const wt = classifyThinComponent(comp, coastZoneMask, width)
       if (wt) processComponent(comp, wt)
     })

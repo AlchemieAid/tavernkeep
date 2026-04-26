@@ -32,7 +32,8 @@ import {
   TERRAIN_ZONES_SYSTEM_PROMPT,
   buildTerrainZonesPrompt,
 } from '@/lib/prompts/terrainZones'
-import { detectWaterRegions } from '@/lib/world/pixelWaterDetection'
+import { detectWaterRegions, type WaterDetectionConfig } from '@/lib/world/pixelWaterDetection'
+import { getConfig } from '@/lib/admin/config'
 import {
   TERRAIN_LANDMARKS_SYSTEM_PROMPT,
   buildTerrainLandmarksPrompt,
@@ -290,7 +291,12 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
   // ── Layer 3: Pixel-Based Water Detection ────────────────────────────────
   yield { type: 'progress', layer: 2, message: 'Detecting rivers, lakes, and coastlines from image pixels…' }
   try {
-    const waterRegions = await detectWaterRegions(imageUrl, grammar)
+    const waterConfig: WaterDetectionConfig = {
+      riverHalfWidth: await getConfig('terrain_water_river_half_width', 5),
+      minThinPixels:  await getConfig('terrain_water_min_thin_pixels', 15),
+      rdpEpsilon:     await getConfig('terrain_water_rdp_epsilon', 3.0),
+    }
+    const waterRegions = await detectWaterRegions(imageUrl, grammar, waterConfig)
     if (waterRegions.length > 0) {
       const rows = waterRegions.map(region => ({
         map_id: mapId,

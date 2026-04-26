@@ -138,6 +138,26 @@ export const CONFIG_SCHEMAS = {
     description: 'AI request timeout in milliseconds',
   },
 
+  // --- Terrain ---
+  terrain_water_river_half_width: {
+    schema: z.number().int().min(1).max(20),
+    kind: 'number',
+    defaultValue: 5,
+    description: 'Water pixel depth threshold for river vs ocean/lake (1–20). Lower = only narrower features become rivers. Raise if rivers are missed; lower if ocean bleeds into river polygons.',
+  },
+  terrain_water_min_thin_pixels: {
+    schema: z.number().int().min(5).max(200),
+    kind: 'number',
+    defaultValue: 15,
+    description: 'Minimum pixel count for a thin water component (river/coast) to be stored (5–200). Lower captures shorter river stubs; raise to suppress noise.',
+  },
+  terrain_water_rdp_epsilon: {
+    schema: z.number().min(0.5).max(10),
+    kind: 'number',
+    defaultValue: 3.0,
+    description: 'Ramer-Douglas-Peucker polygon simplification tolerance (0.5–10). Lower = smoother, more vertices. Raise = blockier but faster.',
+  },
+
   // --- System ---
   system_cache_ttl_seconds: {
     schema: z.number().int().min(1).max(86_400),
