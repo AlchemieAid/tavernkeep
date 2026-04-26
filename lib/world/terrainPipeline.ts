@@ -24,8 +24,9 @@ import type { Database } from '@/lib/supabase/database.types'
 import type { Json } from '@/lib/supabase/database.types'
 import {
   TERRAIN_GRAMMAR_SYSTEM_PROMPT,
-  TERRAIN_GRAMMAR_USER_PROMPT,
+  buildTerrainGrammarPrompt,
   type MapGrammar,
+  type CampaignContext,
 } from '@/lib/prompts/terrainGrammar'
 import {
   TERRAIN_ZONES_SYSTEM_PROMPT,
@@ -166,12 +167,13 @@ export interface PipelineInput {
   biomeProfile: string | null
   campaignId: string
   dmId: string
+  campaignContext?: CampaignContext | null
   openai: OpenAI
   supabase: SupabaseClient<Database>
 }
 
 export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<PipelineEvent> {
-  const { mapId, imageUrl, mapSize, biomeProfile, campaignId, dmId, openai, supabase } = input
+  const { mapId, imageUrl, mapSize, biomeProfile, campaignId, dmId, campaignContext, openai, supabase } = input
   const skipped: string[] = []
   let terrainCount = 0
   let poiCount = 0
@@ -194,7 +196,7 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
         {
           role: 'user',
           content: [
-            { type: 'text', text: TERRAIN_GRAMMAR_USER_PROMPT },
+            { type: 'text', text: buildTerrainGrammarPrompt(campaignContext) },
             { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
           ],
         },
@@ -266,7 +268,7 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
           role: 'user',
           content: [
             { type: 'text', text: buildTerrainZonesPrompt(grammar, mapSize, biomeProfile) },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+            { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
           ],
         },
       ],
@@ -295,14 +297,14 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       temperature: 0.3,
-      max_tokens: 1500,
+      max_tokens: 2500,
       messages: [
         { role: 'system', content: TERRAIN_LINEAR_SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
             { type: 'text', text: buildTerrainLinearPrompt(grammar) },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+            { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
           ],
         },
       ],
@@ -340,7 +342,7 @@ export async function* runTerrainPipeline(input: PipelineInput): AsyncGenerator<
           role: 'user',
           content: [
             { type: 'text', text: buildTerrainLandmarksPrompt(grammar) },
-            { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
+            { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } },
           ],
         },
       ],

@@ -8,74 +8,83 @@ These rules govern all AI-assisted code generation in this project. Follow them 
 
 - **App name**: TavernKeep
 - **Purpose**: D&D shop management and sharing platform for DMs and players
-- **Stack**: Next.js 14 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase · OpenAI API · Google Stitch (design) · Vercel
+- **Stack**: Next.js 14 (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Supabase · Google Gemini API · Google Stitch (design) · Vercel
 
 ---
 
-## 2. Google Stitch Design Workflow (ALWAYS DO THIS FIRST)
+## 2. Git Workflow (Windows/PowerShell)
+
+**NEVER use `&&` to chain commands.** PowerShell does not support it — use `;` or separate commands.
+
+```powershell
+# ❌ BAD — PowerShell parse error
+git add -A && git commit -m "message"
+
+# ✅ GOOD — semicolon for sequential execution
+git add -A; git commit -m "message"
+```
+
+**If `.git/index.lock` persists:** run `Remove-Item .git\index.lock`.
+
+### Commit Message Format
+```
+feat: add AI shopkeeper generation endpoint
+fix: strip hidden items from player shop API
+chore: add RLS policy for party_access table
+ui: implement player shop view from Stitch design
+db: migration for inventory volatility fields
+design: update DESIGN.md from Stitch token extraction
+```
+
+---
+
+## 3. Google Stitch Design Workflow (ALWAYS DO THIS FIRST)
 
 Before writing any UI code for a screen or component:
 
 1. Use the Stitch MCP to list available projects and screens
 2. Fetch the Design DNA for the relevant screen (fonts, colors, spacing, layout)
 3. Retrieve the screen's HTML as a pixel-perfect reference
-4. If this is the first screen built, generate a `DESIGN.md` in the project root containing all extracted design tokens — colors, typography, spacing scale, border radii, shadows
+4. If this is the first screen built, generate a `DESIGN.md` in the project root containing all extracted design tokens
 5. Implement the component in React + Tailwind, matching the Stitch design exactly
 
-**If no Stitch screen exists for a view**, use the design tokens already in `DESIGN.md` and the aesthetic direction in the prompt. Never invent new colors, fonts, or spacing — always anchor to the established system.
+**If no Stitch screen exists**, use tokens already in `DESIGN.md`. Never invent new colors, fonts, or spacing.
 
 `DESIGN.md` is auto-generated from Stitch — never hand-edit it. It is the single source of truth for the design system.
 
 ---
 
-## 3. TypeScript Rules
+## 4. TypeScript Rules
 
-- **Strict mode always on**. No `any`. No `@ts-ignore` unless absolutely unavoidable and documented.
+- **Strict mode always on.** No `any`. No `@ts-ignore` unless absolutely unavoidable and documented.
 - All props interfaces named `[ComponentName]Props`
 - All DB row types live in `/types/database.ts` as exported interfaces
 - All API request/response bodies validated with `zod` schemas in `/lib/validators/`
 - Use `type` for unions/intersections; use `interface` for object shapes
 
-```typescript
-// ✅ Good
-interface ShopCardProps {
-  shop: Shop;
-  onEdit?: (id: string) => void;
-}
-
-// ❌ Bad
-const ShopCard = ({ shop, onEdit }: any) => { ... }
-```
-
 ---
 
-## 4. File and Folder Structure
+## 5. File and Folder Structure
 
 ```
-/app
-  /(auth)/           → Auth pages (login, callback)
-  /(dm)/             → DM-protected pages
-  /(player)/         → Public player pages
-  /api/              → API route handlers
-/components
-  /ui/               → shadcn/ui primitives (never modify these directly)
-  /dm/               → DM-specific components
-  /player/           → Player-specific components
-  /shared/           → Components used in both contexts
-/lib
-  /supabase/         → Supabase client helpers (server.ts, client.ts, middleware.ts)
-  /prompts/          → All AI prompt strings as named exports
-  /validators/       → Zod schemas
-  /utils/            → Pure utility functions
-  /constants/        → App-wide constants (enums, config values)
-/types
-  /database.ts       → DB row interfaces
-  /index.ts          → Re-exports
-/hooks               → Custom React hooks
-/public              → Static assets
-/supabase
-  /migrations/       → All schema migrations
-DESIGN.md            → Stitch-extracted design tokens (auto-generated, do not hand-edit)
+/app/(auth)/          → Auth pages
+/app/(dm)/            → DM-protected pages
+/app/(player)/        → Public player pages
+/app/api/             → API route handlers
+/components/ui/       → shadcn/ui primitives (never modify directly)
+/components/dm/       → DM-specific components
+/components/player/   → Player-specific components
+/components/shared/   → Shared components
+/lib/supabase/        → Supabase client helpers (server.ts, client.ts, middleware.ts)
+/lib/prompts/         → All AI prompt strings as named exports
+/lib/validators/      → Zod schemas
+/lib/utils/           → Pure utility functions
+/lib/constants/       → App-wide constants
+/types/database.ts    → DB row interfaces
+/types/index.ts       → Re-exports
+/hooks/               → Custom React hooks
+/supabase/migrations/ → All schema migrations
+DESIGN.md             → Stitch-extracted design tokens (auto-generated, do not hand-edit)
 ```
 
 - One component per file
@@ -83,112 +92,82 @@ DESIGN.md            → Stitch-extracted design tokens (auto-generated, do not 
 
 ---
 
-## 5. Component Rules
+## 6. Component Rules
 
-- **Server Components by default**. Add `"use client"` only when the component needs hooks, event handlers, browser APIs, or Zustand.
+- **Server Components by default.** Add `"use client"` only when the component needs hooks, event handlers, browser APIs, or Zustand.
 - Never fetch data in Client Components — pass it as props from Server Components
 - All interactive forms are Client Components using `react-hook-form` + `zod`
-- No inline styles. Tailwind utility classes only. Use CSS variables from `DESIGN.md` tokens.
+- No inline styles. Tailwind utility classes only. Use CSS variables from `DESIGN.md`.
 - All images use Next.js `<Image />` with explicit `width`, `height`, and `alt`
 - No `<a>` tags for internal navigation — use Next.js `<Link />`
 
-```tsx
-// ✅ Good — Server Component fetches, passes down
-export default async function ShopPage({ params }: { params: { slug: string } }) {
-  const shop = await getShopBySlug(params.slug);
-  return <ShopView shop={shop} />;
-}
-
-// ❌ Bad — Client Component fetching its own data
-"use client";
-export default function ShopPage() {
-  const [shop, setShop] = useState(null);
-  useEffect(() => { fetchShop().then(setShop) }, []);
-}
-```
-
 ---
 
-## 6. Testing Rules (CRITICAL — MUST FOLLOW)
+## 7. Testing Rules
 
-**Every feature must have tests. No exceptions.** The project just spent hours fixing 75+ broken tests. This must never happen again.
+**Every feature must have tests. No exceptions.**
 
 ### Test-First Development
-1. **Write tests BEFORE or WITH the feature** — never after
-2. **Run `npm test` before EVERY commit** — all tests must pass
-3. **Run `npm run build` before pushing** — build must succeed
-4. **Never push broken tests to GitHub**
+1. Write tests BEFORE or WITH the feature — never after
+2. Run `npm test` before every commit — all tests must pass
+3. Run `npm run build` before pushing — build must succeed
+4. Never push broken tests to GitHub
 
 ### What Requires Tests
 | Feature Type | Test Type | Location |
-|--------------|-----------|----------|
-| New component | Unit test with `@testing-library/react` | `__tests__/components/[name].test.tsx` |
-| API route | Unit test mocking dependencies | `__tests__/api/[route].test.ts` |
-| Server action | Unit test with mocked Supabase | `__tests__/actions/[name].test.ts` |
-| Database logic | Integration test (or RLS policy test) | `__tests__/security/[name].test.ts` |
-| Utility function | Unit test with edge cases | `__tests__/utils/[name].test.ts` |
-| Complex flow (e.g., SSE streaming) | E2E test for Playwright | `e2e/[name].e2e.test.ts` |
+|---|---|---|
+| New component | Unit test (`@testing-library/react`) | `__tests__/components/` |
+| API route | Unit test with mocked deps | `__tests__/api/` |
+| Server action | Unit test with mocked Supabase | `__tests__/actions/` |
+| Database logic | Integration / RLS policy test | `__tests__/security/` |
+| Utility function | Unit test with edge cases | `__tests__/utils/` |
+| Complex flow | E2E with Playwright | `e2e/` |
 
-### Test Quality Standards
-- **Mock external dependencies** — Supabase, OpenAI, fetch, etc.
-- **Test behavior, not implementation** — don't test internal state
-- **Include error cases** — not just happy paths
-- **Use `describe` blocks** for logical grouping
-- **Skip complex integration tests gracefully** — use `if (!envVar) return` or move to `e2e/`
+### Standards
+- **Jest is the sole testing framework** — no Vitest, no Mocha
+- All tests in `__tests__/**/*.test.{ts,tsx}`; E2E in `e2e/` (excluded from Jest)
+- Mock all external dependencies (Supabase, AI clients, fetch)
+- Test behavior, not implementation. Include error cases.
+- Use `describe` blocks for logical grouping
+- Security tests must verify RLS prevents unauthorized access
 
-### Jest Configuration
-- **Jest is the SOLE testing framework** — no Vitest, no Mocha
-- All tests in `__tests__/**/*.test.{ts,tsx}`
-- E2E tests in `e2e/**/*.e2e.test.{ts,tsx}` (excluded from Jest)
-- Use `__mocks__/` for module mocks (e.g., `nanoid.ts`, `google-genai.ts`)
-- Add `transformIgnorePatterns` for ES modules in `jest.config.js`
-
-### The Golden Rule
-> If you can't test it easily, your code is too complex. Simplify it.
-
----
-
-## 8. Data Fetching Rules
-
-- Server-side data fetching via `createServerClient` from `@supabase/ssr`
-- Client-side mutations via Supabase browser client in custom hooks
-- All Supabase queries handle errors explicitly — never assume success
-- Realtime subscriptions set up in Client Components in `useEffect` with cleanup
-
-```typescript
-// ✅ Always handle errors
-const { data: shop, error } = await supabase
-  .from('shops')
-  .select('*')
-  .eq('slug', slug)
-  .single();
-
-if (error) throw new Error(`Failed to load shop: ${error.message}`);
+### Test Scripts
+```bash
+npm test                  # All tests
+npm run test:watch        # Watch mode
+npm run test:security     # Security/RLS only
+npm run test:admin        # Admin tests
 ```
 
 ---
 
-## 7. API Route Rules
+## 8. API Route Rules
 
 - All routes in `/app/api/` using Next.js Route Handlers
 - Validate all inputs with Zod before processing
-- Consistent response shape:
-  ```typescript
-  { data: T, error: null }                        // success
-  { data: null, error: { message: string } }      // failure
-  ```
-- **Player-facing routes MUST strip `is_hidden = true` items before returning** — enforced at API level, not the UI
+- Consistent response shape: `{ data: T, error: null }` / `{ data: null, error: { message: string } }`
+- Player-facing routes MUST strip `is_hidden = true` items server-side — enforced at API level, not UI
 - DM routes MUST verify `session.user.id` ownership before any write
 - AI routes rate-limited to 5 requests/min per IP
-- `OPENAI_API_KEY` is server-side only — never referenced in client components
+- AI API keys are server-side only — never referenced in client components
 
 ---
 
-## 9. Database & Supabase Rules
+## 9. Data Fetching Rules
+
+- Server-side fetching via `createServerClient` from `@supabase/ssr`
+- Client-side mutations via Supabase browser client in custom hooks
+- All Supabase queries handle errors explicitly — never assume success
+- Realtime subscriptions set up in Client Components in `useEffect` with cleanup
+- Fetch all needed data in parallel with `Promise.all` — no waterfalls
+
+---
+
+## 10. Database & Supabase Rules
 
 - RLS enabled on every table — policies written before any data access code
-- Only the **anon key** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) is used — there is no service role key
-- All RLS policies enforce that DMs can only access their own campaigns and shops
+- Only the **anon key** (`NEXT_PUBLIC_SUPABASE_ANON_KEY`) is used in client code
+- All RLS policies enforce that DMs can only access their own data
 - Use `npx supabase` for all CLI commands — no global install
 - All schema changes go through migrations in `/supabase/migrations/` — never alter tables in the dashboard
 - Soft-delete items with `deleted_at timestamp` — never hard delete inventory
@@ -196,40 +175,29 @@ if (error) throw new Error(`Failed to load shop: ${error.message}`);
 
 ---
 
-## 10. Authentication Rules
+## 11. Authentication Rules
 
 - Google OAuth only via Supabase Auth
-- **Google OAuth is deferred until a Vercel deployment URL exists.** Scaffold and wire it up with clear comments, but do not block other features.
-- When Google OAuth is activated: Supabase callback URL = `https://[your-project].supabase.co/auth/v1/callback`
 - Auth state checked in `middleware.ts` for all `/dm/*` and `/api/dm/*` routes
 - Player routes are fully public — zero auth required
 - Never store session data in localStorage — use httpOnly cookies via `@supabase/ssr`
 
 ---
 
-## 11. AI Integration Rules
+## 12. AI Integration Rules
 
 All AI prompt strings live in `/lib/prompts/` as named exports. Never write prompts inline.
 
-```typescript
-// /lib/prompts/itemGeneration.ts
-export const buildItemGenerationPrompt = (context: ItemGenerationContext): string => `
-You are a D&D 5e item generator. Return only valid JSON...
-`;
-```
-
-- Use **GPT-4o** for all text generation (items, shopkeeper profiles)
-- Use **DALL-E 3** for all image generation (keeper portrait, exterior, interior)
-- Always set `max_tokens` explicitly
+- Use the AI client configured in `/lib/ai/` — do not instantiate AI clients directly in routes
+- Always set token limits explicitly
 - Always request JSON-only responses for structured data; parse with try/catch
-- DALL-E 3 prompts must include: `"painterly fantasy illustration, warm candlelight, highly detailed, atmospheric"`
 - Store all generated images in Supabase Storage — never regenerate unless DM explicitly requests
 - Show loading skeletons during all AI generation calls
 - Disable generation buttons while a call is in flight
 
 ---
 
-## 12. UI / Design System Rules
+## 13. UI / Design System Rules
 
 **Always defer to `DESIGN.md` for exact values.** The following are fallback defaults only.
 
@@ -256,29 +224,27 @@ You are a D&D 5e item generator. Return only valid JSON...
 - Cards: `rounded-sm` for a worn, angular feel
 - Borders: `border-gold/30` subtle metallic edge
 - Primary buttons: ember or parchment background with gold text
-- Rarity badge colors: common=gray, uncommon=green, rare=blue, very_rare=purple, legendary=orange
-- Empty states use D&D flavor text — never generic "No results" copy
+- Rarity: common=gray, uncommon=green, rare=blue, very_rare=purple, legendary=orange
+- Empty states use D&D flavor text — never generic "No results"
 
 ### Animations
 - Page transitions: opacity fade 200ms
 - Item cards: staggered `translateY` entrance, 50ms delay per card
 - Loading skeletons: shimmer on parchment base
-- QR code reveal: scale 0.8 → 1.0
 
 ---
 
-## 12. Mobile-First Rules
+## 14. Mobile-First Rules
 
 - All layouts designed for 375px minimum width first
 - Touch targets minimum 44×44px
 - No hover-only interactions on player-facing views
 - QR share page: full-bleed, no chrome, single tap to copy URL
 - Player shop view: single-column card scroll, sticky shopkeeper header
-- Test all player flows at 375px, 390px, and 428px widths
 
 ---
 
-## 13. Error Handling Standards
+## 15. Error Handling Standards
 
 Every route segment must have:
 - `loading.tsx` — skeleton UI matching the real layout
@@ -286,50 +252,6 @@ Every route segment must have:
 - `not-found.tsx` — D&D flavor 404 (e.g., "This shop has vanished from the realm...")
 
 All async operations wrapped in try/catch.
-
----
-
-## 14. Performance Rules
-
-- All shop images via Supabase Storage + Next.js Image Optimization
-- Lazy-load item images with `loading="lazy"`
-- Fetch all needed data in parallel with `Promise.all` — no waterfalls
-- Player shop data: cache at edge 60 seconds, revalidate via `revalidatePath` on DM update
-
----
-
-## 15. Testing Framework (Jest Only)
-
-**Jest is the single testing framework for this project.** Vitest was evaluated and deprecated to maintain consistency.
-
-### Test Organization
-```
-__tests__/
-  /security/        → RLS, authentication, data isolation tests
-  /admin/           → Admin panel, config, audit log tests
-  /architecture/    → Pattern enforcement tests
-  /[feature]/       → Feature-specific tests (create as needed)
-```
-
-### Test Standards
-- All test files: `*.test.ts` or `*.test.tsx`
-- Place tests in `__tests__/` mirror structure, not alongside source files
-- Security tests MUST verify RLS policies prevent unauthorized access
-- Database tests use actual Supabase (integration tests, not mocks)
-- Run security tests with: `npm run test:security`
-
-### Available Test Scripts
-```bash
-npm test              # Run all tests
-npm run test:watch    # Watch mode
-npm run test:security # Security/RLS tests only
-npm run test:admin    # Admin feature tests
-```
-
-### Never Introduce Alternative Frameworks
-- No Vitest, Mocha, or other test runners
-- No mixing test frameworks in same project
-- If migrating tests, complete the migration fully
 
 ---
 
@@ -344,7 +266,7 @@ Before any commit:
 
 ---
 
-## 16. Naming Conventions
+## 17. Naming Conventions
 
 | Thing | Convention | Example |
 |---|---|---|
@@ -360,54 +282,17 @@ Before any commit:
 
 ---
 
-## 17. Git Commit Conventions
-
-```
-feat: add AI shopkeeper generation endpoint
-fix: strip hidden items from player shop API
-chore: add RLS policy for party_access table
-ui: implement player shop view from Stitch design
-db: migration for inventory volatility fields
-design: update DESIGN.md from Stitch token extraction
-```
-
----
-
-## 19. Git Command Syntax (Windows/PowerShell)
-
-**NEVER use `&&` for chaining git commands.** PowerShell does not support `&&` as a statement separator. Using it causes parse errors and can leave `.git/index.lock` files that block future operations.
-
-```powershell
-# ❌ BAD - PowerShell parse error
-git add -A && git commit -m "message"
-
-# ✅ GOOD - Use semicolon for sequential execution
-git add -A; git commit -m "message"
-
-# ✅ GOOD - Use separate commands
-git add -A
-git commit -m "message"
-
-# ✅ GOOD - For complex operations, use cmd /c with &&
-cmd /c "git add -A && git commit -m 'message'"
-```
-
-**If `.git/index.lock` persists:** Restart your IDE or run `Remove-Item .git\index.lock` to clear stale locks from interrupted git operations.
-
----
-
-## 20. What Windsurf Should NEVER Do
+## 18. What Windsurf Should NEVER Do
 
 - Never build a UI screen without first checking for a Stitch design via MCP
-- Never hand-edit `DESIGN.md` — it is always generated from Stitch
+- Never hand-edit `DESIGN.md` — always regenerated from Stitch
 - Never use the Pages Router or `getServerSideProps` / `getStaticProps`
 - Never use `useState` for server-fetchable data
-- Never reference `OPENAI_API_KEY` in client-side code
-- Never use a service role key — there is none in this project
+- Never reference AI API keys in client-side code
 - Never hard delete items — always soft delete via `deleted_at`
 - Never write AI prompts inline — they go in `/lib/prompts/`
 - Never create shadcn components from scratch — install via the shadcn CLI
 - Never commit `.env.local`
 - Never use `eslint-disable` without naming the specific rule and explaining why
-- **Never use `&&` to chain git commands** — PowerShell doesn't support it; use `;` or separate commands
-- **Never introduce alternative testing frameworks** — Jest is the standard; no Vitest, Mocha, etc.
+- **Never use `&&` to chain git commands** — PowerShell doesn't support it; use `;`
+- **Never introduce alternative testing frameworks** — Jest only; no Vitest, no Mocha

@@ -206,6 +206,10 @@ export function MapCanvas({
   const [mobileModal, setMobileModal] = useState<{ result: IDWResult; terrainType: string | null } | null>(null)
   const [hiddenResourceTypes, setHiddenResourceTypes] = useState<Set<string>>(new Set())
   const [showResourceFilter, setShowResourceFilter] = useState(false)
+  const [hiddenPoiCategories, setHiddenPoiCategories] = useState<Set<string>>(new Set())
+  const [showPoiFilter, setShowPoiFilter] = useState(false)
+  const [hiddenTerrainTypes, setHiddenTerrainTypes] = useState<Set<string>>(new Set())
+  const [showTerrainFilter, setShowTerrainFilter] = useState(false)
 
   const placedPoIs = useMemo<PlacedPoI[]>(() =>
     pois.map(p => ({ id: p.id, x_pct: p.x_pct, y_pct: p.y_pct, poi_type: p.poi_type })),
@@ -216,6 +220,22 @@ export function MapCanvas({
     if (!idwResult) return null
     return mutableTerrainAreas.find(a => a.terrain_type === idwResult.dominantTerrain) ?? null
   }, [idwResult, mutableTerrainAreas])
+
+  const presentTerrainTypes = useMemo(
+    () => Array.from(new Set(mutableTerrainAreas.map(a => a.terrain_type))).sort(),
+    [mutableTerrainAreas]
+  )
+
+  const POI_CATEGORIES: { id: string; label: string; color: string }[] = [
+    { id: 'settlement', label: 'Settlements', color: '#7c6a4e' },
+    { id: 'military',   label: 'Military',    color: '#5a7a9e' },
+    { id: 'arcane',     label: 'Arcane',      color: '#7a5e9e' },
+    { id: 'dungeon',    label: 'Dungeons',    color: '#9e5e5e' },
+    { id: 'wilderness', label: 'Wilderness',  color: '#5e8e5e' },
+    { id: 'divine',     label: 'Divine',      color: '#c8a84b' },
+    { id: 'trade',      label: 'Trade',       color: '#8e7a4e' },
+    { id: 'lore',       label: 'Lore',        color: '#6e8a9e' },
+  ]
 
   function getCanvasCoords(e: React.MouseEvent): { x: number; y: number; xPct: number; yPct: number; inBounds: boolean } | null {
     const el = containerRef.current
@@ -434,11 +454,85 @@ export function MapCanvas({
             </div>
           )}
           <SidebarToggle active={showPois} onToggle={() => setShowPois(v => !v)} label="PoIs" icon={<MapPin className="w-3.5 h-3.5" />} />
+          {showPois && (
+            <div className="ml-3 mt-0.5 mb-0.5">
+              <button
+                type="button"
+                onClick={() => setShowPoiFilter(v => !v)}
+                className="flex items-center gap-1 text-[10px] text-on-surface-variant hover:text-primary transition-colors py-0.5"
+              >
+                <Filter className="w-2.5 h-2.5" />
+                Filter types
+                <span className="ml-auto text-[9px] opacity-50">{showPoiFilter ? '▲' : '▼'}</span>
+              </button>
+              {showPoiFilter && (
+                <div className="mt-1 space-y-0.5 pr-1">
+                  {POI_CATEGORIES.map(cat => (
+                    <label key={cat.id} className="flex items-center gap-1.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={!hiddenPoiCategories.has(cat.id)}
+                        onChange={() => {
+                          setHiddenPoiCategories(prev => {
+                            const next = new Set(prev)
+                            if (next.has(cat.id)) next.delete(cat.id); else next.add(cat.id)
+                            return next
+                          })
+                        }}
+                        className="accent-primary w-2.5 h-2.5 shrink-0"
+                      />
+                      <span className="text-[10px] text-on-surface-variant group-hover:text-on-surface capitalize truncate">
+                        {cat.label}
+                      </span>
+                      <span className="w-2 h-2 rounded-full shrink-0 ml-auto" style={{ background: cat.color }} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <SidebarToggle active={showTowns} onToggle={() => setShowTowns(v => !v)} label="Towns" icon={<Castle className="w-3.5 h-3.5" />} />
           <SidebarToggle active={showTerritories} onToggle={() => setShowTerritories(v => !v)} label="Territories" icon={<Shield className="w-3.5 h-3.5" />} />
           <SidebarToggle active={showHistory} onToggle={() => setShowHistory(v => !v)} label="History" icon={<BookOpen className="w-3.5 h-3.5" />} />
           <SidebarToggle active={showTradeRoutes} onToggle={() => setShowTradeRoutes(v => !v)} label="Routes" icon={<Route className="w-3.5 h-3.5" />} />
           <SidebarToggle active={showTerrainAreas} onToggle={() => setShowTerrainAreas(v => !v)} label="Terrain" icon={<Layers className="w-3.5 h-3.5" />} />
+          {showTerrainAreas && presentTerrainTypes.length > 0 && (
+            <div className="ml-3 mt-0.5 mb-0.5">
+              <button
+                type="button"
+                onClick={() => setShowTerrainFilter(v => !v)}
+                className="flex items-center gap-1 text-[10px] text-on-surface-variant hover:text-primary transition-colors py-0.5"
+              >
+                <Filter className="w-2.5 h-2.5" />
+                Filter types
+                <span className="ml-auto text-[9px] opacity-50">{showTerrainFilter ? '▲' : '▼'}</span>
+              </button>
+              {showTerrainFilter && (
+                <div className="mt-1 space-y-0.5 pr-1 max-h-48 overflow-y-auto">
+                  {presentTerrainTypes.map(tt => (
+                    <label key={tt} className="flex items-center gap-1.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={!hiddenTerrainTypes.has(tt)}
+                        onChange={() => {
+                          setHiddenTerrainTypes(prev => {
+                            const next = new Set(prev)
+                            if (next.has(tt)) next.delete(tt); else next.add(tt)
+                            return next
+                          })
+                        }}
+                        className="accent-primary w-2.5 h-2.5 shrink-0"
+                      />
+                      <span className="text-[10px] text-on-surface-variant group-hover:text-on-surface capitalize truncate">
+                        {tt.replace(/_/g, ' ')}
+                      </span>
+                      <span className="w-2 h-2 rounded-full shrink-0 ml-auto" style={{ background: TERRAIN_FILL_COLORS[tt] ?? '#9e9e9e' }} />
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <SidebarToggle active={showNames} onToggle={() => setShowNames(v => !v)} label="Names" icon={<Type className="w-3.5 h-3.5" />} />
         </div>
 
@@ -526,6 +620,12 @@ export function MapCanvas({
             viewBox="0 0 1 1"
             preserveAspectRatio="xMidYMid meet"
           >
+            <defs>
+              <filter id="label-shadow" x="-20%" y="-40%" width="140%" height="180%">
+                <feDropShadow dx="0" dy="0" stdDeviation="0.004" floodColor="#000000" floodOpacity="0.9" />
+                <feDropShadow dx="0" dy="0" stdDeviation="0.002" floodColor="#000000" floodOpacity="0.7" />
+              </filter>
+            </defs>
             {showResources && resourcePoints.filter(rp => !hiddenResourceTypes.has(rp.resource_type)).map(rp => (
               <circle
                 key={rp.id}
@@ -539,7 +639,10 @@ export function MapCanvas({
               />
             ))}
 
-            {showPois && pois.map(poi => {
+            {showPois && pois.filter(poi => {
+              const def = POI_DEFINITIONS.find(d => d.type === poi.poi_type)
+              return !def || !hiddenPoiCategories.has(def.category)
+            }).map(poi => {
               const def = POI_DEFINITIONS.find(d => d.type === poi.poi_type)
               const color = def?.mapColor ?? '#9e9e9e'
               const isSelected = selectedPoi?.id === poi.id
@@ -574,7 +677,7 @@ export function MapCanvas({
             })}
 
             {/* Terrain area outlines */}
-            {showTerrainAreas && mutableTerrainAreas.map((a, i) => {
+            {showTerrainAreas && mutableTerrainAreas.filter(a => !hiddenTerrainTypes.has(a.terrain_type)).map((a, i) => {
               const col = TERRAIN_FILL_COLORS[a.terrain_type] ?? '#9e9e9e'
               return (
                 <polygon
@@ -775,17 +878,17 @@ export function MapCanvas({
 
             {/* Name labels */}
             {showNames && showTowns && worldTowns.map(town => town.name ? (
-              <text key={`nl-t-${town.id}`} x={town.x_pct} y={town.y_pct + 0.022} fontSize={0.011} fill="white" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none' }} stroke="rgba(0,0,0,0.85)" strokeWidth={0.003} paintOrder="stroke" opacity={0.92}>
+              <text key={`nl-t-${town.id}`} x={town.x_pct} y={town.y_pct + 0.022} fontSize={0.012} fill="#ffffff" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none', fontFamily: 'Manrope, sans-serif', fontWeight: 600 }} filter="url(#label-shadow)" opacity={0.95}>
                 {town.name}
               </text>
             ) : null)}
             {showNames && showPois && pois.map(poi => poi.name ? (
-              <text key={`nl-p-${poi.id}`} x={poi.x_pct} y={poi.y_pct + 0.013} fontSize={0.010} fill="white" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none' }} stroke="rgba(0,0,0,0.85)" strokeWidth={0.003} paintOrder="stroke" opacity={0.85}>
+              <text key={`nl-p-${poi.id}`} x={poi.x_pct} y={poi.y_pct + 0.013} fontSize={0.010} fill="#e8e8e8" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none', fontFamily: 'Manrope, sans-serif', fontWeight: 500 }} filter="url(#label-shadow)" opacity={0.90}>
                 {poi.name}
               </text>
             ) : null)}
             {showNames && showHistory && historicalEvents.map(ev => (
-              <text key={`nl-h-${ev.id}`} x={ev.x_pct} y={ev.y_pct + 0.015} fontSize={0.010} fill="#fde68a" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none' }} stroke="rgba(0,0,0,0.85)" strokeWidth={0.003} paintOrder="stroke" opacity={0.8}>
+              <text key={`nl-h-${ev.id}`} x={ev.x_pct} y={ev.y_pct + 0.015} fontSize={0.010} fill="#fde68a" textAnchor="middle" dominantBaseline="hanging" style={{ pointerEvents: 'none', fontFamily: 'Manrope, sans-serif', fontWeight: 500 }} filter="url(#label-shadow)" opacity={0.90}>
                 {ev.event_name}
               </text>
             ))}

@@ -22,7 +22,8 @@
     "test:admin:integration": "jest __tests__/admin/integration.test.ts",
     "validate": "npm run lint && npm run type-check && npm test",
     "validate:quick": "npm run lint && npm run type-check",
-    "prepare": "husky || true"
+    "prepare": "husky || true",
+    "loc": "node scripts/count-loc.js"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

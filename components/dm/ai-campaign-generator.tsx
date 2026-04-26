@@ -146,7 +146,7 @@ export function AICampaignGenerator() {
                 setState(s => ({ ...s, status: 'complete', message: 'World complete!' }))
                 setTimeout(() => {
                   if (data.results?.campaign?.id) {
-                    router.push(`/dm/campaigns/${data.results.campaign.id}`)
+                    router.push(`/dm/campaigns/${data.results.campaign.id}/maps`)
                     router.refresh()
                   }
                 }, 2000)

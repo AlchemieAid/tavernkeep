@@ -87,7 +87,7 @@ export default async function NewCampaignPage() {
       redirect('/dm/dashboard?error=campaign_create_failed')
     }
 
-    redirect(`/dm/campaigns/${campaign.id}`)
+    redirect(`/dm/campaigns/${campaign.id}/maps`)
   }
 
   return (

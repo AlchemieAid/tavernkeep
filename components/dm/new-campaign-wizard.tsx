@@ -198,8 +198,8 @@ export function NewCampaignWizard() {
       goToStep('success')
       
       setTimeout(() => {
-        console.log('[WIZARD] Executing redirect to:', `/dm/campaigns/${campaign.id}/maps/${maps[0].id}`)
-        router.push(`/dm/campaigns/${campaign.id}/maps/${maps[0].id}`)
+        console.log('[WIZARD] Executing redirect to:', `/dm/campaigns/${campaign.id}/maps`)
+        router.push(`/dm/campaigns/${campaign.id}/maps`)
       }, 2000)
       
     } catch (err) {

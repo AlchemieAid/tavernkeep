@@ -47,3 +47,25 @@ OUTPUT FORMAT — respond ONLY with this JSON object, no prose:
 
 export const TERRAIN_GRAMMAR_USER_PROMPT =
   'Analyze the visual language and cartographic conventions used in this map. Describe how each feature type is drawn — not where, just how.'
+
+export interface CampaignContext {
+  name: string
+  setting?: string | null
+  description?: string | null
+  ruleset?: string | null
+}
+
+export function buildTerrainGrammarPrompt(campaign?: CampaignContext | null): string {
+  if (!campaign) return TERRAIN_GRAMMAR_USER_PROMPT
+
+  const lines: string[] = []
+  lines.push('CAMPAIGN CONTEXT (use this to interpret ambiguous visual elements):')
+  lines.push(`  Campaign: ${campaign.name}`)
+  if (campaign.ruleset) lines.push(`  Ruleset/Genre: ${campaign.ruleset}`)
+  if (campaign.setting) lines.push(`  Setting: ${campaign.setting}`)
+  if (campaign.description) lines.push(`  Description: ${campaign.description.substring(0, 300)}`)
+  lines.push('')
+  lines.push('Using the campaign context above to inform your interpretation, analyze the visual language and cartographic conventions used in this map. Describe how each feature type is drawn — not where, just how.')
+  lines.push('For example: if this is a cyberpunk campaign, "rivers" might be data conduits or canals; if it\'s a nautical campaign, coastlines and sea lanes are primary features.')
+  return lines.join('\n')
+}

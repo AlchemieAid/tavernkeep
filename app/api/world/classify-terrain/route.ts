@@ -42,6 +42,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ data: null, error: { message: 'Map not found' } }, { status: 404 })
   }
 
+  const { data: campaign } = await supabase
+    .from('campaigns')
+    .select('name, setting, description, ruleset')
+    .eq('id', map.campaign_id)
+    .single()
+
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json(
@@ -65,6 +71,7 @@ export async function POST(request: Request) {
           biomeProfile: map.biome_profile ?? null,
           campaignId: map.campaign_id,
           dmId: map.dm_id,
+          campaignContext: campaign ?? null,
           openai,
           supabase,
         })

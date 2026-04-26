@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ChevronLeft, Sparkles, Upload, Clock, Layers, Wand2 } from 'lucide-react'
+import { CampaignMapsGrid } from '@/components/dm/campaign-maps-grid'
 
 export default async function MapCreationRouterPage({
   params,
@@ -25,10 +26,10 @@ export default async function MapCreationRouterPage({
 
   const { data: recentMaps } = await supabase
     .from('campaign_maps')
-    .select('id, image_url, map_size, creation_method, is_selected, created_at')
+    .select('id, image_url, map_size, creation_method, is_selected, setup_stage, created_at')
     .eq('campaign_id', campaignId)
     .order('created_at', { ascending: false })
-    .limit(4)
+    .limit(8)
 
   return (
     <div className="min-h-screen bg-[#111316] px-6 py-8 max-w-6xl mx-auto">
@@ -151,42 +152,7 @@ export default async function MapCreationRouterPage({
       </div>
 
       {recentMaps && recentMaps.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-noto-serif text-xl text-on-surface">Recent Cartography</h3>
-            <Link
-              href={`/dm/campaigns/${campaignId}/maps/archives`}
-              className="text-sm font-manrope text-on-surface-variant hover:text-primary transition-colors"
-            >
-              View All Archives
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {recentMaps.map(m => (
-              <Link key={m.id} href={`/dm/campaigns/${campaignId}/maps/${m.id}`}>
-                <div
-                  className="rounded-lg overflow-hidden aspect-square relative group"
-                  style={{ background: '#1a1c1f' }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={m.image_url}
-                    alt={`${m.map_size} map`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {m.is_selected && (
-                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
-                  )}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0c0e11] to-transparent p-2">
-                    <p className="text-xs font-manrope text-on-surface-variant capitalize">
-                      {m.creation_method === 'ai' ? '✦ AI' : '↑ Upload'} · {m.map_size}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <CampaignMapsGrid maps={recentMaps} campaignId={campaignId} />
       )}
     </div>
   )
