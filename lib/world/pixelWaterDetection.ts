@@ -2,12 +2,12 @@
  * Pixel-Based Water Detection
  *
  * Two-pass morphological approach:
- *   Pass 1 (fat water): Erode the water mask by 2px — this removes thin
- *     features like rivers and coast strips, leaving only ocean and lakes.
- *     Rivers connected to ocean become detached in this pass.
- *   Pass 2 (thin water): Pixels in original mask NOT in eroded mask are thin
- *     features — rivers, coast strips. Labeled separately and classified by
- *     aspect ratio and fill ratio.
+ *   Pass 1 (fat water): Erode by 3px — removes thin features (rivers, coast strips),
+ *     leaving only fat ocean cores and lakes. Ocean is identified but NOT stored as a
+ *     polygon (the map background image already shows it).
+ *   Pass 2 (thin water): Pixels in original mask NOT in eroded mask = thin features.
+ *     Coast zone mask = dilate(fat ocean, 3px). Thin components inside this zone = coast.
+ *     Thin components outside = river (if elongated/low fill-ratio).
  *
  *   3. Moore Neighbor boundary tracing (per-component mask)
  *   4. Ramer-Douglas-Peucker polygon simplification
@@ -120,8 +120,8 @@ function isWaterPixel(
 
 /**
  * Box erosion: a pixel survives only if ALL pixels within `radius` in every
- * direction are also water. This shrinks water regions by `radius` pixels on
- * every side, effectively disconnecting thin features (rivers) from fat bodies.
+ * direction are also water. Shrinks water regions by `radius` pixels on every side,
+ * disconnecting thin features (rivers, coast strips) from fat bodies (ocean, lakes).
  */
 function erode(mask: Uint8Array, width: number, height: number, radius: number): Uint8Array {
   const result = new Uint8Array(mask.length)
@@ -143,11 +143,34 @@ function erode(mask: Uint8Array, width: number, height: number, radius: number):
   return result
 }
 
+/**
+ * Box dilation: a pixel is set if ANY pixel within `radius` is set in the source.
+ * Used to expand the fat ocean mask outward to build the "coast zone" — any thin
+ * water component overlapping this zone is a coastline, not a river.
+ */
+function dilate(mask: Uint8Array, width: number, height: number, radius: number): Uint8Array {
+  const result = new Uint8Array(mask.length)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      outer: for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const nx = x + dx; const ny = y + dy
+          if (nx >= 0 && ny >= 0 && nx < width && ny < height && mask[ny * width + nx]) {
+            result[y * width + x] = 1
+            break outer
+          }
+        }
+      }
+    }
+  }
+  return result
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Image decoding
 // ─────────────────────────────────────────────────────────────────────────────
 
-const GRID_SIZE = 256 // process at this resolution for speed
+const GRID_SIZE = 384 // process at this resolution — larger = better river capture
 
 interface PixelGrid {
   data: Buffer
@@ -262,8 +285,8 @@ function labelComponents(
 // Component classification
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MIN_FAT_PIXEL_COUNT = 30  // minimum for ocean/lake components (post-erosion)
-const MIN_THIN_PIXEL_COUNT = 12 // minimum for river/coast components (pre-erosion only)
+const MIN_FAT_PIXEL_COUNT = 50  // minimum for ocean/lake components (post-erosion, 384px)
+const MIN_THIN_PIXEL_COUNT = 20 // minimum for river/coast components (384px resolution)
 const MAX_COMPONENTS = 50
 
 /** Build a binary mask containing only this component's pixels. */
@@ -275,6 +298,14 @@ function buildCompMask(
   const mask = new Uint8Array(totalSize)
   for (const p of comp.pixels) mask[p.y * width + p.x] = 1
   return mask
+}
+
+/** Returns true if any pixel in `comp` is set in `zoneMask`. */
+function anyPixelInMask(comp: Component, zoneMask: Uint8Array, width: number): boolean {
+  for (const p of comp.pixels) {
+    if (zoneMask[p.y * width + p.x]) return true
+  }
+  return false
 }
 
 /** Classify a fat (post-erosion) component as ocean or lake. */
@@ -290,11 +321,23 @@ function classifyFatComponent(
 
 /**
  * Classify a thin component (pixels that eroded away) as river or coast.
- * Fill ratio = pixels / bbox_area — low fill ratio means the shape meanders
- * rather than being a compact blob, which is the signature of a river.
+ *
+ * Coast zone priority: if the component overlaps the dilated ocean mask, it is a
+ * coastline strip — NOT a river. This correctly handles the ocean-edge pixels that
+ * were stripped by erosion.
+ *
+ * River: remaining thin components that are elongated or have low fill ratio.
+ * Fill ratio = pixels / bbox_area; a meandering river covers <40% of its bbox.
  */
-function classifyThinComponent(comp: Component): WaterType | null {
+function classifyThinComponent(
+  comp: Component,
+  coastZoneMask: Uint8Array,
+  width: number,
+): WaterType | null {
   if (comp.pixels.length < MIN_THIN_PIXEL_COUNT) return null
+
+  // Coast zone check — must happen FIRST before any river heuristics
+  if (anyPixelInMask(comp, coastZoneMask, width)) return 'coast'
 
   const bboxW = comp.maxX - comp.minX + 1
   const bboxH = comp.maxY - comp.minY + 1
@@ -303,18 +346,11 @@ function classifyThinComponent(comp: Component): WaterType | null {
   const aspectRatio = Math.max(bboxW, bboxH) / Math.max(1, Math.min(bboxW, bboxH))
   const shortAxis = Math.min(bboxW, bboxH)
 
-  // River: either elongated bbox (meanders along one axis) OR low fill ratio
-  // (meandering river fills much less of its bounding box than a solid blob).
-  // Low-fill is the key discriminator — a classic S-curve river covers <30% of its bbox.
-  if (fillRatio < 0.35 && comp.pixels.length >= MIN_THIN_PIXEL_COUNT) return 'river'
+  // River: low fill ratio (meandering) OR elongated + thin
+  if (fillRatio < 0.40) return 'river'
   if (aspectRatio >= 2.5 && shortAxis <= GRID_SIZE * 0.08) return 'river'
 
-  // Coast: thin strip touching the edge
-  if (comp.touchesEdge && shortAxis <= GRID_SIZE * 0.07) return 'coast'
-
-  // Default for thin features above minimum size
-  if (comp.pixels.length >= MIN_THIN_PIXEL_COUNT * 2) return 'river'
-
+  // Larger thin blobs that passed coast check but aren't rivers — skip
   return null
 }
 
@@ -451,8 +487,8 @@ export async function detectWaterRegions(
   const totalWater = waterMask.reduce((s, v) => s + v, 0)
   if (totalWater < MIN_THIN_PIXEL_COUNT) return []
 
-  // ── Step 2: Erode by 2px → fat water only (rivers disappear) ─────────────
-  const erodedMask = erode(waterMask, width, height, 2)
+  // ── Step 2: Erode by 3px → fat water only (rivers & coast strips disappear) ───
+  const erodedMask = erode(waterMask, width, height, 3)
 
   // ── Step 3: Thin water = original minus eroded (rivers & coast strips) ────
   const thinMask = new Uint8Array(totalSize)
@@ -462,10 +498,7 @@ export async function detectWaterRegions(
 
   const results: DetectedWaterRegion[] = []
 
-  function processComponent(
-    comp: Component,
-    waterType: WaterType,
-  ): void {
+  function processComponent(comp: Component, waterType: WaterType): void {
     const compMask = buildCompMask(comp, totalSize, width)
     const rawBoundary = traceBoundary(comp, compMask, width, height)
     if (rawBoundary.length < 3) return
@@ -475,34 +508,43 @@ export async function detectWaterRegions(
       x: Math.round((p.x / (width - 1)) * 10000) / 10000,
       y: Math.round((p.y / (height - 1)) * 10000) / 10000,
     }))
-    const intensity =
-      waterType === 'ocean' ? 1.0
-      : waterType === 'river' ? 0.95
-      : waterType === 'lake' ? 0.90
-      : 0.75
+    const intensity = waterType === 'river' ? 0.95 : waterType === 'lake' ? 0.90 : 0.75
     results.push({ terrain_type: waterType, polygon, pixelCount: comp.pixels.length, intensity })
   }
 
-  // ── Step 4: Fat components → ocean and lakes ──────────────────────────────
+  // ── Step 4: Fat components → identify ocean (coast zone anchor) + store lakes ──
   const fatComponents = labelComponents(erodedMask, width, height)
   const oceanLabel = findOceanLabel(fatComponents)
 
-  Array.from(fatComponents.values())
+  // Build coast zone: dilate the fat ocean mask so thin strips just outside it
+  // (the actual coastline pixels) are correctly identified as coast, not river.
+  let coastZoneMask: Uint8Array = new Uint8Array(totalSize)
+  const fatSorted = Array.from(fatComponents.values())
     .sort((a, b) => b.pixels.length - a.pixels.length)
     .slice(0, MAX_COMPONENTS)
-    .forEach(comp => {
-      const wt = classifyFatComponent(comp, oceanLabel)
-      if (wt) processComponent(comp, wt)
-    })
 
-  // ── Step 5: Thin components → rivers and coasts ───────────────────────────
+  for (const comp of fatSorted) {
+    const wt = classifyFatComponent(comp, oceanLabel)
+    if (!wt) continue
+    if (wt === 'ocean') {
+      // Build coast zone from the ocean's eroded footprint — dilate back outward
+      const oceanMask = buildCompMask(comp, totalSize, width)
+      coastZoneMask = dilate(oceanMask, width, height, 3)
+      // Ocean itself: do NOT store a polygon (map background already shows it)
+    } else {
+      // Lakes: store normally
+      processComponent(comp, wt)
+    }
+  }
+
+  // ── Step 5: Thin components → coast (if in coast zone) or river ────────────
   const thinComponents = labelComponents(thinMask, width, height)
 
   Array.from(thinComponents.values())
     .sort((a, b) => b.pixels.length - a.pixels.length)
     .slice(0, MAX_COMPONENTS)
     .forEach(comp => {
-      const wt = classifyThinComponent(comp)
+      const wt = classifyThinComponent(comp, coastZoneMask, width)
       if (wt) processComponent(comp, wt)
     })
 
