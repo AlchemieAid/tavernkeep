@@ -9,7 +9,7 @@ const TerrainSeedSchema = z.object({
   terrain_type: z.string().min(1).max(60),
   x_pct: z.number().min(0).max(1),
   y_pct: z.number().min(0).max(1),
-  gap_bridge: z.enum(['tight', 'medium', 'wide']),
+  dilation_radius: z.number().int().min(0).max(20),
 })
 
 const RequestSchema = z.object({

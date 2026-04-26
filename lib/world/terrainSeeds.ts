@@ -18,7 +18,6 @@
  */
 
 import sharp from 'sharp'
-import type { GapBridge } from '@/lib/constants/terrain-types'
 import { NARROW_TERRAIN_TYPES } from '@/lib/constants/terrain-types'
 import { type PixelCache, getPixelCache, setPixelCache } from '@/lib/world/terrainPixelCache'
 
@@ -30,7 +29,7 @@ export interface TerrainSeed {
   terrain_type: string
   x_pct: number
   y_pct: number
-  gap_bridge: GapBridge
+  dilation_radius: number
 }
 
 export interface DetectedTerrainRegion {
@@ -46,10 +45,12 @@ export interface DetectedTerrainRegion {
 const GRID_SIZE = 512
 const SCORE_THRESHOLD = 18          // ΔE ≈ 18 for normal terrain
 const NARROW_SCORE_THRESHOLD = 12   // ΔE ≈ 12 for thin linear features (rivers, coast)
+const RIVER_EDGE_STOP = 0.12        // Normalised Sobel magnitude; stops BFS at bank lines
 const MIN_REGION_PIXELS = 40
 const RDP_EPSILON = 3.0
 const PATCH_RADIUS = 4              // 9×9 sample patch
-const GAP_BRIDGE_RADIUS: Record<GapBridge, number> = { tight: 1, medium: 4, wide: 10 }
+const GX_KERNEL = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
+const GY_KERNEL = [-1, -2, -1,  0, 0, 0,  1, 2, 1]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CIELAB colour conversion
@@ -67,6 +68,34 @@ function rgbToLab(r: number, g: number, b: number): [number, number, number] {
   const Z = rl * 0.0193339 + gl * 0.1191920 + bl * 0.9503041
   const f = (t: number) => t > 0.008856 ? Math.cbrt(t) : 7.787037 * t + 16 / 116
   return [116 * f(Y) - 16, 500 * (f(X / 0.95047) - f(Y)), 200 * (f(Y) - f(Z / 1.08883))]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sobel edge magnitude map (normalised 0–1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildSobelEdgeMap(data: Buffer, width: number, height: number): Float32Array {
+  const mags = new Float32Array(width * height)
+  let maxMag = 0
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      let gx = 0, gy = 0
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          const idx = ((y + ky) * width + (x + kx)) * 4
+          const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2]
+          const w = (ky + 1) * 3 + (kx + 1)
+          gx += GX_KERNEL[w] * lum
+          gy += GY_KERNEL[w] * lum
+        }
+      }
+      const mag = Math.sqrt(gx * gx + gy * gy)
+      mags[y * width + x] = mag
+      if (mag > maxMag) maxMag = mag
+    }
+  }
+  if (maxMag > 0) for (let i = 0; i < mags.length; i++) mags[i] /= maxMag
+  return mags
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -180,6 +209,8 @@ function dilate(mask: Uint8Array, width: number, height: number, radius: number)
 function bfsRegion(
   startX: number, startY: number,
   mask: Uint8Array, width: number, height: number,
+  edgeMap?: Float32Array,
+  edgeThreshold?: number,
 ): Uint8Array {
   const visited = new Uint8Array(mask.length)
   const startIdx = startY * width + startX
@@ -191,10 +222,17 @@ function bfsRegion(
     const idx = queue[head++]
     const x = idx % width
     const y = (idx - x) / width
-    if (x > 0           && mask[idx - 1]      && !visited[idx - 1])      { visited[idx - 1]      = 1; queue[tail++] = idx - 1 }
-    if (x < width - 1   && mask[idx + 1]      && !visited[idx + 1])      { visited[idx + 1]      = 1; queue[tail++] = idx + 1 }
-    if (y > 0           && mask[idx - width]  && !visited[idx - width])  { visited[idx - width]  = 1; queue[tail++] = idx - width }
-    if (y < height - 1  && mask[idx + width]  && !visited[idx + width])  { visited[idx + width]  = 1; queue[tail++] = idx + width }
+    const neighbors: number[] = []
+    if (x > 0)           neighbors.push(idx - 1)
+    if (x < width - 1)   neighbors.push(idx + 1)
+    if (y > 0)           neighbors.push(idx - width)
+    if (y < height - 1)  neighbors.push(idx + width)
+    for (const ni of neighbors) {
+      if (visited[ni] || !mask[ni]) continue
+      if (edgeMap && edgeThreshold !== undefined && edgeMap[ni] > edgeThreshold) continue
+      visited[ni] = 1
+      queue[tail++] = ni
+    }
   }
   return visited
 }
@@ -283,7 +321,8 @@ export async function buildPixelCache(imageUrl: string): Promise<PixelCache> {
     .raw()
     .toBuffer({ resolveWithObject: true })
   const stdDevMap = buildStdDevMap(data, info.width, info.height)
-  return { data, width: info.width, height: info.height, stdDevMap }
+  const edgeMap = buildSobelEdgeMap(data, info.width, info.height)
+  return { data, width: info.width, height: info.height, stdDevMap, edgeMap }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -300,7 +339,7 @@ export async function detectTerrainFromSeeds(
     pixelCache = await buildPixelCache(imageUrl)
     if (mapId) setPixelCache(mapId, pixelCache)
   }
-  const { data, width, height, stdDevMap } = pixelCache
+  const { data, width, height, stdDevMap, edgeMap } = pixelCache
 
   // Group seeds by terrain_type
   const byType = new Map<string, TerrainSeed[]>()
@@ -325,12 +364,9 @@ export async function detectTerrainFromSeeds(
       for (let i = 0; i < width * height; i++) if (match[i]) unionMask[i] = 1
     }
 
-    // Narrow types (river, coast) get zero dilation to prevent bleeding into ocean/lake
-    const gapBridgeOrder: GapBridge[] = ['tight', 'medium', 'wide']
-    const maxBridge = typeSeeds.reduce<GapBridge>((best, s) => {
-      return gapBridgeOrder.indexOf(s.gap_bridge) > gapBridgeOrder.indexOf(best) ? s.gap_bridge : best
-    }, 'tight')
-    const dilationRadius = isNarrow ? 0 : GAP_BRIDGE_RADIUS[maxBridge]
+    // Narrow types use edge-stop BFS (bank lines act as hard boundaries); spread slider is ignored
+    const maxDilation = typeSeeds.reduce((max, s) => Math.max(max, s.dilation_radius ?? 0), 0)
+    const dilationRadius = isNarrow ? 0 : maxDilation
     const dilated = dilationRadius > 0 ? dilate(unionMask, width, height, dilationRadius) : unionMask
 
     // BFS from each seed → union regions
@@ -338,8 +374,10 @@ export async function detectTerrainFromSeeds(
     for (const seed of typeSeeds) {
       const px = Math.round(seed.x_pct * (width - 1))
       const py = Math.round(seed.y_pct * (height - 1))
-      dilated[py * width + px] = 1  // ensure seed is reachable
-      const region = bfsRegion(px, py, dilated, width, height)
+      dilated[py * width + px] = 1  // ensure seed is always reachable
+      const region = bfsRegion(px, py, dilated, width, height,
+        isNarrow ? edgeMap : undefined,
+        isNarrow ? RIVER_EDGE_STOP : undefined)
       for (let i = 0; i < width * height; i++) if (region[i]) regionMask[i] = 1
     }
 

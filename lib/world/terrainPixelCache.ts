@@ -14,6 +14,7 @@ export interface PixelCache {
   width: number
   height: number
   stdDevMap: Float32Array
+  edgeMap: Float32Array
 }
 
 interface CacheEntry {

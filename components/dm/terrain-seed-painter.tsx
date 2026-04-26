@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Loader2, X, Check, AlertTriangle } from 'lucide-react'
-import { TERRAIN_TYPES, TERRAIN_TYPE_MAP, TERRAIN_GROUPS, type GapBridge } from '@/lib/constants/terrain-types'
+import { TERRAIN_TYPES, TERRAIN_TYPE_MAP, TERRAIN_GROUPS, NARROW_TERRAIN_TYPES } from '@/lib/constants/terrain-types'
 import type { DetectedTerrainRegion } from '@/lib/world/terrainSeeds'
 
 interface SeedEntry {
@@ -20,20 +20,15 @@ interface TerrainSeedPainterProps {
   onBack: () => void
 }
 
-const GAP_OPTIONS: { value: GapBridge; label: string }[] = [
-  { value: 'tight', label: 'Tight' },
-  { value: 'medium', label: 'Mid' },
-  { value: 'wide', label: 'Wide' },
-]
-
+const DILATION_MAX = 15
 const DEBOUNCE_MS = 250
 
 export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: TerrainSeedPainterProps) {
   const router = useRouter()
 
   const [selectedType, setSelectedType] = useState<string>(TERRAIN_TYPES[0].value)
-  const [gapByType, setGapByType] = useState<Record<string, GapBridge>>(
-    () => Object.fromEntries(TERRAIN_TYPES.map(t => [t.value, t.defaultGapBridge]))
+  const [dilationByType, setDilationByType] = useState<Record<string, number>>(
+    () => Object.fromEntries(TERRAIN_TYPES.map(t => [t.value, t.defaultDilation]))
   )
   const [seeds, setSeeds] = useState<SeedEntry[]>([])
   const [regionByType, setRegionByType] = useState<Record<string, DetectedTerrainRegion | null>>({})
@@ -44,8 +39,8 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
   // Refs for latest values inside debounced async callbacks
   const seedsRef = useRef(seeds)
   seedsRef.current = seeds
-  const gapRef = useRef(gapByType)
-  gapRef.current = gapByType
+  const dilationRef = useRef(dilationByType)
+  dilationRef.current = dilationByType
 
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -76,7 +71,7 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
             terrain_type: s.terrain_type,
             x_pct: s.x_pct,
             y_pct: s.y_pct,
-            gap_bridge: gapRef.current[s.terrain_type] ?? 'medium',
+            dilation_radius: dilationRef.current[s.terrain_type] ?? 2,
           })),
         }),
       })
@@ -120,8 +115,8 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
     scheduleFill(terrainType)
   }, [scheduleFill])
 
-  const handleGapChange = useCallback((terrainType: string, gap: GapBridge) => {
-    setGapByType(prev => ({ ...prev, [terrainType]: gap }))
+  const handleDilationChange = useCallback((terrainType: string, value: number) => {
+    setDilationByType(prev => ({ ...prev, [terrainType]: value }))
     scheduleFill(terrainType)
   }, [scheduleFill])
 
@@ -216,21 +211,33 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
                             )}
                           </button>
                           {isSelected && (
-                            <div className="flex gap-1 px-2.5 pb-2">
-                              {GAP_OPTIONS.map(opt => (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => handleGapChange(tt.value, opt.value)}
-                                  className={`flex-1 text-[10px] font-manrope font-semibold py-1 rounded transition-colors ${
-                                    gapByType[tt.value] === opt.value
-                                      ? 'bg-primary text-[#3f2e00]'
-                                      : 'bg-[#282a2d] text-on-surface-variant hover:bg-[#2e3035]'
-                                  }`}
-                                >
-                                  {opt.label}
-                                </button>
-                              ))}
+                            <div className="px-2.5 pb-2.5">
+                              {NARROW_TERRAIN_TYPES.has(tt.value) ? (
+                                <div className="flex items-center gap-1.5 text-[10px] font-manrope text-on-surface-variant">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                  Edge-lock active
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[10px] font-manrope text-on-surface-variant">Spread</span>
+                                    <span className="text-[10px] font-manrope font-semibold text-primary">{dilationByType[tt.value] ?? 2}px</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={DILATION_MAX}
+                                    step={1}
+                                    value={dilationByType[tt.value] ?? 2}
+                                    onChange={e => handleDilationChange(tt.value, Number(e.target.value))}
+                                    className="w-full h-1 appearance-none rounded cursor-pointer accent-primary"
+                                  />
+                                  <div className="flex justify-between mt-0.5">
+                                    <span className="text-[9px] font-manrope text-on-surface-variant">0</span>
+                                    <span className="text-[9px] font-manrope text-on-surface-variant">{DILATION_MAX}</span>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
