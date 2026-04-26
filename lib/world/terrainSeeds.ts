@@ -266,9 +266,16 @@ export async function detectTerrainFromSeeds(
   imageUrl: string,
   seeds: TerrainSeed[],
 ): Promise<DetectedTerrainRegion[]> {
-  const response = await fetch(imageUrl)
-  if (!response.ok) throw new Error(`Failed to fetch map image: ${response.status}`)
-  const buf = Buffer.from(await response.arrayBuffer())
+  let buf: Buffer
+  if (imageUrl.startsWith('data:')) {
+    const base64 = imageUrl.split(',')[1]
+    if (!base64) throw new Error('Invalid data URI')
+    buf = Buffer.from(base64, 'base64')
+  } else {
+    const response = await fetch(imageUrl)
+    if (!response.ok) throw new Error(`Failed to fetch map image: ${response.status}`)
+    buf = Buffer.from(await response.arrayBuffer())
+  }
 
   const { data, info } = await sharp(buf)
     .resize(GRID_SIZE, GRID_SIZE, { fit: 'fill' })

@@ -14,7 +14,10 @@ const TerrainSeedSchema = z.object({
 
 const RequestSchema = z.object({
   map_id: z.string().uuid(),
-  image_url: z.string().startsWith('http'),
+  image_url: z.string().refine(
+    (v) => v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:'),
+    { message: 'image_url must be an HTTP URL or data URI' }
+  ),
   seeds: z.array(TerrainSeedSchema).min(1).max(50),
 })
 
