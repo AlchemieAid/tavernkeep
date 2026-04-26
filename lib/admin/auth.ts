@@ -12,7 +12,8 @@
  * - Role hierarchy enforcement
  * 
  * @security
- * - All checks use RLS-protected queries
+ * - Identity verified via auth.getUser() (normal client, user-scoped)
+ * - admin_users queried via service-role client so RLS can never block the check
  * - Redirects unauthorized users
  * - Logs all access attempts
  * - Session-based verification
@@ -20,6 +21,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/admin/supabase-admin'
 
 /**
  * Admin role types
@@ -63,6 +65,7 @@ export interface AdminStatus {
 export async function checkAdminStatus(
   requiredRole?: AdminRole
 ): Promise<AdminStatus | null> {
+  // Normal client — verify the caller's identity via their auth token.
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -70,16 +73,22 @@ export async function checkAdminStatus(
     return null
   }
 
-  // Query admin_users table
-  const { data: adminUser, error } = await supabase
+  // Service-role client — bypass RLS for the admin_users lookup.
+  // This prevents the self-defeating cycle where a deactivated row becomes
+  // invisible to the normal client, locking the admin out permanently.
+  const adminDb = createAdminClient()
+  const { data: adminUser, error } = await adminDb
     .from('admin_users')
     .select('user_id, role, granted_at, granted_by, is_active')
     .eq('user_id', user.id)
-    .eq('is_active', true)
     .maybeSingle()
 
   if (error || !adminUser) {
-    console.error('[ADMIN AUTH] Error checking admin status:', error)
+    return null
+  }
+
+  // Application-level active check (not delegated to RLS).
+  if (!adminUser.is_active) {
     return null
   }
 
@@ -126,6 +135,7 @@ export async function checkAdminStatus(
 export async function requireAdmin(
   requiredRole?: AdminRole
 ): Promise<AdminStatus> {
+  // Identity check first — normal client is sufficient for getUser.
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
