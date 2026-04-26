@@ -1,13 +1,13 @@
 /**
  * Pixel-Based Water Detection
  *
- * Two-pass morphological approach:
- *   Pass 1 (fat water): Erode by 3px — removes thin features (rivers, coast strips),
- *     leaving only fat ocean cores and lakes. Ocean is identified but NOT stored as a
- *     polygon (the map background image already shows it).
- *   Pass 2 (thin water): Pixels in original mask NOT in eroded mask = thin features.
- *     Coast zone mask = dilate(fat ocean, 3px). Thin components inside this zone = coast.
- *     Thin components outside = river (if elongated/low fill-ratio).
+ * Distance transform approach (v3):
+ *   Each water pixel receives d = Chebyshev distance to nearest non-water pixel.
+ *   d ≤ RIVER_HALF_WIDTH → thin feature (river, coast strip).
+ *   d > RIVER_HALF_WIDTH → fat feature (ocean, lake).
+ *   This correctly splits a river from the ocean at the narrow junction even when
+ *   they are part of the same connected component — no global erosion needed.
+ *   Ocean fat component → dilated to build coast zone → thin near coast = coastline.
  *
  *   3. Moore Neighbor boundary tracing (per-component mask)
  *   4. Ramer-Douglas-Peucker polygon simplification
@@ -119,28 +119,49 @@ function isWaterPixel(
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Box erosion: a pixel survives only if ALL pixels within `radius` in every
- * direction are also water. Shrinks water regions by `radius` pixels on every side,
- * disconnecting thin features (rivers, coast strips) from fat bodies (ocean, lakes).
+ * Two-pass Chebyshev distance transform (Rosenfeld-Pfaltz).
+ * Returns a map where each water pixel holds its distance to the nearest
+ * non-water pixel (capped at `cap` for efficiency). Non-water pixels = 0.
+ *
+ * Chebyshev distance treats 8-connected neighbors as equidistant (no diagonal
+ * penalty), which is correct for raster water-width measurement.
  */
-function erode(mask: Uint8Array, width: number, height: number, radius: number): Uint8Array {
-  const result = new Uint8Array(mask.length)
+function chebyshevDistanceTransform(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  cap: number,
+): Uint8Array {
+  const init = Math.min(cap + 1, 255)
+  const dist = new Uint8Array(mask.length)
+  for (let i = 0; i < mask.length; i++) dist[i] = mask[i] ? init : 0
+
+  // Pass 1: top-left → bottom-right
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      if (!mask[y * width + x]) continue
-      let all = true
-      outer: for (let dy = -radius; dy <= radius && all; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          const nx = x + dx; const ny = y + dy
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height || !mask[ny * width + nx]) {
-            all = false; break outer
-          }
-        }
-      }
-      if (all) result[y * width + x] = 1
+      const i = y * width + x
+      if (!mask[i]) continue
+      if (y > 0 && x > 0)           dist[i] = Math.min(dist[i], dist[(y-1)*width+(x-1)] + 1)
+      if (y > 0)                    dist[i] = Math.min(dist[i], dist[(y-1)*width+x] + 1)
+      if (y > 0 && x < width - 1)  dist[i] = Math.min(dist[i], dist[(y-1)*width+(x+1)] + 1)
+      if (x > 0)                    dist[i] = Math.min(dist[i], dist[y*width+(x-1)] + 1)
     }
   }
-  return result
+
+  // Pass 2: bottom-right → top-left
+  for (let y = height - 1; y >= 0; y--) {
+    for (let x = width - 1; x >= 0; x--) {
+      const i = y * width + x
+      if (!mask[i]) continue
+      if (y < height-1 && x < width-1) dist[i] = Math.min(dist[i], dist[(y+1)*width+(x+1)] + 1)
+      if (y < height-1)                dist[i] = Math.min(dist[i], dist[(y+1)*width+x] + 1)
+      if (y < height-1 && x > 0)      dist[i] = Math.min(dist[i], dist[(y+1)*width+(x-1)] + 1)
+      if (x < width-1)                 dist[i] = Math.min(dist[i], dist[y*width+(x+1)] + 1)
+      if (dist[i] > cap) dist[i] = cap
+    }
+  }
+
+  return dist
 }
 
 /**
@@ -170,7 +191,7 @@ function dilate(mask: Uint8Array, width: number, height: number, radius: number)
 // Image decoding
 // ─────────────────────────────────────────────────────────────────────────────
 
-const GRID_SIZE = 384 // process at this resolution — larger = better river capture
+const GRID_SIZE = 512 // 512px — enough resolution to distinguish thin rivers from ocean
 
 interface PixelGrid {
   data: Buffer
@@ -285,8 +306,9 @@ function labelComponents(
 // Component classification
 // ─────────────────────────────────────────────────────────────────────────────
 
-const MIN_FAT_PIXEL_COUNT = 50  // minimum for ocean/lake components (post-erosion, 384px)
-const MIN_THIN_PIXEL_COUNT = 20 // minimum for river/coast components (384px resolution)
+const RIVER_HALF_WIDTH = 5      // water pixels with depth ≤ this are "thin" (river/coast)
+const MIN_FAT_PIXEL_COUNT = 60  // minimum for ocean/lake components (512px)
+const MIN_THIN_PIXEL_COUNT = 15 // minimum for river/coast components (512px)
 const MAX_COMPONENTS = 50
 
 /** Build a binary mask containing only this component's pixels. */
@@ -464,8 +486,8 @@ function rdpSimplify(
  * Analyzes the map image and returns pixel-accurate water terrain regions.
  *
  * Two-pass morphological approach:
- *   Fat pass  — eroded mask → ocean + lakes (thin features removed by erosion)
- *   Thin pass — original XOR eroded → rivers + coasts (thin features only)
+ *   Fat pass  — pixels with Chebyshev depth > RIVER_HALF_WIDTH → ocean + lakes
+ *   Thin pass — pixels with depth ≤ RIVER_HALF_WIDTH → rivers + coasts
  */
 export async function detectWaterRegions(
   imageUrl: string,
@@ -474,7 +496,7 @@ export async function detectWaterRegions(
   const { data, width, height } = await fetchImagePixels(imageUrl)
   const hueRanges = getWaterHueRanges(grammar)
   const totalSize = width * height
-  const RDP_EPSILON = 2.0
+  const RDP_EPSILON = 3.0 // scaled for 512px
 
   // ── Step 1: Build full water mask ──────────────────────────────────────────
   const waterMask = new Uint8Array(totalSize)
@@ -487,13 +509,17 @@ export async function detectWaterRegions(
   const totalWater = waterMask.reduce((s, v) => s + v, 0)
   if (totalWater < MIN_THIN_PIXEL_COUNT) return []
 
-  // ── Step 2: Erode by 3px → fat water only (rivers & coast strips disappear) ───
-  const erodedMask = erode(waterMask, width, height, 3)
+  // ── Step 2: Distance transform → each water pixel gets its depth (half-width) ──
+  // d ≤ RIVER_HALF_WIDTH → thin (river/coast);  d > RIVER_HALF_WIDTH → fat (ocean/lake)
+  const distMap = chebyshevDistanceTransform(waterMask, width, height, RIVER_HALF_WIDTH + 1)
 
-  // ── Step 3: Thin water = original minus eroded (rivers & coast strips) ────
+  // ── Step 3: Split into fat and thin masks using depth threshold ──────────────
+  const fatMask = new Uint8Array(totalSize)
   const thinMask = new Uint8Array(totalSize)
   for (let i = 0; i < totalSize; i++) {
-    if (waterMask[i] && !erodedMask[i]) thinMask[i] = 1
+    if (!waterMask[i]) continue
+    if (distMap[i] > RIVER_HALF_WIDTH) fatMask[i] = 1
+    else thinMask[i] = 1
   }
 
   const results: DetectedWaterRegion[] = []
@@ -513,11 +539,11 @@ export async function detectWaterRegions(
   }
 
   // ── Step 4: Fat components → identify ocean (coast zone anchor) + store lakes ──
-  const fatComponents = labelComponents(erodedMask, width, height)
+  const fatComponents = labelComponents(fatMask, width, height)
   const oceanLabel = findOceanLabel(fatComponents)
 
-  // Build coast zone: dilate the fat ocean mask so thin strips just outside it
-  // (the actual coastline pixels) are correctly identified as coast, not river.
+  // Build coast zone: dilate the fat ocean component outward by RIVER_HALF_WIDTH so
+  // thin-pass pixels just outside the fat ocean are classified as coast, not river.
   let coastZoneMask: Uint8Array = new Uint8Array(totalSize)
   const fatSorted = Array.from(fatComponents.values())
     .sort((a, b) => b.pixels.length - a.pixels.length)
@@ -527,12 +553,11 @@ export async function detectWaterRegions(
     const wt = classifyFatComponent(comp, oceanLabel)
     if (!wt) continue
     if (wt === 'ocean') {
-      // Build coast zone from the ocean's eroded footprint — dilate back outward
+      // Dilate the fat ocean to build coast zone (recover the thin boundary pixels)
       const oceanMask = buildCompMask(comp, totalSize, width)
-      coastZoneMask = dilate(oceanMask, width, height, 3)
+      coastZoneMask = dilate(oceanMask, width, height, RIVER_HALF_WIDTH)
       // Ocean itself: do NOT store a polygon (map background already shows it)
     } else {
-      // Lakes: store normally
       processComponent(comp, wt)
     }
   }
