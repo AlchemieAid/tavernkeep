@@ -42,11 +42,11 @@ export interface DetectedTerrainRegion {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const GRID_SIZE = 512
-const SCORE_THRESHOLD = 35
+const SCORE_THRESHOLD = 18      // ΔE ≈ 18; tighter than 35 which bled across terrain types
 const MIN_REGION_PIXELS = 40
 const RDP_EPSILON = 3.0
-const PATCH_RADIUS = 7  // 15×15 sample patch
-const GAP_BRIDGE_RADIUS: Record<GapBridge, number> = { tight: 2, medium: 8, wide: 20 }
+const PATCH_RADIUS = 4          // 9×9 sample patch (was 15×15 — more representative of click spot)
+const GAP_BRIDGE_RADIUS: Record<GapBridge, number> = { tight: 1, medium: 4, wide: 10 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CIELAB colour conversion
