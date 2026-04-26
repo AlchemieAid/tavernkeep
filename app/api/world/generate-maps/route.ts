@@ -6,7 +6,8 @@ import { buildMapGenerationPrompt } from '@/lib/prompts/mapGeneration'
 
 export const maxDuration = 60
 
-const MAX_GENERATIONS_PER_CAMPAIGN = 3
+const MAX_GENERATIONS_PER_CAMPAIGN = 3 // batches (each batch = 3 maps)
+const MAPS_PER_BATCH = 3
 
 export async function POST(request: Request) {
   const startTime = Date.now()
@@ -72,7 +73,8 @@ export async function POST(request: Request) {
       .eq('campaign_id', campaign_id)
       .eq('dm_id', user.id)
 
-    if ((existingCount ?? 0) >= MAX_GENERATIONS_PER_CAMPAIGN) {
+    const batchesUsed = Math.floor((existingCount ?? 0) / MAPS_PER_BATCH)
+    if (batchesUsed >= MAX_GENERATIONS_PER_CAMPAIGN) {
       return NextResponse.json(
         { data: null, error: { message: `Maximum of ${MAX_GENERATIONS_PER_CAMPAIGN} map generations per campaign reached` } },
         { status: 429 }

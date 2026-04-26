@@ -11,7 +11,8 @@ interface MapGenerateWizardProps {
   existingAiMapCount: number
 }
 
-const MAX_AI_GENERATIONS = 3
+const MAX_AI_GENERATIONS = 3 // batches; each batch generates 3 maps
+const MAPS_PER_BATCH = 3
 
 const MAP_STYLES = [
   { value: 'fantasy_painted', label: 'Fantasy Painted', desc: 'Lush, illustrated' },
@@ -68,7 +69,8 @@ export function MapGenerateWizard({ campaignId, campaignName, existingAiMapCount
   const [error, setError] = useState<string | null>(null)
   const [selecting, setSelecting] = useState(false)
 
-  const remainingGenerations = MAX_AI_GENERATIONS - existingAiMapCount
+  const generationsUsed = Math.floor(existingAiMapCount / MAPS_PER_BATCH)
+  const remainingGenerations = MAX_AI_GENERATIONS - generationsUsed
   const canGenerate = remainingGenerations > 0
 
   async function handleGenerate() {
