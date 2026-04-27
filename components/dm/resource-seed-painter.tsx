@@ -29,22 +29,119 @@ interface ResourceSeedPainterProps {
   onBack: () => void
 }
 
-// ─── Resource type catalogue ──────────────────────────────────────────────────
+// ─── Resource catalogue ─────────────────────────────────────────────────────
+//
+// `density` = multiplier on top of BASE_DENSITY (50 per full-map area unit).
+// Lower values = rarer resources. Add new types here AND add a matching entry
+// in RESOURCE_TERRAIN_AFFINITIES or the type will be skipped by auto-distribute.
+//
+// Categories mirror what the AI classifier would produce so the two approaches
+// produce consistent output. To add a new resource:
+//   1. Add an entry here with a unique `value`, display `label`, dot `color`, relative `density`, and `category`.
+//   2. Add a `value: string[]` entry in RESOURCE_TERRAIN_AFFINITIES.
 
-const RESOURCE_TYPES = [
-  { value: 'iron',    label: 'Iron',    color: '#78909C' },
-  { value: 'gold',    label: 'Gold',    color: '#FDD835' },
-  { value: 'timber',  label: 'Timber',  color: '#6D4C41' },
-  { value: 'fish',    label: 'Fish',    color: '#26C6DA' },
-  { value: 'stone',   label: 'Stone',   color: '#90A4AE' },
-  { value: 'coal',    label: 'Coal',    color: '#546E7A' },
-  { value: 'gems',    label: 'Gems',    color: '#AB47BC' },
-  { value: 'herbs',   label: 'Herbs',   color: '#66BB6A' },
-  { value: 'crops',   label: 'Crops',   color: '#FFA726' },
-  { value: 'game',    label: 'Game',    color: '#A5D6A7' },
-  { value: 'salt',    label: 'Salt',    color: '#E0E0E0' },
-  { value: 'peat',    label: 'Peat',    color: '#8D6E63' },
+const RESOURCE_CATEGORIES = ['Minerals', 'Food & Water', 'Nature', 'Trade', 'Special'] as const
+type ResourceCategory = typeof RESOURCE_CATEGORIES[number]
+
+const RESOURCE_TYPES: {
+  value: string; label: string; color: string; density: number; category: ResourceCategory
+}[] = [
+  // ── Minerals ────────────────────────────────────────────────────────────────
+  { value: 'iron_deposit',    label: 'Iron Deposit',    color: '#78909C', density: 0.9,  category: 'Minerals'      },
+  { value: 'copper_deposit',  label: 'Copper Deposit',  color: '#D4A574', density: 0.7,  category: 'Minerals'      },
+  { value: 'gold_vein',       label: 'Gold Vein',       color: '#FDD835', density: 0.35, category: 'Minerals'      },
+  { value: 'silver_vein',     label: 'Silver Vein',     color: '#CFD8DC', density: 0.4,  category: 'Minerals'      },
+  { value: 'mithril_seam',    label: 'Mithril Seam',    color: '#90CAF9', density: 0.08, category: 'Minerals'      }, // Very rare — deep peaks only
+  { value: 'gem_cluster',     label: 'Gem Cluster',     color: '#AB47BC', density: 0.3,  category: 'Minerals'      },
+  { value: 'coal_seam',       label: 'Coal Seam',       color: '#546E7A', density: 0.8,  category: 'Minerals'      },
+  { value: 'stone_quarry',    label: 'Stone Quarry',    color: '#90A4AE', density: 1.0,  category: 'Minerals'      },
+  { value: 'salt_flat',       label: 'Salt Flat',       color: '#E0E0E0', density: 0.5,  category: 'Minerals'      },
+  { value: 'sulfur_vent',     label: 'Sulfur Vent',     color: '#F9A825', density: 0.4,  category: 'Minerals'      },
+  // ── Food & Water ────────────────────────────────────────────────────────────
+  { value: 'fertile_farmland',label: 'Fertile Farmland',color: '#FFA726', density: 1.0,  category: 'Food & Water'  },
+  { value: 'grazing_land',    label: 'Grazing Land',    color: '#66BB6A', density: 0.9,  category: 'Food & Water'  },
+  { value: 'orchard',         label: 'Orchard',         color: '#43A047', density: 0.6,  category: 'Food & Water'  },
+  { value: 'deep_fishery',    label: 'Deep Fishery',    color: '#1565C0', density: 0.8,  category: 'Food & Water'  },
+  { value: 'coastal_fishery', label: 'Coastal Fishery', color: '#26C6DA', density: 1.0,  category: 'Food & Water'  },
+  { value: 'river_fishery',   label: 'River Fishery',   color: '#039BE5', density: 0.8,  category: 'Food & Water'  },
+  // ── Nature ──────────────────────────────────────────────────────────────────
+  { value: 'ancient_forest',  label: 'Ancient Forest',  color: '#1B5E20', density: 0.4,  category: 'Nature'        },
+  { value: 'managed_woodland',label: 'Managed Woodland',color: '#388E3C', density: 0.8,  category: 'Nature'        },
+  { value: 'rare_herbs',      label: 'Rare Herbs',      color: '#8BC34A', density: 0.5,  category: 'Nature'        },
+  // ── Trade ───────────────────────────────────────────────────────────────────
+  { value: 'natural_harbor',  label: 'Natural Harbor',  color: '#0277BD', density: 0.4,  category: 'Trade'         },
+  { value: 'river_ford',      label: 'River Ford',      color: '#29B6F6', density: 0.5,  category: 'Trade'         },
+  { value: 'mountain_pass',   label: 'Mountain Pass',   color: '#795548', density: 0.3,  category: 'Trade'         },
+  { value: 'trade_crossroads',label: 'Trade Crossroads',color: '#FF8F00', density: 0.3,  category: 'Trade'         },
+  { value: 'oasis',           label: 'Oasis',           color: '#00897B', density: 0.3,  category: 'Trade'         },
+  { value: 'river_confluence',label: 'River Confluence',color: '#0288D1', density: 0.35, category: 'Trade'         },
+  // ── Special ─────────────────────────────────────────────────────────────────
+  { value: 'arcane_nexus',    label: 'Arcane Nexus',    color: '#7C4DFF', density: 0.08, category: 'Special'       }, // Very rare — place manually
+  { value: 'ancient_ruins',   label: 'Ancient Ruins',   color: '#A1887F', density: 0.15, category: 'Special'       },
+  { value: 'volcanic_soil',   label: 'Volcanic Soil',   color: '#E53935', density: 0.6,  category: 'Special'       },
+  { value: 'hot_springs',     label: 'Hot Springs',     color: '#F06292', density: 0.35, category: 'Special'       },
 ]
+
+const RESOURCE_TYPE_MAP = Object.fromEntries(RESOURCE_TYPES.map(r => [r.value, r]))
+
+// ─── Terrain-resource affinities ─────────────────────────────────────────────
+//
+// Maps each resource value to terrain types where it naturally occurs.
+// Auto-distribute respects these; manual click placement ignores them.
+//
+// Design notes:
+//   - Metals form in elevated rocky terrain; mithril exclusively in high_mountains.
+//   - Gems form in volcanic / metamorphic rock (mountains, hills, volcanic).
+//   - Salt: coastal evaporation beds and arid desert flats.
+//   - Food resources map to the biome that produces them (water → fish, etc.).
+//   - Trade routes occur where geography creates natural chokepoints or crossings.
+//   - Special resources are rare; arcane_nexus and ancient_ruins span many terrains.
+//
+// NOTE: Intentionally kept as a code constant.
+// Future: `resource_terrain_affinities` DB table for per-campaign overrides.
+
+const RESOURCE_TERRAIN_AFFINITIES: Record<string, string[]> = {
+  // ── Minerals ────────────────────────────────────────────────────────────────
+  iron_deposit:    ['mountains', 'hills', 'high_mountains', 'badlands', 'volcanic'],
+  copper_deposit:  ['mountains', 'hills', 'high_mountains'],
+  gold_vein:       ['mountains', 'high_mountains', 'hills', 'badlands'],
+  silver_vein:     ['mountains', 'high_mountains', 'hills'],
+  mithril_seam:    ['high_mountains'],                        // Deepest peaks only
+  gem_cluster:     ['mountains', 'high_mountains', 'hills', 'volcanic'],
+  coal_seam:       ['mountains', 'hills', 'badlands'],
+  stone_quarry:    ['mountains', 'hills', 'high_mountains', 'badlands', 'volcanic', 'tundra', 'arctic'],
+  salt_flat:       ['coast', 'desert'],
+  sulfur_vent:     ['volcanic'],
+  // ── Food & Water ────────────────────────────────────────────────────────────
+  fertile_farmland:['plains', 'grassland', 'farmland'],
+  grazing_land:    ['plains', 'grassland', 'hills'],
+  orchard:         ['plains', 'grassland', 'farmland', 'forest'],
+  deep_fishery:    ['ocean', 'lake'],
+  coastal_fishery: ['coast', 'ocean'],
+  river_fishery:   ['river', 'lake', 'coast'],
+  // ── Nature ──────────────────────────────────────────────────────────────────
+  ancient_forest:  ['forest', 'jungle'],
+  managed_woodland:['forest'],
+  rare_herbs:      ['forest', 'jungle', 'swamp', 'plains', 'grassland'],
+  // ── Trade ───────────────────────────────────────────────────────────────────
+  natural_harbor:  ['coast', 'ocean'],
+  river_ford:      ['river'],
+  mountain_pass:   ['mountains', 'high_mountains', 'hills'],
+  trade_crossroads:['plains', 'grassland', 'farmland', 'desert'],
+  oasis:           ['desert'],
+  river_confluence:['river', 'lake'],
+  // ── Special ─────────────────────────────────────────────────────────────────
+  arcane_nexus:    ['forest', 'mountains', 'high_mountains', 'swamp', 'volcanic', 'arctic'],
+  ancient_ruins:   ['plains', 'grassland', 'desert', 'forest', 'mountains', 'badlands'],
+  volcanic_soil:   ['volcanic'],
+  hot_springs:     ['mountains', 'volcanic', 'tundra', 'arctic'],
+}
+
+/**
+ * Base scatter density: resources per full-map area unit (0–1 normalised).
+ * Terrain at 5% of map → area ≈ 0.05 → 50 × 0.05 × density placed points.
+ */
+const BASE_DENSITY = 50
 
 // ─── Geometry helpers ─────────────────────────────────────────────────────────
 
@@ -112,32 +209,33 @@ export function ResourceSeedPainter({
     }])
   }, [selectedResource, richness])
 
-  /** Auto-scatter resources across all terrain areas proportional to polygon size.
-   *  Density: 1 resource per ~2% of map area (density multiplier = 50). */
+  // Auto-distribute ALL resource types across their terrain affinities.
+  // For each resource: finds matching terrain areas → scatters points proportional
+  // to polygon area × BASE_DENSITY × per-type density.
   const handleAutoDistribute = useCallback(() => {
-    const DENSITY = 50
     const newPoints: PlacedResource[] = []
-    for (const area of terrainAreas) {
-      if (area.polygon.length < 3) continue
-      const area_fraction = polygonArea(area.polygon)
-      const count = Math.max(1, Math.round(area_fraction * DENSITY))
-      const pts = scatterInPolygon(area.polygon, count)
-      for (const pt of pts) {
-        newPoints.push({
-          id: crypto.randomUUID(),
-          x_pct: pt.x,
-          y_pct: pt.y,
-          resource_type: selectedResource,
-          richness,
-        })
+    for (const rt of RESOURCE_TYPES) {
+      const validTerrains = RESOURCE_TERRAIN_AFFINITIES[rt.value]
+      if (!validTerrains || validTerrains.length === 0) continue
+      const matchingAreas = terrainAreas.filter(a => validTerrains.includes(a.terrain_type))
+      for (const area of matchingAreas) {
+        if (area.polygon.length < 3) continue
+        const areaFraction = polygonArea(area.polygon)
+        const count = Math.max(1, Math.round(areaFraction * BASE_DENSITY * rt.density))
+        const pts = scatterInPolygon(area.polygon, count)
+        for (const pt of pts) {
+          newPoints.push({
+            id: crypto.randomUUID(),
+            x_pct: pt.x,
+            y_pct: pt.y,
+            resource_type: rt.value,
+            richness,
+          })
+        }
       }
     }
     setPlaced(prev => [...prev, ...newPoints])
-  }, [terrainAreas, selectedResource, richness])
-
-  const removeResource = useCallback((id: string) => {
-    setPlaced(prev => prev.filter(r => r.id !== id))
-  }, [])
+  }, [terrainAreas, richness])
 
   async function handleSave() {
     if (placed.length === 0) return
@@ -207,38 +305,50 @@ export function ResourceSeedPainter({
           {/* ── Left panel ── */}
           <div className="w-64 flex-shrink-0 space-y-5">
 
-            {/* Resource type picker */}
-            <div>
-              <div className="text-[10px] font-manrope font-semibold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
-                Resource Type
-              </div>
-              <div className="space-y-0.5">
-                {RESOURCE_TYPES.map(rt => {
-                  const isSelected = selectedResource === rt.value
-                  const cnt = countByType[rt.value] ?? 0
-                  return (
-                    <button
-                      key={rt.value}
-                      type="button"
-                      onClick={() => setSelectedResource(rt.value)}
-                      className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all ${
-                        isSelected ? 'bg-[#1e2023] ring-1 ring-primary/40' : 'hover:bg-[#1a1c1f]'
-                      }`}
-                    >
-                      <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: rt.color }} />
-                      <span className={`flex-1 text-xs font-manrope ${isSelected ? 'text-on-surface font-semibold' : 'text-on-surface-variant'}`}>
-                        {rt.label}
-                      </span>
-                      {cnt > 0 && (
-                        <span className="text-[10px] font-manrope font-bold px-1.5 py-0.5 rounded-full"
-                          style={{ backgroundColor: `${rt.color}33`, color: rt.color }}>
-                          {cnt}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
+            {/* Resource type picker — grouped by category */}
+            <div className="overflow-y-auto max-h-[calc(100vh-340px)] space-y-3 pr-1">
+              {RESOURCE_CATEGORIES.map(cat => {
+                const typesInCat = RESOURCE_TYPES.filter(r => r.category === cat)
+                return (
+                  <div key={cat}>
+                    <div className="text-[10px] font-manrope font-semibold text-on-surface-variant uppercase tracking-widest mb-1 px-1">
+                      {cat}
+                    </div>
+                    <div className="space-y-0.5">
+                      {typesInCat.map(rt => {
+                        const isSelected = selectedResource === rt.value
+                        const cnt = countByType[rt.value] ?? 0
+                        const hasAffinity = (RESOURCE_TERRAIN_AFFINITIES[rt.value] ?? []).some(t =>
+                          terrainAreas.some(a => a.terrain_type === t)
+                        )
+                        return (
+                          <button
+                            key={rt.value}
+                            type="button"
+                            onClick={() => setSelectedResource(rt.value)}
+                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all ${
+                              isSelected ? 'bg-[#1e2023] ring-1 ring-primary/40' : 'hover:bg-[#1a1c1f]'
+                            }`}
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: rt.color }} />
+                            <span className={`flex-1 text-[11px] font-manrope ${
+                              isSelected ? 'text-on-surface font-semibold' : hasAffinity ? 'text-on-surface-variant' : 'text-on-surface-variant opacity-40'
+                            }`}>
+                              {rt.label}
+                            </span>
+                            {cnt > 0 && (
+                              <span className="text-[9px] font-manrope font-bold px-1 py-0.5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: `${rt.color}33`, color: rt.color }}>
+                                {cnt}
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             {/* Richness slider */}

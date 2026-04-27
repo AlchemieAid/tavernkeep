@@ -374,35 +374,15 @@ export function MapSetupWizard({
 
       <div className="mt-8">
         {currentStage === 'terrain_classified' && resourceMode === null ? (
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => setResourceMode('manual')}
-              className="w-full flex items-start gap-4 px-5 py-4 rounded-xl bg-[#1e2023] hover:bg-[#252729] ring-1 ring-primary/20 transition-colors text-left"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#261a00] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <TreePine className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-manrope font-semibold text-on-surface">Manual Placement</div>
-                <div className="text-xs font-manrope text-on-surface-variant mt-0.5">Click the map to place resources, or auto-distribute across terrain areas.</div>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={runStage}
-              disabled={running}
-              className="w-full flex items-start gap-4 px-5 py-4 rounded-xl bg-[#1a1c1f] hover:bg-[#1e2023] ring-1 ring-[#3a3d42]/50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#282a2d] flex items-center justify-center flex-shrink-0 mt-0.5">
-                {running ? <Loader2 className="w-4 h-4 text-on-surface-variant animate-spin" /> : <MapPin className="w-4 h-4 text-on-surface-variant" />}
-              </div>
-              <div>
-                <div className="text-sm font-manrope font-semibold text-on-surface">AI Placement (Experimental)</div>
-                <div className="text-xs font-manrope text-on-surface-variant mt-0.5">Let AI read the terrain and scatter resources automatically.</div>
-              </div>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setResourceMode('manual')}
+            className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-manrope font-semibold text-sm text-[#3f2e00] transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
+          >
+            <TreePine className="w-4 h-4" />
+            Place Resources
+          </button>
         ) : currentStage === 'created' && terrainMode !== 'ai' ? (
           <TerrainModeSelector onSelect={(mode) => {
             if (mode === 'ai') setTerrainMode('ai')
