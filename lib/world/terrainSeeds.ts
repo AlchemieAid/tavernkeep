@@ -45,8 +45,9 @@ export interface DetectedTerrainRegion {
 const GRID_SIZE = 512
 const SCORE_THRESHOLD = 18          // ΔE ≈ 18 for normal terrain
 const NARROW_SCORE_THRESHOLD = 12   // ΔE ≈ 12 for thin linear features (rivers, coast)
-const RIVER_EDGE_STOP = 0.12        // Normalised Sobel magnitude; stops BFS at bank lines
+const RIVER_EDGE_STOP = 0.22        // Normalised Sobel magnitude; stops BFS at bank lines (0.22 = strong bank only, not internal river texture)
 const MIN_REGION_PIXELS = 40
+const MIN_NARROW_REGION_PIXELS = 10  // Rivers can be thin — lower threshold to avoid discarding them
 const RDP_EPSILON = 3.0
 const PATCH_RADIUS = 4              // 9×9 sample patch
 const GX_KERNEL = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
@@ -382,7 +383,8 @@ export async function detectTerrainFromSeeds(
     }
 
     const pixelCount = regionMask.reduce((s, v) => s + v, 0)
-    if (pixelCount < MIN_REGION_PIXELS) continue
+    const minPixels = isNarrow ? MIN_NARROW_REGION_PIXELS : MIN_REGION_PIXELS
+    if (pixelCount < minPixels) continue
 
     const boundary = traceBoundary(regionMask, width, height, pixelCount)
     if (boundary.length < 3) continue

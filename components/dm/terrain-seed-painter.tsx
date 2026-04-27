@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Loader2, X, Check, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, Loader2, X, Check, AlertTriangle, Eye, EyeOff } from 'lucide-react'
 import { TERRAIN_TYPES, TERRAIN_TYPE_MAP, TERRAIN_GROUPS, NARROW_TERRAIN_TYPES } from '@/lib/constants/terrain-types'
 import type { DetectedTerrainRegion } from '@/lib/world/terrainSeeds'
 
@@ -154,8 +154,25 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
     }
   }
 
+  const [showUnallocated, setShowUnallocated] = useState(false)
+
   const typesWithSeeds = useMemo(() => [...new Set(seeds.map(s => s.terrain_type))], [seeds])
   const savedRegionCount = Object.values(regionByType).filter(Boolean).length
+
+  const coveragePct = useMemo(() => {
+    const polygons = Object.values(regionByType).filter(Boolean) as DetectedTerrainRegion[]
+    let total = 0
+    for (const r of polygons) {
+      const poly = r.polygon
+      let area = 0
+      for (let i = 0; i < poly.length; i++) {
+        const j = (i + 1) % poly.length
+        area += poly[i].x * poly[j].y - poly[j].x * poly[i].y
+      }
+      total += Math.abs(area) / 2
+    }
+    return Math.min(100, Math.round(total * 1000) / 10)
+  }, [regionByType])
 
   return (
     <div className="min-h-screen bg-[#111316]">
@@ -252,6 +269,29 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
           {/* ── Right panel: map + overlay ── */}
           <div className="flex-1 min-w-0 flex flex-col gap-3">
 
+            {/* Coverage bar */}
+            {coveragePct > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-1.5 rounded-full bg-[#282a2d] overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${coveragePct}%`, background: 'linear-gradient(90deg, #ffc637, #e2aa00)' }}
+                  />
+                </div>
+                <span className="text-xs font-manrope font-semibold text-primary w-12 text-right flex-shrink-0">
+                  {coveragePct}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowUnallocated(v => !v)}
+                  title={showUnallocated ? 'Hide unallocated overlay' : 'Show unallocated map space'}
+                  className={`p-1 rounded transition-colors ${showUnallocated ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                >
+                  {showUnallocated ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            )}
+
             {/* Focus chips — one per type that has seeds */}
             {typesWithSeeds.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -303,8 +343,23 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
               >
-                {/* Only the focused type's region overlay */}
-                {(() => {
+                {/* Unallocated overlay: dark mask + all allocated regions showing through */}
+                {showUnallocated && (
+                  <>
+                    <rect x="0" y="0" width="100" height="100" fill="#000" fillOpacity={0.55} />
+                    {Object.entries(regionByType).map(([type, region]) => {
+                      if (!region) return null
+                      const color = TERRAIN_TYPE_MAP[type]?.color ?? '#888'
+                      const points = region.polygon.map(p => `${p.x * 100},${p.y * 100}`).join(' ')
+                      return (
+                        <polygon key={type} points={points} fill={color} fillOpacity={0.75}
+                          stroke={color} strokeWidth="0.15" strokeOpacity={0.9} />
+                      )
+                    })}
+                  </>
+                )}
+                {/* Focused type's region overlay (always shown) */}
+                {!showUnallocated && (() => {
                   const region = regionByType[selectedType]
                   const def = TERRAIN_TYPE_MAP[selectedType]
                   const color = def?.color ?? '#888'

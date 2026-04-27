@@ -98,6 +98,7 @@ export default async function MapViewPage({
         campaignName={campaign?.name ?? ''}
         terrainAreaCount={normalizedTerrainAreas.length}
         resourcePointCount={normalizedResourcePoints.length}
+        terrainAreas={normalizedTerrainAreas.map(a => ({ id: a.id, terrain_type: a.terrain_type, polygon: a.polygon }))}
       />
     )
   }
