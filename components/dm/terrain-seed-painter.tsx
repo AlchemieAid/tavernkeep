@@ -31,7 +31,7 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
     () => Object.fromEntries(TERRAIN_TYPES.map(t => [t.value, t.defaultDilation]))
   )
   const [seeds, setSeeds] = useState<SeedEntry[]>([])
-  const [regionByType, setRegionByType] = useState<Record<string, DetectedTerrainRegion | null>>({})
+  const [regionByType, setRegionByType] = useState<Record<string, DetectedTerrainRegion[] | null>>({})
   const [detectingTypes, setDetectingTypes] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +78,8 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
       const json = await res.json()
       if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Detection failed')
       const regions: DetectedTerrainRegion[] = json.data ?? []
-      setRegionByType(prev => ({ ...prev, [terrainType]: regions.find(r => r.terrain_type === terrainType) ?? null }))
+      const forType = regions.filter(r => r.terrain_type === terrainType)
+      setRegionByType(prev => ({ ...prev, [terrainType]: forType.length > 0 ? forType : null }))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Detection failed')
     } finally {
@@ -121,7 +122,7 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
   }, [scheduleFill])
 
   async function handleSave() {
-    const toSave = Object.values(regionByType).filter(Boolean) as DetectedTerrainRegion[]
+    const toSave = (Object.values(regionByType).filter(Boolean) as DetectedTerrainRegion[][]).flat()
     if (toSave.length === 0) return
     setIsSaving(true)
     setError(null)
@@ -157,10 +158,10 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
   const [showUnallocated, setShowUnallocated] = useState(false)
 
   const typesWithSeeds = useMemo(() => [...new Set(seeds.map(s => s.terrain_type))], [seeds])
-  const savedRegionCount = Object.values(regionByType).filter(Boolean).length
+  const savedRegionCount = Object.values(regionByType).filter(a => a && a.length > 0).length
 
   const coveragePct = useMemo(() => {
-    const polygons = Object.values(regionByType).filter(Boolean) as DetectedTerrainRegion[]
+    const polygons = (Object.values(regionByType).filter(Boolean) as DetectedTerrainRegion[][]).flat()
     let total = 0
     for (const r of polygons) {
       const poly = r.polygon
@@ -315,7 +316,7 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: def?.color ?? '#888' }} />
                       {def?.label ?? type}
                       {detectingTypes.has(type) && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
-                      {!detectingTypes.has(type) && regionByType[type] && <Check className="w-2.5 h-2.5" />}
+                      {!detectingTypes.has(type) && (regionByType[type]?.length ?? 0) > 0 && <Check className="w-2.5 h-2.5" />}
                     </button>
                   )
                 })}
@@ -347,35 +348,36 @@ export function TerrainSeedPainter({ mapId, campaignId, mapImageUrl, onBack }: T
                 {showUnallocated && (
                   <>
                     <rect x="0" y="0" width="100" height="100" fill="#000" fillOpacity={0.55} />
-                    {Object.entries(regionByType).map(([type, region]) => {
-                      if (!region) return null
-                      const color = TERRAIN_TYPE_MAP[type]?.color ?? '#888'
-                      const points = region.polygon.map(p => `${p.x * 100},${p.y * 100}`).join(' ')
-                      return (
-                        <polygon key={type} points={points} fill={color} fillOpacity={0.75}
-                          stroke={color} strokeWidth="0.15" strokeOpacity={0.9} />
-                      )
-                    })}
+                    {Object.entries(regionByType).flatMap(([type, regions]) =>
+                      (regions ?? []).map((region, ri) => {
+                        const color = TERRAIN_TYPE_MAP[type]?.color ?? '#888'
+                        const points = region.polygon.map(p => `${p.x * 100},${p.y * 100}`).join(' ')
+                        return (
+                          <polygon key={`${type}-${ri}`} points={points} fill={color} fillOpacity={0.75}
+                            stroke={color} strokeWidth="0.15" strokeOpacity={0.9} />
+                        )
+                      })
+                    )}
                   </>
                 )}
-                {/* Focused type's region overlay (always shown) */}
-                {!showUnallocated && (() => {
-                  const region = regionByType[selectedType]
-                  const def = TERRAIN_TYPE_MAP[selectedType]
-                  const color = def?.color ?? '#888'
-                  if (!region) return null
-                  const points = region.polygon.map(p => `${p.x * 100},${p.y * 100}`).join(' ')
-                  return (
-                    <polygon
-                      points={points}
-                      fill={color}
-                      fillOpacity={0.45}
-                      stroke={color}
-                      strokeWidth="0.2"
-                      strokeOpacity={0.8}
-                    />
-                  )
-                })()}
+                {/* Focused type's region polygons (one per connected component) */}
+                {!showUnallocated && (
+                  (regionByType[selectedType] ?? []).map((region, ri) => {
+                    const color = TERRAIN_TYPE_MAP[selectedType]?.color ?? '#888'
+                    const points = region.polygon.map(p => `${p.x * 100},${p.y * 100}`).join(' ')
+                    return (
+                      <polygon
+                        key={ri}
+                        points={points}
+                        fill={color}
+                        fillOpacity={0.45}
+                        stroke={color}
+                        strokeWidth="0.2"
+                        strokeOpacity={0.8}
+                      />
+                    )
+                  })
+                )}
                 {/* Seed pins for focused type */}
                 {seeds
                   .filter(s => s.terrain_type === selectedType)

@@ -382,21 +382,46 @@ export async function detectTerrainFromSeeds(
       for (let i = 0; i < width * height; i++) if (region[i]) regionMask[i] = 1
     }
 
-    const pixelCount = regionMask.reduce((s, v) => s + v, 0)
     const minPixels = isNarrow ? MIN_NARROW_REGION_PIXELS : MIN_REGION_PIXELS
-    if (pixelCount < minPixels) continue
 
-    const boundary = traceBoundary(regionMask, width, height, pixelCount)
-    if (boundary.length < 3) continue
-    const simplified = rdpSimplify(boundary, RDP_EPSILON)
-    if (simplified.length < 3) continue
+    // Decompose regionMask into connected components; trace each separately.
+    // This ensures two disconnected same-type areas (e.g. ocean top + ocean bottom)
+    // both produce polygons instead of only the first one found.
+    const compVisited = new Uint8Array(regionMask.length)
+    for (let startIdx = 0; startIdx < regionMask.length; startIdx++) {
+      if (!regionMask[startIdx] || compVisited[startIdx]) continue
 
-    const polygon = simplified.map(p => ({
-      x: Math.round((p.x / (width - 1)) * 10000) / 10000,
-      y: Math.round((p.y / (height - 1)) * 10000) / 10000,
-    }))
+      const compMask = new Uint8Array(regionMask.length)
+      const q = new Int32Array(regionMask.length)
+      let head = 0, tail = 0
+      q[tail++] = startIdx
+      compVisited[startIdx] = 1
+      compMask[startIdx] = 1
+      while (head < tail) {
+        const idx = q[head++]
+        const x = idx % width
+        const y = (idx - x) / width
+        if (x > 0           && !compVisited[idx - 1]     && regionMask[idx - 1])     { compVisited[idx - 1]     = 1; compMask[idx - 1]     = 1; q[tail++] = idx - 1 }
+        if (x < width - 1  && !compVisited[idx + 1]     && regionMask[idx + 1])     { compVisited[idx + 1]     = 1; compMask[idx + 1]     = 1; q[tail++] = idx + 1 }
+        if (y > 0           && !compVisited[idx - width] && regionMask[idx - width]) { compVisited[idx - width] = 1; compMask[idx - width] = 1; q[tail++] = idx - width }
+        if (y < height - 1 && !compVisited[idx + width] && regionMask[idx + width]) { compVisited[idx + width] = 1; compMask[idx + width] = 1; q[tail++] = idx + width }
+      }
 
-    results.push({ terrain_type: terrainType, polygon, pixelCount })
+      const compPixelCount = compMask.reduce((s, v) => s + v, 0)
+      if (compPixelCount < minPixels) continue
+
+      const boundary = traceBoundary(compMask, width, height, compPixelCount)
+      if (boundary.length < 3) continue
+      const simplified = rdpSimplify(boundary, RDP_EPSILON)
+      if (simplified.length < 3) continue
+
+      const polygon = simplified.map(p => ({
+        x: Math.round((p.x / (width - 1)) * 10000) / 10000,
+        y: Math.round((p.y / (height - 1)) * 10000) / 10000,
+      }))
+
+      results.push({ terrain_type: terrainType, polygon, pixelCount: compPixelCount })
+    }
   }
 
   return results
