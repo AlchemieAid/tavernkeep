@@ -258,6 +258,8 @@ export type Database = {
           map_style: string | null
           original_filename: string | null
           setup_stage: string
+          wealth_ceiling: number
+          wealth_floor: number
           width_px: number | null
         }
         Insert: {
@@ -276,6 +278,8 @@ export type Database = {
           map_style?: string | null
           original_filename?: string | null
           setup_stage?: string
+          wealth_ceiling?: number
+          wealth_floor?: number
           width_px?: number | null
         }
         Update: {
@@ -294,6 +298,8 @@ export type Database = {
           map_style?: string | null
           original_filename?: string | null
           setup_stage?: string
+          wealth_ceiling?: number
+          wealth_floor?: number
           width_px?: number | null
         }
         Relationships: [

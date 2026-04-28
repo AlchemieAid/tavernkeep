@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PlaceTownSchema } from '@/lib/validators/world'
 import { createAIClient } from '@/lib/ai'
 import { buildWorldContext, buildEconomicContextForAI } from '@/lib/world/worldBuilder'
+import { remapWealthScore } from '@/lib/world/wealthField'
 import { TOWN_FROM_ECONOMICS_SYSTEM_PROMPT, buildTownFromEconomicsPrompt } from '@/lib/prompts/townFromEconomics'
 import type { ResourcePoint, TerrainArea, PlacedPoI } from '@/lib/world/resourceInterpolation'
 import type { TownNode } from '@/lib/world/gravityModel'
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
 
     const { data: map, error: mapError } = await supabase
       .from('campaign_maps')
-      .select('id, dm_id, map_size, biome_profile')
+      .select('id, dm_id, map_size, biome_profile, wealth_floor, wealth_ceiling')
       .eq('id', map_id)
       .eq('dm_id', user.id)
       .single()
@@ -86,6 +87,9 @@ export async function POST(request: Request) {
       name: t.name ?? null,
     }))
 
+    const wealthFloor   = (map.wealth_floor   as number | null) ?? 0.0
+    const wealthCeiling  = (map.wealth_ceiling  as number | null) ?? 1.0
+
     const worldContext = buildWorldContext({
       qx: x_pct,
       qy: y_pct,
@@ -96,6 +100,11 @@ export async function POST(request: Request) {
       biome_profile: map.biome_profile ?? undefined,
       map_size: (map.map_size as 'region' | 'kingdom' | 'continent') ?? 'region',
     })
+
+    // Apply per-map wealth bounds: remap raw score into DM's chosen range
+    const rawWealthScore = worldContext.economic.wealth_score
+    const boundedWealthScore = remapWealthScore(rawWealthScore, wealthFloor, wealthCeiling)
+    worldContext.economic.wealth_score = boundedWealthScore
 
     const economicContextText = buildEconomicContextForAI(worldContext)
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -8,6 +8,7 @@ import {
   Maximize2, X, AlertTriangle, SkipForward, RefreshCw,
 } from 'lucide-react'
 import { TerrainModeSelector, type TerrainMode } from '@/components/dm/terrain-mode-selector'
+import { WEALTH_LABEL_THRESHOLDS } from '@/lib/world/wealthField'
 import { TerrainSeedPainter } from '@/components/dm/terrain-seed-painter'
 import { TerrainZonePainter } from '@/components/dm/terrain-zone-painter'
 import { ResourceSeedPainter } from '@/components/dm/resource-seed-painter'
@@ -30,6 +31,8 @@ interface MapSetupWizardProps {
   terrainAreaCount: number
   resourcePointCount: number
   terrainAreas: TerrainAreaShape[]
+  wealthFloor: number
+  wealthCeiling: number
 }
 
 type Stage = 'created' | 'terrain_classified' | 'resources_placed'
@@ -68,6 +71,8 @@ export function MapSetupWizard({
   terrainAreaCount,
   resourcePointCount,
   terrainAreas,
+  wealthFloor: initialFloor,
+  wealthCeiling: initialCeiling,
 }: MapSetupWizardProps) {
   const router = useRouter()
   const currentStage = map.setup_stage as Stage
@@ -80,6 +85,20 @@ export function MapSetupWizard({
   const [skippedLayers, setSkippedLayers] = useState<string[]>([])
   const [terrainMode, setTerrainMode] = useState<TerrainMode | null>(null)
   const [resourceMode, setResourceMode] = useState<'manual' | null>(null)
+  const [wealthFloor, setWealthFloor] = useState(initialFloor)
+  const [wealthCeiling, setWealthCeiling] = useState(initialCeiling)
+  const [boundsError, setBoundsError] = useState<string | null>(null)
+
+  const saveBounds = useCallback(async (floor: number, ceiling: number) => {
+    setBoundsError(null)
+    const res = await fetch('/api/world/map-settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ map_id: map.id, campaign_id: campaignId, wealth_floor: floor, wealth_ceiling: ceiling }),
+    })
+    const json = await res.json()
+    if (!res.ok || json.error) setBoundsError(json.error?.message ?? 'Failed to save')
+  }, [map.id, campaignId])
 
   if (currentStage === 'terrain_classified' && resourceMode === 'manual') {
     return (
@@ -369,6 +388,55 @@ export function MapSetupWizard({
       {error && (
         <div className="mt-6 rounded-lg bg-[#93000a]/20 px-4 py-3 text-sm font-manrope text-[#ffb4ab]">
           {error}
+        </div>
+      )}
+
+      {currentStage === 'resources_placed' && (
+        <div className="mt-8 rounded-xl bg-[#1e2023] ring-1 ring-[#3a3d42]/60 p-5">
+          <div className="mb-4">
+            <div className="text-sm font-manrope font-semibold text-on-surface">World Economy</div>
+            <div className="text-xs font-manrope text-on-surface-variant mt-0.5">
+              Set the prosperity range for this map. Towns will be remapped into this range when placed.
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-manrope text-on-surface-variant mb-1.5">Minimum prosperity</label>
+              <select
+                value={wealthFloor}
+                onChange={e => {
+                  const val = parseFloat(e.target.value)
+                  if (val < wealthCeiling) { setWealthFloor(val); void saveBounds(val, wealthCeiling) }
+                }}
+                className="w-full bg-[#111316] border border-[#3a3d42] rounded-lg px-3 py-2 text-sm font-manrope text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
+              >
+                {WEALTH_LABEL_THRESHOLDS.slice(0, -1).map(t => (
+                  <option key={t.label} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-manrope text-on-surface-variant mb-1.5">Maximum prosperity</label>
+              <select
+                value={wealthCeiling}
+                onChange={e => {
+                  const val = parseFloat(e.target.value)
+                  if (val > wealthFloor) { setWealthCeiling(val); void saveBounds(wealthFloor, val) }
+                }}
+                className="w-full bg-[#111316] border border-[#3a3d42] rounded-lg px-3 py-2 text-sm font-manrope text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
+              >
+                {WEALTH_LABEL_THRESHOLDS.slice(1).map(t => (
+                  <option key={t.label} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {boundsError && (
+            <p className="mt-2 text-xs font-manrope text-[#ffb4ab]">{boundsError}</p>
+          )}
+          <p className="mt-3 text-xs font-manrope text-on-surface-variant opacity-60">
+            Changing these after towns are placed won&apos;t update existing towns.
+          </p>
         </div>
       )}
 

@@ -9,6 +9,30 @@ export type WealthLabel =
   | 'Prosperous'
   | 'Opulent'
 
+/**
+ * Ordered list of wealth tiers and the minimum score at which each applies.
+ * Exported so UI dropdowns can be built without hardcoding the thresholds.
+ */
+export const WEALTH_LABEL_THRESHOLDS: ReadonlyArray<{ label: WealthLabel; value: number }> = [
+  { label: 'Destitute',   value: 0.00 },
+  { label: 'Poor',        value: 0.10 },
+  { label: 'Modest',      value: 0.22 },
+  { label: 'Comfortable', value: 0.36 },
+  { label: 'Wealthy',     value: 0.50 },
+  { label: 'Prosperous',  value: 0.65 },
+  { label: 'Opulent',     value: 0.80 },
+]
+
+/**
+ * Linearly remaps a raw wealth score (0–1) into a DM-defined [floor, ceiling]
+ * range before storing it.  floor=0, ceiling=1 → identity (no change).
+ * Example: floor=0.10 (Poor), ceiling=0.50 (Wealthy) means even the most
+ * resource-rich location in this map tops out at Wealthy.
+ */
+export function remapWealthScore(raw: number, floor: number, ceiling: number): number {
+  return Math.max(0, Math.min(1, floor + raw * (ceiling - floor)))
+}
+
 const WEALTH_DIMENSION_WEIGHTS: Record<keyof ResourceScores, number> = {
   agriculture:  0.25,
   fishing:      0.10,

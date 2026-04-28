@@ -99,6 +99,8 @@ export default async function MapViewPage({
         terrainAreaCount={normalizedTerrainAreas.length}
         resourcePointCount={normalizedResourcePoints.length}
         terrainAreas={normalizedTerrainAreas.map(a => ({ id: a.id, terrain_type: a.terrain_type, polygon: a.polygon }))}
+        wealthFloor={map.wealth_floor ?? 0}
+        wealthCeiling={map.wealth_ceiling ?? 1}
       />
     )
   }
