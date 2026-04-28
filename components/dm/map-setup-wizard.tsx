@@ -292,7 +292,7 @@ export function MapSetupWizard({
         </div>
       )}
 
-      <div className="mt-8 space-y-4">
+      {terrainMode === 'ai' && <div className="mt-8 space-y-4">
         {STAGES.map((s, i) => {
           const done = i < stageIndex
           const active = i === stageIndex
@@ -347,7 +347,7 @@ export function MapSetupWizard({
             </div>
           )
         })}
-      </div>
+      </div>}
 
       {warning && !running && (
         <div className="mt-4 rounded-lg bg-[#332200]/60 border border-[#ffc637]/20 px-4 py-3 flex items-start gap-3">
