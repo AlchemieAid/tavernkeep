@@ -254,7 +254,7 @@ export function ResourceSeedPainter({
             y_pct: r.y_pct,
             resource_type: r.resource_type,
             richness: r.richness,
-            influence_radius_pct: 0.08,
+            influence_radius_pct: 0.15,
           })),
         }),
       })

@@ -120,37 +120,11 @@ export function computeIDW(
 ): IDWResult {
   const scores: ResourceScores = { ...ZERO_SCORES }
 
-  // ── Resource point contributions ─────────────────────────────────────────
-  let totalWeight = 0
-  const dimensionWeightedSums: ResourceScores = { ...ZERO_SCORES }
-
-  for (const rp of resourcePoints) {
-    const dist = euclideanDistance(qx, qy, rp.x_pct, rp.y_pct)
-    if (dist > rp.influence_radius_pct) continue
-    if (dist < 1e-10) {
-      // Exact coincidence — cap to avoid infinity
-      const dims = RESOURCE_DIMENSIONS[rp.resource_type] ?? {}
-      const w = 1e6
-      totalWeight += w
-      for (const dim of Object.keys(dimensionWeightedSums) as Array<keyof ResourceScores>) {
-        dimensionWeightedSums[dim] += rp.richness * (dims[dim] ?? 0) * w
-      }
-      continue
-    }
-    const w = 1 / (dist * dist)
-    totalWeight += w
-    const dims = RESOURCE_DIMENSIONS[rp.resource_type] ?? {}
-    for (const dim of Object.keys(dimensionWeightedSums) as Array<keyof ResourceScores>) {
-      dimensionWeightedSums[dim] += rp.richness * (dims[dim] ?? 0) * w
-    }
-  }
-
-  // ── Phase 1: normalise resource-point IDW or fall back to terrain ─────────
+  // ── Terrain Gaussian blend (always computed) ──────────────────────────────
+  // Terrain is the ecological foundation — always present regardless of
+  // whether resource points are nearby.
   let dominantTerrain = 'plains'
 
-  // Compute Gaussian soft-blend weights for every terrain blob.
-  // Terrains CAN overlap — the scores at any point are a weighted average
-  // of all nearby terrain types, smoothly blending across boundaries.
   const terrainContribs = terrainAreas.map(area => {
     const centroid = polygonCentroid(area.polygon)
     const sigma = polygonMeanRadius(area.polygon)
@@ -161,23 +135,70 @@ export function computeIDW(
 
   const totalTerrainWeight = terrainContribs.reduce((s, tc) => s + tc.weight, 0)
 
-  if (totalWeight > 0) {
-    for (const dim of Object.keys(scores) as Array<keyof ResourceScores>) {
-      scores[dim] = dimensionWeightedSums[dim] / totalWeight
-    }
-  } else if (totalTerrainWeight > 0) {
-    // Blend terrain base scores proportionally to Gaussian weights
+  const terrainScores: ResourceScores = { ...ZERO_SCORES }
+  if (totalTerrainWeight > 0) {
     for (const { area, weight } of terrainContribs) {
       const base = TERRAIN_BASE_SCORES[area.terrain_type]
       if (!base) continue
       const w = weight / totalTerrainWeight
-      for (const dim of Object.keys(scores) as Array<keyof ResourceScores>) {
-        scores[dim] += base[dim] * w
+      for (const dim of Object.keys(terrainScores) as Array<keyof ResourceScores>) {
+        terrainScores[dim] += base[dim] * w
       }
     }
-  } else {
-    // Query point is beyond every terrain blob's 2.5-sigma radius — fall back
-    // to the nearest centroid (should be rare for well-covering blob sets)
+  }
+
+  // ── Per-dimension resource IDW ────────────────────────────────────────────
+  // Each score dimension is interpolated independently using only the resource
+  // points that contribute to that dimension.  This prevents an iron deposit
+  // from diluting agriculture or fishing scores — a critical correctness fix.
+  // Weights across dimensions are NOT shared.
+  const resourceScores: ResourceScores = { ...ZERO_SCORES }
+  const dimHasContrib: Partial<Record<keyof ResourceScores, boolean>> = {}
+
+  // Precompute in-range resource points and their IDW weights
+  type WeightedRP = ResourcePoint & { _w: number }
+  const inRange: WeightedRP[] = []
+  for (const rp of resourcePoints) {
+    const dist = euclideanDistance(qx, qy, rp.x_pct, rp.y_pct)
+    if (dist > rp.influence_radius_pct) continue
+    const w = dist < 1e-10 ? 1e6 : 1 / (dist * dist)
+    inRange.push({ ...rp, _w: w })
+  }
+
+  for (const dim of Object.keys(resourceScores) as Array<keyof ResourceScores>) {
+    let dimWeightedSum = 0
+    let dimTotalWeight = 0
+    for (const rp of inRange) {
+      const dimValue = RESOURCE_DIMENSIONS[rp.resource_type]?.[dim] ?? 0
+      if (dimValue === 0) continue
+      dimWeightedSum += rp.richness * dimValue * rp._w
+      dimTotalWeight += rp._w
+    }
+    if (dimTotalWeight > 0) {
+      resourceScores[dim] = dimWeightedSum / dimTotalWeight
+      dimHasContrib[dim] = true
+    }
+  }
+
+  // ── Blend: terrain (foundation) + resources (amplification) ──────────────
+  // Where resources exist for a dimension: 60% resource + 40% terrain.
+  // Where no resources exist for a dimension: 100% terrain baseline.
+  // This ensures terrain ecology is always reflected, while resources
+  // provide meaningful uplift on top of the natural foundation.
+  const RESOURCE_WEIGHT = 0.60
+  const TERRAIN_WEIGHT  = 0.40
+
+  for (const dim of Object.keys(scores) as Array<keyof ResourceScores>) {
+    const key = dim as keyof ResourceScores
+    if (dimHasContrib[key]) {
+      scores[key] = resourceScores[key] * RESOURCE_WEIGHT + terrainScores[key] * TERRAIN_WEIGHT
+    } else {
+      scores[key] = terrainScores[key]
+    }
+  }
+
+  // Fall-back when no terrain blobs reach this point
+  if (totalTerrainWeight === 0 && inRange.length === 0) {
     let minDist = Infinity
     for (const area of terrainAreas) {
       const c = polygonCentroid(area.polygon)
@@ -195,7 +216,7 @@ export function computeIDW(
     }
   }
 
-  // ── Determine dominant terrain label (highest Gaussian weight) ────────────
+  // ── Dominant terrain label (highest Gaussian weight) ──────────────────────
   if (terrainContribs.length > 0) {
     dominantTerrain = terrainContribs.reduce(
       (best, tc) => tc.weight > best.weight ? tc : best
@@ -253,10 +274,12 @@ export function computeIDWWithTerrain(
   let dominantTerrainType = result.dominantTerrain
   const base = TERRAIN_BASE_SCORES[dominantTerrainType] ?? ZERO_SCORES
 
-  // Blend terrain base into IDW result (terrain provides floor)
+  // Terrain floor: ensure no dimension falls below 50% of the natural baseline.
+  // With the per-dimension blend in computeIDW this rarely fires, but guards
+  // against edge cases (e.g. all nearby resources are zero-dim for some axis).
   const blended = addScores(result.scores, {})
   for (const dim of Object.keys(blended) as Array<keyof ResourceScores>) {
-    blended[dim] = Math.max(blended[dim], base[dim] * 0.3)
+    blended[dim] = Math.max(blended[dim], base[dim] * 0.5)
   }
 
   return {

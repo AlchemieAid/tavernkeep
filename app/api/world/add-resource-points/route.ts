@@ -7,7 +7,7 @@ const ResourcePointSchema = z.object({
   y_pct: z.number().min(0).max(1),
   resource_type: z.string().min(1),
   richness: z.number().min(1).max(10),
-  influence_radius_pct: z.number().min(0.01).max(0.5).optional().default(0.08),
+  influence_radius_pct: z.number().min(0.01).max(0.5).optional().default(0.15),
   name: z.string().max(100).nullable().optional(),
 })
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       y_pct: p.y_pct,
       resource_type: p.resource_type,
       richness: p.richness / 10, // UI sends 1–10; DB constraint expects 0.1–1.0
-      influence_radius_pct: p.influence_radius_pct,
+      influence_radius_pct: p.influence_radius_pct ?? 0.15,
       name: p.name ?? null,
       placed_by: 'dm' as const,
     }))
