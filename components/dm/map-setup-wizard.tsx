@@ -8,7 +8,7 @@ import {
   Maximize2, X, AlertTriangle, SkipForward, RefreshCw,
 } from 'lucide-react'
 import { TerrainModeSelector, type TerrainMode } from '@/components/dm/terrain-mode-selector'
-import { WEALTH_LABEL_THRESHOLDS } from '@/lib/world/wealthField'
+import { WEALTH_LABEL_THRESHOLDS, WEALTH_CEILING_OPTIONS } from '@/lib/world/wealthField'
 import { TerrainSeedPainter } from '@/components/dm/terrain-seed-painter'
 import { TerrainZonePainter } from '@/components/dm/terrain-zone-painter'
 import { ResourceSeedPainter } from '@/components/dm/resource-seed-painter'
@@ -88,6 +88,7 @@ export function MapSetupWizard({
   const [wealthFloor, setWealthFloor] = useState(initialFloor)
   const [wealthCeiling, setWealthCeiling] = useState(initialCeiling)
   const [boundsError, setBoundsError] = useState<string | null>(null)
+  const [atmosphereProgress, setAtmosphereProgress] = useState<{ done: number; total: number } | null>(null)
 
   const saveBounds = useCallback(async (floor: number, ceiling: number) => {
     setBoundsError(null)
@@ -211,6 +212,18 @@ export function MapSetupWizard({
         const json = await res.json()
         if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Resource placement failed')
       } else if (currentStage === 'resources_placed') {
+        // Generate atmosphere for each terrain area before finalising
+        if (terrainAreas.length > 0) {
+          setAtmosphereProgress({ done: 0, total: terrainAreas.length })
+          for (let i = 0; i < terrainAreas.length; i++) {
+            await fetch('/api/world/generate-atmosphere', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ terrain_area_id: terrainAreas[i].id, map_id: map.id }),
+            })
+            setAtmosphereProgress({ done: i + 1, total: terrainAreas.length })
+          }
+        }
         const res = await fetch('/api/world/mark-map-ready', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -425,7 +438,7 @@ export function MapSetupWizard({
                 }}
                 className="w-full bg-[#111316] border border-[#3a3d42] rounded-lg px-3 py-2 text-sm font-manrope text-on-surface focus:outline-none focus:ring-1 focus:ring-primary/50"
               >
-                {WEALTH_LABEL_THRESHOLDS.slice(1).map(t => (
+                {WEALTH_CEILING_OPTIONS.map(t => (
                   <option key={t.label} value={t.value}>{t.label}</option>
                 ))}
               </select>
@@ -465,7 +478,9 @@ export function MapSetupWizard({
             style={{ background: 'linear-gradient(135deg, #ffc637 0%, #e2aa00 100%)' }}
           >
             {running ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing map&hellip; This may take up to 60 seconds</>
+              atmosphereProgress
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Writing atmosphere&hellip; {atmosphereProgress.done}/{atmosphereProgress.total}</>
+                : <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing map&hellip; This may take up to 60 seconds</>
             ) : (
               stageButtonLabel[currentStage]
             )}

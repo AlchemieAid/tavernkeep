@@ -24,6 +24,20 @@ export const WEALTH_LABEL_THRESHOLDS: ReadonlyArray<{ label: WealthLabel; value:
 ]
 
 /**
+ * Options for the Maximum prosperity (ceiling) dropdown.
+ * Opulent uses 1.0 (not 0.80) so selecting it truly uncaps the range —
+ * remapWealthScore(raw, floor, 1.0) is the identity for floor=0.
+ */
+export const WEALTH_CEILING_OPTIONS: ReadonlyArray<{ label: WealthLabel; value: number }> = [
+  { label: 'Poor',        value: 0.10 },
+  { label: 'Modest',      value: 0.22 },
+  { label: 'Comfortable', value: 0.36 },
+  { label: 'Wealthy',     value: 0.50 },
+  { label: 'Prosperous',  value: 0.65 },
+  { label: 'Opulent',     value: 1.00 },
+]
+
+/**
  * Linearly remaps a raw wealth score (0–1) into a DM-defined [floor, ceiling]
  * range before storing it.  floor=0, ceiling=1 → identity (no change).
  * Example: floor=0.10 (Poor), ceiling=0.50 (Wealthy) means even the most
