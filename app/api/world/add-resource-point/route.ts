@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         richness,
         influence_radius_pct,
         name: name ?? null,
-        placed_by: 'manual',
+        placed_by: 'dm',
       })
       .select()
       .single()
