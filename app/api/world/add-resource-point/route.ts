@@ -46,7 +46,7 @@ export async function POST(request: Request) {
         x_pct,
         y_pct,
         resource_type,
-        richness,
+        richness: richness / 10, // UI sends 1–10; DB constraint expects 0.1–1.0
         influence_radius_pct,
         name: name ?? null,
         placed_by: 'dm',
