@@ -242,23 +242,24 @@ export function ResourceSeedPainter({
     setIsSaving(true)
     setError(null)
     try {
-      for (const r of placed) {
-        const res = await fetch('/api/world/add-resource-point', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            map_id: mapId,
-            campaign_id: campaignId,
+      // Single batch request — one DB insert for all points
+      const batchRes = await fetch('/api/world/add-resource-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          map_id: mapId,
+          campaign_id: campaignId,
+          points: placed.map(r => ({
             x_pct: r.x_pct,
             y_pct: r.y_pct,
             resource_type: r.resource_type,
             richness: r.richness,
             influence_radius_pct: 0.08,
-          }),
-        })
-        const json = await res.json()
-        if (!res.ok || json.error) throw new Error(json.error?.message ?? 'Save failed')
-      }
+          })),
+        }),
+      })
+      const batchJson = await batchRes.json()
+      if (!batchRes.ok || batchJson.error) throw new Error(batchJson.error?.message ?? 'Save failed')
 
       const stageRes = await fetch('/api/world/mark-resources-placed', {
         method: 'POST',
